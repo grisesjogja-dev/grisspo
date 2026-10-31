@@ -1,0 +1,216 @@
+{
+  "entities": {
+    "Warga": {
+      "title": "Warga",
+      "description": "Data kependudukan warga Griya Sedayu Selaras",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID warga / username" },
+        "nomorRumah": { "type": "string", "description": "Nomor rumah warga e.g. A-01" },
+        "namaKK": { "type": "string", "description": "Nama kepala keluarga" },
+        "noHp": { "type": "string", "description": "Nomor WhatsApp atau HP" },
+        "blok": { "type": "string", "description": "Blok perumahan A/B/C/D" },
+        "statusHunian": { "type": "string", "description": "Status hunian: Tetap, Kontrak, Kosong" },
+        "jumlahKeluarga": { "type": "number", "description": "Jumlah anggota keluarga" },
+        "kendaraan": { "type": "string", "description": "Deskripsi kendaraan" },
+        "role": { "type": "string", "description": "Hak akses: superadmin, bendahara1, bendahara2, admin_inventaris, warga" },
+        "statusIuranBulanIni": { "type": "boolean", "description": "Status pembayaran iuran bulan ini" },
+        "totalJimpitanBulanIni": { "type": "number", "description": "Akumulasi jimpitan bulan ini (target 15000)" },
+        "username": { "type": "string", "description": "Username login Griss[NoRumah]" },
+        "password": { "type": "string", "description": "Password login Griss[123]" },
+        "updatedAt": { "type": "string", "description": "Waktu pembaharuan terakhir" }
+      },
+      "required": ["id", "nomorRumah", "namaKK", "blok", "role", "username"]
+    },
+    "RondaSchedule": {
+      "title": "RondaSchedule",
+      "description": "Jadwal piket ronda malam perumahan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID jadwal" },
+        "hari": { "type": "string", "description": "Hari piket (Senin-Minggu)" },
+        "koordinator": { "type": "string", "description": "Koordinator regu ronda" },
+        "anggota": { "type": "array", "description": "Daftar warga yang bertugas" },
+        "jam": { "type": "string", "description": "Jam tugas ronda" },
+        "rute": { "type": "string", "description": "Rute patroli ronda" },
+        "catatan": { "type": "string", "description": "Catatan khusus" }
+      },
+      "required": ["id", "hari", "koordinator", "anggota"]
+    },
+    "JimpitanRecord": {
+      "title": "JimpitanRecord",
+      "description": "Pencatatan uang jimpitan ronda malam",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID jimpitan" },
+        "tanggal": { "type": "string", "description": "Tanggal jimpit YYYY-MM-DD" },
+        "hari": { "type": "string", "description": "Nama hari jimpit" },
+        "bulanTahun": { "type": "string", "description": "Format YYYY-MM" },
+        "wargaId": { "type": "string", "description": "ID warga penyetor" },
+        "namaWarga": { "type": "string", "description": "Nama warga" },
+        "blok": { "type": "string", "description": "Blok rumah warga" },
+        "nominal": { "type": "number", "description": "Nominal jimpit (kelipatan 500 atau custom)" },
+        "petugasPencatat": { "type": "string", "description": "Petugas ronda yang mencatat" },
+        "petugasRole": { "type": "string", "description": "Role petugas" },
+        "metode": { "type": "string", "description": "Metode penyetoran" },
+        "timestamp": { "type": "string", "description": "Timestamp ISO" },
+        "e2eHash": { "type": "string", "description": "Integritas hash transaksi" }
+      },
+      "required": ["id", "tanggal", "hari", "wargaId", "nominal", "petugasPencatat"]
+    },
+    "TataTertib": {
+      "title": "TataTertib",
+      "description": "Aturan dan tata tertib paguyuban warga tahun 2026",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID pasal" },
+        "kategori": { "type": "string", "description": "Kategori aturan" },
+        "judul": { "type": "string", "description": "Judul aturan" },
+        "isi": { "type": "string", "description": "Uraian butir aturan" },
+        "sanksi": { "type": "string", "description": "Sanksi jika melanggar" },
+        "tahun": { "type": "number", "description": "Tahun pemberlakuan (2026)" },
+        "nomorUrut": { "type": "number", "description": "Urutan tampilan" }
+      },
+      "required": ["id", "kategori", "judul", "isi"]
+    },
+    "Inventaris": {
+      "title": "Inventaris",
+      "description": "Daftar inventaris sarana dan prasarana paguyuban",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID inventaris" },
+        "namaBarang": { "type": "string", "description": "Nama alat / barang" },
+        "kodeBarang": { "type": "string", "description": "Kode inventaris" },
+        "kategori": { "type": "string", "description": "Kategori inventaris" },
+        "jumlahTotal": { "type": "number", "description": "Total stok unit" },
+        "jumlahTersedia": { "type": "number", "description": "Unit yang siap dipinjam" },
+        "kondisi": { "type": "string", "description": "Kondisi fisik (Baik/Rusak/Perbaikan)" },
+        "lokasiPenyimpanan": { "type": "string", "description": "Lokasi simpan (Pos Satpam/Gudang Fasum)" },
+        "statusPeminjaman": { "type": "string", "description": "Status: Tersedia / Dipinjam" },
+        "peminjamTerakhir": { "type": "string", "description": "Nama & rumah peminjam" },
+        "tglKembaliRencana": { "type": "string", "description": "Estimasi tgl pengembalian" },
+        "catatan": { "type": "string", "description": "Keterangan tambahan" },
+        "updatedAt": { "type": "string", "description": "Waktu update" }
+      },
+      "required": ["id", "namaBarang", "kodeBarang", "jumlahTotal", "kondisi"]
+    },
+    "KeuanganTransaksi": {
+      "title": "KeuanganTransaksi",
+      "description": "Pencatatan kas pemasukan dan pengeluaran perumahan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID transaksi" },
+        "tanggal": { "type": "string", "description": "Tanggal transaksi YYYY-MM-DD" },
+        "bulanTahun": { "type": "string", "description": "Bulan YYYY-MM" },
+        "jenis": { "type": "string", "description": "Jenis: pemasukan atau pengeluaran" },
+        "kategori": { "type": "string", "description": "Kategori transaksi kas" },
+        "deskripsi": { "type": "string", "description": "Keterangan transaksi" },
+        "nominal": { "type": "number", "description": "Nominal dalam Rupiah" },
+        "dicatatOleh": { "type": "string", "description": "Nama pencatat / bendahara" },
+        "isVerified": { "type": "boolean", "description": "Status verifikasi bendahara" },
+        "e2eHash": { "type": "string", "description": "Hash enkripsi integritas data" },
+        "createdAt": { "type": "string", "description": "Waktu pembuatan" }
+      },
+      "required": ["id", "tanggal", "bulanTahun", "jenis", "kategori", "deskripsi", "nominal"]
+    },
+    "Pengumuman": {
+      "title": "Pengumuman",
+      "description": "Pengumuman dan berita penting paguyuban",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID pengumuman" },
+        "judul": { "type": "string", "description": "Judul pengumuman" },
+        "isi": { "type": "string", "description": "Konten lengkap" },
+        "kategori": { "type": "string", "description": "Kategori: Penting/Kerja Bakti/Ronda/Sosial" },
+        "tanggal": { "type": "string", "description": "Tanggal rilis YYYY-MM-DD" },
+        "penulis": { "type": "string", "description": "Penulis / Pengurus" },
+        "isPinned": { "type": "boolean", "description": "Sematkan di atas" }
+      },
+      "required": ["id", "judul", "isi", "tanggal", "penulis"]
+    },
+    "SystemSettings": {
+      "title": "SystemSettings",
+      "description": "Konfigurasi paguyuban dan parameter notifikasi",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID config" },
+        "iuranBulananNominal": { "type": "number", "description": "Besaran iuran bulanan Rp 25.000" },
+        "iuranSampahNominal": { "type": "number", "description": "Besaran iuran sampah Rp 25.000" },
+        "sewaFasumNominal": { "type": "number", "description": "Tarif sewa fasum Rp 30.000" },
+        "targetJimpitanPerBulan": { "type": "number", "description": "Target jimpitan per KK Rp 15.000" },
+        "thresholdAnomaliPengeluaran": { "type": "number", "description": "Ambang batas alert anomali" },
+        "emailNotifikasiAnomali": { "type": "string", "description": "Email penerima alert anomali" },
+        "e2eEncryptionEnabled": { "type": "boolean", "description": "Status proteksi enkripsi" }
+      },
+      "required": ["id"]
+    },
+    "FasumBooking": {
+      "title": "FasumBooking",
+      "description": "Pemesanan fasilitas umum paguyuban warga dan integrasi pembayaran kas",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID pemesanan fasum" },
+        "facilityType": { "type": "string", "description": "Tipe fasum (balai_warga, lapangan_olahraga, dll)" },
+        "facilityName": { "type": "string", "description": "Nama fasilitas umum" },
+        "date": { "type": "string", "description": "Tanggal pemakaian YYYY-MM-DD" },
+        "timeSlot": { "type": "string", "description": "Sesi waktu (pagi, siang, malam, seharian, custom)" },
+        "startTime": { "type": "string", "description": "Waktu mulai HH:MM" },
+        "endTime": { "type": "string", "description": "Waktu selesai HH:MM" },
+        "purpose": { "type": "string", "description": "Keperluan acara warga" },
+        "residentId": { "type": "string", "description": "ID warga pemesan" },
+        "residentName": { "type": "string", "description": "Nama warga pemesan" },
+        "residentHouse": { "type": "string", "description": "Nomor rumah warga e.g. A 11" },
+        "residentPhone": { "type": "string", "description": "Nomor kontak WhatsApp" },
+        "rentalFee": { "type": "number", "description": "Biaya sewa fasum (standar Rp 30.000)" },
+        "paymentMethod": { "type": "string", "description": "Metode: qris, transfer_bank, tunai_bendahara" },
+        "paymentStatus": { "type": "string", "description": "Status bayar: menunggu_pembayaran, menunggu_konfirmasi, lunas, dibatalkan" },
+        "status": { "type": "string", "description": "Status reservasi: menunggu_konfirmasi, disetujui, ditolak, selesai, dibatalkan" },
+        "paymentDate": { "type": "string", "description": "Tanggal pelunasan" },
+        "transactionId": { "type": "string", "description": "ID transaksi kas masuk di keuangan_transaksi" },
+        "notes": { "type": "string", "description": "Catatan tambahan" },
+        "approvedBy": { "type": "string", "description": "Nama bendahara/pengurus yang memverifikasi" },
+        "createdAt": { "type": "string", "description": "Timestamp pembuatan" },
+        "e2eHash": { "type": "string", "description": "Hash integritas SHA-256" }
+      },
+      "required": ["id", "facilityType", "facilityName", "date", "purpose", "residentName", "residentHouse", "rentalFee", "paymentStatus", "status"]
+    }
+  },
+  "firestore": {
+    "/warga/{wargaId}": {
+      "schema": { "$ref": "#/entities/Warga" },
+      "description": "Data warga dan profil penghuni perumahan"
+    },
+    "/ronda_schedules/{scheduleId}": {
+      "schema": { "$ref": "#/entities/RondaSchedule" },
+      "description": "Jadwal harian ronda malam"
+    },
+    "/jimpitan_records/{jimpitId}": {
+      "schema": { "$ref": "#/entities/JimpitanRecord" },
+      "description": "Catatan jimpitan harian dan real-time"
+    },
+    "/tata_tertib/{ruleId}": {
+      "schema": { "$ref": "#/entities/TataTertib" },
+      "description": "Daftar tata tertib warga tahun 2026"
+    },
+    "/inventaris/{inventarisId}": {
+      "schema": { "$ref": "#/entities/Inventaris" },
+      "description": "Peralatan dan inventaris milik paguyuban"
+    },
+    "/keuangan_transaksi/{transaksiId}": {
+      "schema": { "$ref": "#/entities/KeuanganTransaksi" },
+      "description": "Buku kas pemasukan dan pengeluaran paguyuban"
+    },
+    "/pengumuman/{pengumumanId}": {
+      "schema": { "$ref": "#/entities/Pengumuman" },
+      "description": "Papan pengumuman warga dan notifikasi"
+    },
+    "/system_settings/{configId}": {
+      "schema": { "$ref": "#/entities/SystemSettings" },
+      "description": "Pengaturan sistem paguyuban"
+    },
+    "/fasum_bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/FasumBooking" },
+      "description": "Reservasi fasilitas umum dan pencatatan pembayaran sewa fasum"
+    }
+  }
+}

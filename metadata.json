@@ -1,0 +1,6 @@
+{
+  "name": "GRISSPO - Griya Sedayu Selaras Portal Online",
+  "description": "Aplikasi portal online Paguyuban Warga Perum GSS: Jimpitan Ronda Online, Data Warga, Jadwal Ronda, Tata Tertib 2026, Inventaris, dan Laporan Keuangan Transparan dengan Firebase Cloud Sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

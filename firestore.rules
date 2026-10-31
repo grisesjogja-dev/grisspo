@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Default deny for anything outside defined collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Warga collection
+    match /warga/{wargaId} {
+      allow read: if true;
+      allow create, update: if isValidId(wargaId);
+      allow delete: if false; // Only superadmin via server or restricted
+    }
+
+    // Ronda schedules
+    match /ronda_schedules/{scheduleId} {
+      allow read: if true;
+      allow write: if isValidId(scheduleId);
+    }
+
+    // Jimpitan records
+    match /jimpitan_records/{jimpitId} {
+      allow read: if true;
+      allow create: if isValidId(jimpitId);
+      allow update, delete: if isValidId(jimpitId);
+    }
+
+    // Tata tertib
+    match /tata_tertib/{ruleId} {
+      allow read: if true;
+      allow write: if isValidId(ruleId);
+    }
+
+    // Inventaris
+    match /inventaris/{inventarisId} {
+      allow read: if true;
+      allow create, update: if isValidId(inventarisId);
+      allow delete: if isValidId(inventarisId);
+    }
+
+    // Keuangan transaksi
+    match /keuangan_transaksi/{transaksiId} {
+      allow read: if true;
+      allow create, update: if isValidId(transaksiId);
+      allow delete: if isValidId(transaksiId);
+    }
+
+    // Pengumuman
+    match /pengumuman/{pengumumanId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(pengumumanId);
+    }
+
+    // Forum posts
+    match /forum_posts/{postId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(postId);
+    }
+
+    // System settings
+    match /system_settings/{configId} {
+      allow read: if true;
+      allow write: if isValidId(configId);
+    }
+
+    // Fasum bookings (Pemesanan Fasilitas Umum & Integrasi Kas)
+    match /fasum_bookings/{bookingId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(bookingId);
+    }
+  }
+}
