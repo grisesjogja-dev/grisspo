@@ -487,7 +487,7 @@ export const JimpitanView: React.FC = () => {
 
                       <div>
                         <div className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2">
-                          <span>{resident.name}</span>
+                          <span>{resident.houseNumber}</span>
                           {dutyGroup?.members.some((m) => resident.name.toUpperCase().includes(m)) && (
                             <span className="text-[10px] bg-amber-200 text-amber-900 font-extrabold px-1.5 py-0.2 rounded">
                               Ronda Hari Ini
