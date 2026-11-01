@@ -166,7 +166,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                   <span>Bendahara 1</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-900 font-mono">B 02</span>
                 </div>
-                <div className="text-[11px] text-emerald-600 mt-0.5 font-medium">Bpk. AHMAD 2</div>
+                <div className="text-[11px] text-emerald-600 mt-0.5 font-medium">Bpk. AHMAD</div>
               </button>
 
               {/* Bendahara 2 Robi C15 */}

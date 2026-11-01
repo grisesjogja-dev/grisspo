@@ -205,7 +205,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                     {/* 2. Bendahara 1 (Ahmad B02) */}
                     <button
-                      onClick={() => handlePromptRolePassword('Bendahara 1', 'AHMAD 2', 'B 02')}
+                      onClick={() => handlePromptRolePassword('Bendahara 1', 'AHMAD', 'B 02')}
                       className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-emerald-300 font-semibold flex items-center justify-between"
                     >
                       <span>Bendahara 1 (AHMAD - B 02)</span>
@@ -214,7 +214,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                     {/* 3. Bendahara 2 (Robi C15) */}
                     <button
-                      onClick={() => handlePromptRolePassword('Bendahara 2', 'ROBY C', 'C 15')}
+                      onClick={() => handlePromptRolePassword('Bendahara 2', 'ROBI', 'C 15')}
                       className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-teal-300 font-semibold flex items-center justify-between"
                     >
                       <span>Bendahara 2 (ROBI - C 15)</span>
