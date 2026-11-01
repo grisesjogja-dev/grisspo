@@ -155,7 +155,7 @@ export const InventarisView: React.FC = () => {
             Data Inventaris Paguyuban GSS (33 Barang Resmi)
           </h2>
           <p className="mt-2 text-slate-300 text-xs sm:text-sm leading-relaxed">
-            Pencatatan seluruh perlengkapan paguyuban (piring, gelas, lampu sorot, jumbo, sound, tikar, dll). Dikelola khusus oleh Admin Inventaris (Bpk. HENGKI B 26) dan Superadmin.
+            Pencatatan seluruh perlengkapan paguyuban (piring, gelas, lampu sorot, jumbo, sound, tikar, dll). Dikelola khusus oleh Admin Inventaris (Bpk. SONY B 23) dan Superadmin.
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2.5 items-center">
@@ -178,7 +178,7 @@ export const InventarisView: React.FC = () => {
             ) : (
               <div className="text-xs bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700 text-slate-400 flex items-center gap-2">
                 <Lock size={13} className="text-amber-400" />
-                <span>Akses Khusus Admin Inventaris (Bpk. Hengki) & Superadmin</span>
+                <span>Akses Khusus Admin Inventaris (Bpk. Sony) & Superadmin</span>
               </div>
             )}
           </div>
