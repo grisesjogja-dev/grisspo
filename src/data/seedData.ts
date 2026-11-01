@@ -184,7 +184,7 @@ export const initialRondaSchedule: RondaGroup[] = [
   { day: 'Kamis', members: ['DEWA', 'EKO', 'ALID', 'NANDO'], captain: 'DEWA', dendaMissed: 15000 },
   { day: 'Jumat', members: ['IRVAN', 'DYO', 'FALLAH', 'ILHAM'], captain: 'IRVAN', dendaMissed: 15000 },
   { day: 'Sabtu', members: ['WALUYO', 'SONY', 'DIAN', 'ASROFI', 'HENGKI'], captain: 'WALUYO', dendaMissed: 15000 },
-  { day: 'Minggu', members: ['JECK', 'DANANG', 'ROBI', 'HANS'], captain: 'DANANG', dendaMissed: 15000 },
+  { day: 'Minggu', members: ['JOKO TRI', 'DANANG', 'ROBI', 'HANS'], captain: 'DANANG', dendaMissed: 15000 },
 ];
 
 /**
