@@ -15,11 +15,26 @@ import {
   XCircle,
   ShieldCheck,
   Lock,
-  Coins
+  Coins,
+  AlertTriangle,
+  Send,
+  ExternalLink,
+  MessageSquare,
+  CheckCircle2
 } from 'lucide-react';
 
 export const DataWargaView: React.FC = () => {
-  const { residents, updateResident, deleteResident, addResident, currentUser } = useApp();
+  const {
+    residents,
+    updateResident,
+    deleteResident,
+    addResident,
+    currentUser,
+    sendWhatsAppIuranWarning
+  } = useApp();
+
+  // Active Tab: 'semua' | 'tunggakan'
+  const [wargaTab, setWargaTab] = useState<'semua' | 'tunggakan'>('semua');
 
   // Search & Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,6 +53,12 @@ export const DataWargaView: React.FC = () => {
   const [formPhone, setFormPhone] = useState('');
   const [formRole, setFormRole] = useState<UserRole>('warga');
   const [formFamily, setFormFamily] = useState<number>(3);
+  const [formUnpaidMonths, setFormUnpaidMonths] = useState<number>(0);
+  const [formUnpaidMonthNames, setFormUnpaidMonthNames] = useState<string>('');
+  const [formPrevJimpitanDeficit, setFormPrevJimpitanDeficit] = useState<number>(0);
+  const [formJimpitanPaid, setFormJimpitanPaid] = useState<number>(0);
+  const [formPoints, setFormPoints] = useState<number>(50);
+  const [formPassword, setFormPassword] = useState<string>('Griss123');
 
   // Permission check: only Superadmin can edit or delete residents
   const canEditOrDelete = permissions.canManageResidents(currentUser.role);
@@ -80,6 +101,21 @@ export const DataWargaView: React.FC = () => {
     }
   };
 
+  // Delinquent residents (>= 2 consecutive months of unpaid dues)
+  const delinquentResidents = useMemo(() => {
+    return residents.filter((r) => (r.iuranUnpaidMonths || 0) >= 2);
+  }, [residents]);
+
+  const handleSendWhatsAppWarning = async (res: Resident) => {
+    try {
+      const result = await sendWhatsAppIuranWarning(res.id);
+      window.open(result.url, '_blank');
+      alert(`Notifikasi WhatsApp untuk Bpk/Ibu ${res.name} (${res.houseNumber}) berhasil disiapkan dan dicatat di sistem!`);
+    } catch (err: any) {
+      alert('Gagal mengirim WhatsApp: ' + err.message);
+    }
+  };
+
   const handleOpenEdit = (r: Resident) => {
     if (!canEditOrDelete) {
       alert('Akses Ditolak: Hak akses edit data warga hanya dimiliki oleh Superadmin.');
@@ -93,6 +129,12 @@ export const DataWargaView: React.FC = () => {
     setFormPhone(r.phone || '');
     setFormRole(r.role);
     setFormFamily(r.familyMembers || 3);
+    setFormUnpaidMonths(r.iuranUnpaidMonths || 0);
+    setFormUnpaidMonthNames((r.unpaidMonthNames || []).join(', '));
+    setFormPrevJimpitanDeficit(r.previousMonthsJimpitanDeficit || 0);
+    setFormJimpitanPaid(r.jimpitanPaidMonth || 0);
+    setFormPoints(r.points || 50);
+    setFormPassword(r.password || 'Griss123');
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
@@ -106,10 +148,16 @@ export const DataWargaView: React.FC = () => {
       statusRumah: formStatus,
       phone: formPhone,
       role: formRole,
-      familyMembers: formFamily
+      familyMembers: Number(formFamily),
+      iuranUnpaidMonths: Number(formUnpaidMonths),
+      unpaidMonthNames: formUnpaidMonthNames.split(',').map((s) => s.trim()).filter(Boolean),
+      previousMonthsJimpitanDeficit: Number(formPrevJimpitanDeficit),
+      jimpitanPaidMonth: Number(formJimpitanPaid),
+      points: Number(formPoints),
+      password: formPassword || undefined
     });
     setEditingResident(null);
-    alert('Data warga berhasil diperbarui oleh Superadmin!');
+    alert('Master data warga berhasil diperbarui oleh Superadmin!');
   };
 
   const handleAddResident = (e: React.FormEvent) => {
@@ -211,54 +259,211 @@ export const DataWargaView: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
-            <span className="text-xs font-bold text-slate-600 flex items-center gap-1 whitespace-nowrap">
-              <Filter size={13} /> Blok:
+      {/* Tab Switcher: Semua Warga vs Tunggakan Iuran (>= 2 Bulan) */}
+      <div className="flex border-b border-slate-200 gap-2">
+        <button
+          type="button"
+          onClick={() => setWargaTab('semua')}
+          className={`pb-3 px-4 text-xs font-black border-b-2 transition flex items-center gap-2 ${
+            wargaTab === 'semua'
+              ? 'border-blue-600 text-blue-700'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Users size={15} />
+          <span>Daftar 58 Warga Perum GSS</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setWargaTab('tunggakan')}
+          className={`pb-3 px-4 text-xs font-black border-b-2 transition flex items-center gap-2 ${
+            wargaTab === 'tunggakan'
+              ? 'border-red-600 text-red-700'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <AlertTriangle size={15} className="text-red-500" />
+          <span>Tunggakan Iuran (&ge; 2 Bulan Berturut-turut)</span>
+          {delinquentResidents.length > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-extrabold animate-pulse">
+              {delinquentResidents.length} Rumah
             </span>
-            {(['ALL', 'A', 'B', 'C'] as const).map((blk) => (
-              <button
-                key={blk}
-                onClick={() => setSelectedBlock(blk)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
-                  selectedBlock === blk
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                {blk === 'ALL' ? 'Semua Blok (58)' : `Blok ${blk} (${residents.filter((r) => r.block === blk).length})`}
-              </button>
-            ))}
+          )}
+        </button>
+      </div>
+
+      {/* VIEW 2: DAFTAR WARGA MENUNGGAK IURAN (>= 2 BULAN) */}
+      {wargaTab === 'tunggakan' && (
+        <div className="space-y-4">
+          <div className="bg-gradient-to-r from-red-950 via-rose-950 to-slate-900 text-white rounded-2xl p-5 border border-red-800 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-600/40 text-red-300 text-[11px] font-bold border border-red-500/30">
+                <AlertTriangle size={12} />
+                <span>Monitoring Tunggakan Iuran Rutin Kas Paguyuban</span>
+              </div>
+              <h3 className="text-lg font-black tracking-tight">
+                Daftar Warga dengan Tunggakan Iuran &ge; 2 Bulan Berturut-turut
+              </h3>
+              <p className="text-xs text-slate-300 max-w-2xl">
+                Sesuai instruksi dan Tata Tertib 2026, warga yang terlambat membayar iuran bulanan (Rp 25.000/bln) selama 2 bulan berturut-turut memperoleh warning saat login dan notifikasi otomatis ke nomor WhatsApp.
+              </p>
+            </div>
+
+            <div className="bg-red-900/60 p-4 rounded-xl border border-red-700/60 text-center min-w-[150px]">
+              <span className="text-[10px] uppercase font-bold text-red-300 block">Total Menunggak</span>
+              <div className="text-2xl font-black text-amber-300 mt-0.5">
+                {delinquentResidents.length} <span className="text-xs text-slate-300">Rumah</span>
+              </div>
+              <span className="text-[10px] text-red-200">
+                Rp {(delinquentResidents.reduce((acc, r) => acc + (r.iuranUnpaidMonths || 0) * 25000, 0)).toLocaleString('id-ID')}
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="text-xs py-1.5 px-2.5 bg-white border border-slate-300 rounded-lg text-slate-700 font-semibold"
-            >
-              <option value="ALL">Semua Status Hunian</option>
-              <option value="DI HUNI PEMILIK">DI HUNI PEMILIK</option>
-              <option value="DI HUNI KONTRAK">DI HUNI KONTRAK</option>
-              <option value="KOSONG (MEMBAYAR IURAN)">KOSONG (MEMBAYAR IURAN)</option>
-              <option value="KOSONG (ADA PEMILIK)">KOSONG (ADA PEMILIK)</option>
-              <option value="BELUM ADA PEMILIK">BELUM ADA PEMILIK</option>
-            </select>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-2">
+                <AlertTriangle size={15} className="text-red-600" />
+                <span>Rincian Warga Menunggak & Kirim Notifikasi WhatsApp</span>
+              </h4>
+              <span className="text-xs font-semibold text-slate-500">
+                Tarif Iuran: Rp 25.000 / KK / bulan
+              </span>
+            </div>
 
-            <div className="relative flex-1 md:w-60">
-              <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Cari nama / no rumah..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
-              />
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                    <th className="py-3 px-3 w-10 text-center">No</th>
+                    <th className="py-3 px-3">Rumah</th>
+                    <th className="py-3 px-3">Nama Warga</th>
+                    <th className="py-3 px-3">Status Hunian</th>
+                    <th className="py-3 px-3">No. WhatsApp</th>
+                    <th className="py-3 px-3 text-center">Lama Tunggakan</th>
+                    <th className="py-3 px-3">Bulan Menunggak</th>
+                    <th className="py-3 px-3 text-right">Total Tagihan</th>
+                    <th className="py-3 px-3 text-center">Aksi Superadmin / Bendahara</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {delinquentResidents.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-slate-500 font-medium">
+                        Tidak ada warga dengan tunggakan iuran &ge; 2 bulan. Semua warga tertib!
+                      </td>
+                    </tr>
+                  ) : (
+                    delinquentResidents.map((r, idx) => {
+                      const unpaidCount = r.iuranUnpaidMonths || 2;
+                      const arrears = unpaidCount * 25000;
+                      const monthList = r.unpaidMonthNames && r.unpaidMonthNames.length > 0
+                        ? r.unpaidMonthNames.join(', ')
+                        : `${unpaidCount} bulan`;
+
+                      return (
+                        <tr key={r.id} className="hover:bg-red-50/40 transition">
+                          <td className="py-3 px-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                          <td className="py-3 px-3 font-mono font-bold text-blue-700">{r.houseNumber}</td>
+                          <td className="py-3 px-3 font-bold text-slate-900">{r.name}</td>
+                          <td className="py-3 px-3 text-slate-600 text-[11px]">{r.statusRumah}</td>
+                          <td className="py-3 px-3 font-mono text-slate-700">{r.phone || '-'}</td>
+                          <td className="py-3 px-3 text-center">
+                            <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-black text-[10px]">
+                              {unpaidCount} BULAN BERTURUT-TURUT
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-slate-700 font-medium">{monthList}</td>
+                          <td className="py-3 px-3 text-right font-black text-red-600 whitespace-nowrap">
+                            Rp {arrears.toLocaleString('id-ID')}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleSendWhatsAppWarning(r)}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-xs"
+                                title="Kirim Notifikasi Peringatan Otomatis ke WhatsApp Warga"
+                              >
+                                <Send size={11} />
+                                <span>Kirim Notif WhatsApp</span>
+                              </button>
+
+                              {canEditOrDelete && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEdit(r)}
+                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                  title="Edit Master Data Warga (Superadmin)"
+                                >
+                                  <Edit2 size={13} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
+      )}
+
+      {/* VIEW 1: SEMUA 58 DATA WARGA */}
+      {wargaTab === 'semua' && (
+        <div className="space-y-4">
+          {/* Filter and Search Bar */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
+                <span className="text-xs font-bold text-slate-600 flex items-center gap-1 whitespace-nowrap">
+                  <Filter size={13} /> Blok:
+                </span>
+                {(['ALL', 'A', 'B', 'C'] as const).map((blk) => (
+                  <button
+                    key={blk}
+                    onClick={() => setSelectedBlock(blk)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                      selectedBlock === blk
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {blk === 'ALL' ? 'Semua Blok (58)' : `Blok ${blk} (${residents.filter((r) => r.block === blk).length})`}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="text-xs py-1.5 px-2.5 bg-white border border-slate-300 rounded-lg text-slate-700 font-semibold"
+                >
+                  <option value="ALL">Semua Status Hunian</option>
+                  <option value="DI HUNI PEMILIK">DI HUNI PEMILIK</option>
+                  <option value="DI HUNI KONTRAK">DI HUNI KONTRAK</option>
+                  <option value="KOSONG (MEMBAYAR IURAN)">KOSONG (MEMBAYAR IURAN)</option>
+                  <option value="KOSONG (ADA PEMILIK)">KOSONG (ADA PEMILIK)</option>
+                  <option value="BELUM ADA PEMILIK">BELUM ADA PEMILIK</option>
+                </select>
+
+                <div className="relative flex-1 md:w-60">
+                  <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Cari nama / no rumah..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
+                  />
+                </div>
+              </div>
+            </div>
 
         {/* Residents Table */}
         <div className="overflow-x-auto">
@@ -357,6 +562,8 @@ export const DataWargaView: React.FC = () => {
           </table>
         </div>
       </div>
+    </div>
+  )}
 
       {/* MODAL: EDIT / ADD WARGA (SUPERADMIN ONLY) */}
       {(editingResident || showAddModal) && (
@@ -465,6 +672,100 @@ export const DataWargaView: React.FC = () => {
                   </select>
                 </div>
               </div>
+
+              {editingResident && (
+                <div className="pt-3 border-t border-slate-200 space-y-3">
+                  <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wider block">
+                    Master Pengaturan Iuran & Jimpitan (Hak Akses Superadmin)
+                  </span>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Tunggakan Iuran (Bulan)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formUnpaidMonths}
+                        onChange={(e) => setFormUnpaidMonths(Number(e.target.value))}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-red-600 focus:ring-2 focus:ring-red-500"
+                      />
+                      <span className="text-[10px] text-slate-400">&ge; 2 memicu warning portal & WA</span>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Akumulasi Defisit Jimpitan (Rp)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="500"
+                        value={formPrevJimpitanDeficit}
+                        onChange={(e) => setFormPrevJimpitanDeficit(Number(e.target.value))}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-amber-700 focus:ring-2 focus:ring-amber-500"
+                      />
+                      <span className="text-[10px] text-slate-400">Tunggakan bulan lalu</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Rincian Bulan Menunggak (Pisahkan Koma)
+                    </label>
+                    <input
+                      type="text"
+                      value={formUnpaidMonthNames}
+                      onChange={(e) => setFormUnpaidMonthNames(e.target.value)}
+                      placeholder="Contoh: September 2026, Oktober 2026"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Jimpitan Bulan Ini Terbayar (Rp)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="500"
+                        value={formJimpitanPaid}
+                        onChange={(e) => setFormJimpitanPaid(Number(e.target.value))}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-emerald-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Poin Loyalitas
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formPoints}
+                        onChange={(e) => setFormPoints(Number(e.target.value))}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-blue-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Password Login Warga (Default: Griss123)
+                    </label>
+                    <input
+                      type="text"
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      placeholder="Kata sandi warga..."
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2 pt-3">
                 <button

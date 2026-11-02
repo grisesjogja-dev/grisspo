@@ -19,6 +19,7 @@ import {
   CheckCircle,
   XCircle,
   Trash2,
+  Edit2,
   Mail,
   PieChart as PieChartIcon,
   BarChart3,
@@ -31,6 +32,7 @@ export const KeuanganView: React.FC = () => {
     transactions,
     addTransaction,
     deleteTransaction,
+    updateTransaction,
     totalIncome,
     totalExpense,
     currentBalance,
@@ -51,6 +53,54 @@ export const KeuanganView: React.FC = () => {
   const [trxDate, setTrxDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [trxDesc, setTrxDesc] = useState<string>('');
   const [trxHouse, setTrxHouse] = useState<string>('');
+
+  // Superadmin Edit Master Transaksi state
+  const [editingTrx, setEditingTrx] = useState<Transaction | null>(null);
+  const [editType, setEditType] = useState<'pemasukan' | 'pengeluaran'>('pemasukan');
+  const [editCategory, setEditCategory] = useState<IncomeCategory | ExpenseCategory>('Iuran Bulanan (Rp 25.000)');
+  const [editAmount, setEditAmount] = useState<number | ''>(25000);
+  const [editDate, setEditDate] = useState<string>('');
+  const [editDesc, setEditDesc] = useState<string>('');
+  const [editHouse, setEditHouse] = useState<string>('');
+
+  const handleOpenEdit = (trx: Transaction) => {
+    if (currentUser.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak akses master edit transaksi kas!');
+      return;
+    }
+    setEditingTrx(trx);
+    setEditType(trx.type);
+    setEditCategory(trx.category);
+    setEditAmount(trx.amount);
+    setEditDate(trx.date);
+    setEditDesc(trx.description);
+    setEditHouse(trx.sourceHouse || '');
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTrx) return;
+    if (!editAmount || Number(editAmount) <= 0) {
+      alert('Masukkan nominal yang valid!');
+      return;
+    }
+
+    try {
+      await updateTransaction({
+        ...editingTrx,
+        type: editType,
+        category: editCategory,
+        amount: Number(editAmount),
+        date: editDate,
+        description: editDesc,
+        sourceHouse: editHouse || undefined
+      });
+      setEditingTrx(null);
+      alert('Transaksi kas berhasil diperbarui oleh Superadmin & hash SHA-256 telah disinkronkan!');
+    } catch (err: any) {
+      alert('Gagal menyimpan perubahan transaksi: ' + err.message);
+    }
+  };
 
   // End-to-end encryption verification inspection modal
   const [inspectedTrx, setInspectedTrx] = useState<Transaction | null>(null);
@@ -475,17 +525,26 @@ export const KeuanganView: React.FC = () => {
                   {/* Restricted to Superadmin only per prompt: "selain superadmin, bendahara 1, bendahara 2 dan admin inventaris tidak dapat akses untuk menhapus dan mengedit data yang ada. Berikan hak akses hanya kepada superadmin untuk melakukan perubahan data tersebut." */}
                   {canDelete && (
                     <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => {
-                          if (confirm(`Hapus transaksi "${trx.description}"? Aksi ini permanen.`)) {
-                            deleteTransaction(trx.id);
-                          }
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                        title="Hapus Transaksi (Hak Akses Superadmin)"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleOpenEdit(trx)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          title="Edit Master Transaksi (Hak Akses Khusus Superadmin)"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Hapus transaksi "${trx.description}"? Aksi ini permanen.`)) {
+                              deleteTransaction(trx.id);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Hapus Transaksi (Hak Akses Superadmin)"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -710,6 +769,129 @@ export const KeuanganView: React.FC = () => {
                 Tutup
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL: EDIT MASTER TRANSAKSI (SUPERADMIN ONLY) */}
+      {editingTrx && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden border border-slate-200 shadow-2xl">
+            <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
+                  <Edit2 size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold">Edit Master Transaksi (Superadmin)</h3>
+                  <p className="text-[11px] text-slate-300">Hash SHA-256 akan otomatis dihitung ulang & disinkronkan ke Cloud</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingTrx(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                <XCircle size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="p-6 space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Jenis Transaksi</label>
+                  <select
+                    value={editType}
+                    onChange={(e) => {
+                      const newType = e.target.value as 'pemasukan' | 'pengeluaran';
+                      setEditType(newType);
+                      setEditCategory(newType === 'pemasukan' ? incomeCategories[0] : expenseCategories[0]);
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                  >
+                    <option value="pemasukan">Pemasukan (+)</option>
+                    <option value="pengeluaran">Pengeluaran (-)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Tanggal</label>
+                  <input
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Kategori Transaksi</label>
+                <select
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value as any)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold"
+                >
+                  {(editType === 'pemasukan' ? incomeCategories : expenseCategories).map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Nominal (Rp)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="500"
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                    required
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-blue-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Nomor Rumah (Sumber/Tujuan)</label>
+                  <input
+                    type="text"
+                    value={editHouse}
+                    onChange={(e) => setEditHouse(e.target.value.toUpperCase())}
+                    placeholder="Contoh: A 01, B 24"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold uppercase"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Deskripsi / Keterangan</label>
+                <textarea
+                  rows={2}
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingTrx(null)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
+                >
+                  Simpan Perubahan Master Transaksi
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

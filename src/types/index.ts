@@ -23,9 +23,25 @@ export interface Resident {
   familyMembers?: number;
   vehicles?: string;
   monthlyIuranPaid?: boolean;
+  iuranUnpaidMonths?: number; // count of unpaid months (if >= 2 triggers warning and WhatsApp alert)
+  unpaidMonthNames?: string[]; // e.g. ["September 2026", "Oktober 2026"]
+  lastWhatsAppWarningSent?: string;
   jimpitanPaidMonth?: number; // total paid this month
+  previousMonthsJimpitanDeficit?: number; // accumulated deficit carried over from previous months
   points: number;
   password?: string;
+}
+
+export interface WhatsAppNotificationLog {
+  id: string;
+  residentName: string;
+  residentHouse: string;
+  phoneNumber: string;
+  message: string;
+  unpaidMonthsCount: number;
+  totalArrears: number;
+  timestamp: string;
+  status: 'Terkirim' | 'Gagal';
 }
 
 export interface User {

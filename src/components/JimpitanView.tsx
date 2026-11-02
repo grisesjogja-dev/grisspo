@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { DayOfWeek, JimpitDailyReport } from '../types';
+import { DayOfWeek, JimpitDailyReport, Resident } from '../types';
 import {
   exportJimpitanReportToExcel,
   exportDailyJimpitanToPDF,
@@ -31,7 +31,12 @@ import {
   Building2,
   Check,
   X,
-  CalendarDays
+  CalendarDays,
+  CreditCard,
+  QrCode,
+  Receipt,
+  ArrowRight,
+  Wallet
 } from 'lucide-react';
 
 export const JimpitanView: React.FC = () => {
@@ -41,6 +46,7 @@ export const JimpitanView: React.FC = () => {
     jimpitReports,
     submitDailyJimpit,
     deleteJimpitReport,
+    payJimpitanDeficit,
     currentUser
   } = useApp();
 
@@ -248,6 +254,99 @@ export const JimpitanView: React.FC = () => {
       return matchBlock && matchStatus && matchSearch;
     });
   }, [residents, monthlyBlockFilter, monthlyStatusFilter, monthlySearch]);
+
+  // --- STATE FOR BAYAR KEKURANGAN JIMPITAN MODAL ---
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [selectedResidentForPay, setSelectedResidentForPay] = useState<Resident | null>(null);
+  const [payAmountInput, setPayAmountInput] = useState<number | ''>(15000);
+  const [payMethod, setPayMethod] = useState<'qris' | 'transfer' | 'cash'>('qris');
+  const [payNotes, setPayNotes] = useState<string>('');
+  const [paySuccessReceipt, setPaySuccessReceipt] = useState<{
+    residentName: string;
+    residentHouse: string;
+    amount: number;
+    method: string;
+    date: string;
+    trxId?: string;
+  } | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  const totalAkumulasiDefisit = useMemo(() => {
+    return residents.reduce((acc, r) => {
+      const curDef = Math.max(0, targetMonthly - (r.jimpitanPaidMonth || 0));
+      const prevDef = r.previousMonthsJimpitanDeficit || 0;
+      return acc + curDef + prevDef;
+    }, 0);
+  }, [residents]);
+
+  const handleOpenPayModal = (resident?: Resident) => {
+    const target = resident || residents.find((r) => r.houseNumber === currentUser.houseNumber) || residents[0];
+    setSelectedResidentForPay(target);
+    const curDef = Math.max(0, targetMonthly - (target.jimpitanPaidMonth || 0));
+    const prevDef = target.previousMonthsJimpitanDeficit || 0;
+    const totalDef = curDef + prevDef;
+    setPayAmountInput(totalDef > 0 ? totalDef : 15000);
+    setPayNotes(`Pelunasan kekurangan jimpitan ${selectedMonth}`);
+    setPaySuccessReceipt(null);
+    setIsPayModalOpen(true);
+  };
+
+  const handleSelectResidentForPay = (resId: string) => {
+    const target = residents.find((r) => r.id === resId);
+    if (!target) return;
+    setSelectedResidentForPay(target);
+    const curDef = Math.max(0, targetMonthly - (target.jimpitanPaidMonth || 0));
+    const prevDef = target.previousMonthsJimpitanDeficit || 0;
+    const totalDef = curDef + prevDef;
+    setPayAmountInput(totalDef > 0 ? totalDef : 15000);
+  };
+
+  const handleExecutePay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedResidentForPay) return;
+    const amt = Number(payAmountInput);
+    if (!amt || amt <= 0) {
+      alert('Nominal pembayaran harus lebih besar dari Rp 0!');
+      return;
+    }
+    if (amt % 500 !== 0) {
+      alert('Nominal jimpitan harus kelipatan Rp 500!');
+      return;
+    }
+
+    setIsProcessingPayment(true);
+    try {
+      const result = await payJimpitanDeficit(
+        selectedResidentForPay.id,
+        amt,
+        payMethod,
+        payNotes
+      );
+
+      if (result.success) {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+
+        setPaySuccessReceipt({
+          residentName: selectedResidentForPay.name,
+          residentHouse: selectedResidentForPay.houseNumber,
+          amount: amt,
+          method: payMethod.toUpperCase(),
+          date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+          trxId: result.transactionId
+        });
+      } else {
+        alert('Gagal: ' + result.message);
+      }
+    } catch (err: any) {
+      alert('Terjadi kesalahan pembayaran: ' + err.message);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200">
@@ -889,6 +988,14 @@ export const JimpitanView: React.FC = () => {
               </select>
 
               <button
+                onClick={() => handleOpenPayModal()}
+                className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md shadow-emerald-600/30"
+              >
+                <CreditCard size={14} />
+                <span>Bayar Kekurangan Jimpitan</span>
+              </button>
+
+              <button
                 onClick={() => exportMonthlyJimpitanToPDF(residents, jimpitReports, selectedMonth)}
                 className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
               >
@@ -926,13 +1033,15 @@ export const JimpitanView: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-amber-100 shadow-xs">
-              <span className="text-xs font-semibold text-amber-700">Total Kekurangan Warga</span>
+            <div className="bg-white p-5 rounded-2xl border border-amber-200 bg-amber-50/40 shadow-xs">
+              <span className="text-xs font-semibold text-amber-800 flex items-center gap-1">
+                <Coins size={13} className="text-amber-600" /> Total Akumulasi Tunggakan
+              </span>
               <div className="text-xl font-black text-amber-600 mt-1">
-                Rp {totalDefisitBulanIni.toLocaleString('id-ID')}
+                Rp {totalAkumulasiDefisit.toLocaleString('id-ID')}
               </div>
               <p className="text-[11px] text-amber-700 mt-0.5">
-                {totalResidentsCount - lunasCount} rumah belum melunasi Rp 15.000
+                Bulan Ini: Rp {totalDefisitBulanIni.toLocaleString('id-ID')} &bull; Otomatis Terakumulasi
               </p>
             </div>
 
@@ -997,12 +1106,17 @@ export const JimpitanView: React.FC = () => {
 
           {/* Table of all 58 residents and their deficit */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-              <h4 className="text-xs sm:text-sm font-bold text-slate-800">
-                Data Lengkap {filteredMonthlyResidents.length} Rumah (Periode: {selectedMonth})
-              </h4>
-              <span className="text-xs text-slate-500 font-semibold">
-                Target: Rp 15.000 / KK
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-slate-800">
+                  Data Lengkap {filteredMonthlyResidents.length} Rumah (Periode: {selectedMonth})
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  Kekurangan jimpitan otomatis terakumulasi ke bulan berikutnya sesuai Tata Tertib 2026.
+                </p>
+              </div>
+              <span className="text-xs text-amber-800 bg-amber-100 px-3 py-1 rounded-full font-bold">
+                Kewajiban: Rp 15.000 / KK / bulan
               </span>
             </div>
 
@@ -1010,62 +1124,76 @@ export const JimpitanView: React.FC = () => {
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
-                    <th className="py-3 px-4 w-12 text-center">No</th>
-                    <th className="py-3 px-4">No Rumah</th>
-                    <th className="py-3 px-4">Nama Kepala Keluarga</th>
-                    <th className="py-3 px-4">Blok</th>
-                    <th className="py-3 px-4">Status Hunian</th>
-                    <th className="py-3 px-4 text-right">Target</th>
-                    <th className="py-3 px-4 text-right">Sudah Masuk</th>
-                    <th className="py-3 px-4 text-right">Kekurangan</th>
-                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-3 w-10 text-center">No</th>
+                    <th className="py-3 px-3">Rumah</th>
+                    <th className="py-3 px-3">Kepala Keluarga</th>
+                    <th className="py-3 px-3">Blok</th>
+                    <th className="py-3 px-3 text-right">Target</th>
+                    <th className="py-3 px-3 text-right">Bulan Ini</th>
+                    <th className="py-3 px-3 text-right">Kurang Bulan Ini</th>
+                    <th className="py-3 px-3 text-right">Akumulasi Lalu</th>
+                    <th className="py-3 px-3 text-right">Total Tunggakan</th>
+                    <th className="py-3 px-3 text-center">Aksi / Pelunasan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredMonthlyResidents.map((r, idx) => {
                     const paid = r.jimpitanPaidMonth || 0;
-                    const deficit = Math.max(0, targetMonthly - paid);
-                    const percent = Math.min(100, Math.round((paid / targetMonthly) * 100));
-                    const isLunas = deficit === 0;
+                    const curDeficit = Math.max(0, targetMonthly - paid);
+                    const prevDeficit = r.previousMonthsJimpitanDeficit || 0;
+                    const totalDeficit = curDeficit + prevDeficit;
+                    const isLunas = totalDeficit === 0;
 
                     return (
                       <tr key={r.id} className="hover:bg-slate-50/80 transition">
-                        <td className="py-3 px-4 text-center font-bold text-slate-400">{idx + 1}</td>
-                        <td className="py-3 px-4 font-mono font-bold text-blue-700">{r.houseNumber}</td>
-                        <td className="py-3 px-4 font-semibold text-slate-800">{r.name}</td>
-                        <td className="py-3 px-4 font-bold text-slate-600">Blok {r.block}</td>
-                        <td className="py-3 px-4 text-slate-500 text-[11px]">{r.statusRumah}</td>
-                        <td className="py-3 px-4 text-right font-medium text-slate-600">
+                        <td className="py-3 px-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                        <td className="py-3 px-3 font-mono font-bold text-blue-700">{r.houseNumber}</td>
+                        <td className="py-3 px-3 font-semibold text-slate-800">{r.name}</td>
+                        <td className="py-3 px-3 font-bold text-slate-600">Blok {r.block}</td>
+                        <td className="py-3 px-3 text-right font-medium text-slate-600">
                           Rp {targetMonthly.toLocaleString('id-ID')}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-emerald-600">
+                        <td className="py-3 px-3 text-right font-bold text-emerald-600">
                           Rp {paid.toLocaleString('id-ID')}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold">
-                          {deficit > 0 ? (
-                            <span className="text-amber-600">Rp {deficit.toLocaleString('id-ID')}</span>
+                        <td className="py-3 px-3 text-right font-bold text-slate-700">
+                          {curDeficit > 0 ? (
+                            <span className="text-amber-600">Rp {curDeficit.toLocaleString('id-ID')}</span>
                           ) : (
                             <span className="text-emerald-600">Rp 0</span>
                           )}
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2 justify-center">
-                            <div className="w-16 bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${isLunas ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                                style={{ width: `${percent}%` }}
-                              />
-                            </div>
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
-                                isLunas
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-amber-100 text-amber-800'
-                              }`}
+                        <td className="py-3 px-3 text-right font-medium">
+                          {prevDeficit > 0 ? (
+                            <span className="text-rose-600 font-bold">+Rp {prevDeficit.toLocaleString('id-ID')}</span>
+                          ) : (
+                            <span className="text-slate-400">Rp 0</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-right font-black">
+                          {totalDeficit > 0 ? (
+                            <span className="text-red-600 font-black">Rp {totalDeficit.toLocaleString('id-ID')}</span>
+                          ) : (
+                            <span className="text-emerald-600 font-bold">LUNAS</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          {totalDeficit > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPayModal(r)}
+                              className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg text-[10px] font-black transition flex items-center gap-1 mx-auto shadow-xs"
+                              title="Bayar kekurangan jimpitan warga ini dan catat otomatis ke Kas Paguyuban"
                             >
-                              {isLunas ? 'LUNAS' : `Kurang Rp ${deficit.toLocaleString('id-ID')}`}
+                              <CreditCard size={11} />
+                              <span>Bayar (Rp {totalDeficit.toLocaleString('id-ID')})</span>
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-800">
+                              <CheckCircle2 size={11} />
+                              <span>LUNAS</span>
                             </span>
-                          </div>
+                          )}
                         </td>
                       </tr>
                     );
@@ -1298,6 +1426,298 @@ export const JimpitanView: React.FC = () => {
           </div>
         </div>
       )}
+      {/* ========================================================================= */}
+      {/* MODAL: BAYAR KEKURANGAN JIMPITAN (TERINTEGRASI KE KAS PAGUYUBAN)          */}
+      {/* ========================================================================= */}
+      {isPayModalOpen && selectedResidentForPay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <CreditCard size={20} className="text-emerald-300" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold">Pembayaran Kekurangan Jimpitan</h3>
+                  <p className="text-[11px] text-emerald-200">Terintegrasi otomatis ke Laporan Keuangan Kas GSS</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPayModalOpen(false);
+                  setPaySuccessReceipt(null);
+                }}
+                className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              {paySuccessReceipt ? (
+                /* Digital Receipt */
+                <div className="space-y-4 text-center">
+                  <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                    <CheckCircle2 size={32} />
+                  </div>
+
+                  <div>
+                    <h4 className="text-base font-black text-slate-900">Pembayaran Jimpitan Berhasil!</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Dana otomatis masuk Buku Kas Paguyuban dan kekurangan warga telah disesuaikan.
+                    </p>
+                  </div>
+
+                  {/* Receipt Paper Card */}
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300 text-xs text-left space-y-2">
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                      <span className="text-slate-500 font-mono">No. Transaksi:</span>
+                      <span className="font-mono font-bold text-slate-800 text-[11px]">{paySuccessReceipt.trxId || `TRX-${Date.now()}`}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-1">
+                      <span className="text-slate-500">Warga / Rumah:</span>
+                      <strong className="text-slate-900">{paySuccessReceipt.residentName} ({paySuccessReceipt.residentHouse})</strong>
+                    </div>
+                    <div className="flex justify-between items-center pb-1">
+                      <span className="text-slate-500">Metode:</span>
+                      <span className="font-bold text-blue-700">{paySuccessReceipt.method}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-1">
+                      <span className="text-slate-500">Tanggal:</span>
+                      <span className="text-slate-700">{paySuccessReceipt.date}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                      <span className="font-bold text-slate-800">Total Nominal:</span>
+                      <span className="text-base font-black text-emerald-600">
+                        Rp {paySuccessReceipt.amount.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 italic text-center pt-1">
+                      +15 GRISS-Poin Loyalitas telah ditambahkan ke akun warga.
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition"
+                    >
+                      <Printer size={13} />
+                      <span>Cetak Kuitansi</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPayModalOpen(false);
+                        setPaySuccessReceipt(null);
+                      }}
+                      className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition"
+                    >
+                      Selesai & Tutup
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Payment Form */
+                <form onSubmit={handleExecutePay} className="space-y-4 text-xs">
+                  {/* Select Resident */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Pilih Warga / Nomor Rumah:
+                    </label>
+                    <select
+                      value={selectedResidentForPay.id}
+                      onChange={(e) => handleSelectResidentForPay(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      {residents.map((r) => {
+                        const cur = Math.max(0, targetMonthly - (r.jimpitanPaidMonth || 0));
+                        const prev = r.previousMonthsJimpitanDeficit || 0;
+                        const tot = cur + prev;
+                        return (
+                          <option key={r.id} value={r.id}>
+                            {r.houseNumber} - {r.name} {tot > 0 ? `(Tunggakan: Rp ${tot.toLocaleString('id-ID')})` : '(Lunas)'}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  {/* Arrears Breakdown Card */}
+                  {(() => {
+                    const paid = selectedResidentForPay.jimpitanPaidMonth || 0;
+                    const curDef = Math.max(0, targetMonthly - paid);
+                    const prevDef = selectedResidentForPay.previousMonthsJimpitanDeficit || 0;
+                    const totDef = curDef + prevDef;
+
+                    return (
+                      <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-500">Target Bulanan (58 KK):</span>
+                          <span className="font-semibold text-slate-700">Rp 15.000 / bulan</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-500">Jimpitan Masuk Bulan Ini:</span>
+                          <span className="font-bold text-emerald-600">Rp {paid.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-500">Kurang Bulan Berjalan:</span>
+                          <span className="font-bold text-amber-600">Rp {curDef.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-500">Akumulasi Bulan Sebelumnya:</span>
+                          <span className="font-bold text-rose-600">Rp {prevDef.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                          <span className="font-bold text-slate-900">Total Akumulasi Tunggakan:</span>
+                          <span className="text-base font-black text-red-600">
+                            Rp {totDef.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Nominal Input & Preset buttons */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Nominal Pembayaran (Kelipatan Rp 500):
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 font-bold text-slate-400">Rp</span>
+                      <input
+                        type="number"
+                        min={500}
+                        step={500}
+                        value={payAmountInput}
+                        onChange={(e) => setPayAmountInput(e.target.value === '' ? '' : Number(e.target.value))}
+                        required
+                        className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        placeholder="Contoh: 15000"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {[5000, 10000, 15000, 20000].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setPayAmountInput(preset)}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold"
+                        >
+                          Rp {preset.toLocaleString('id-ID')}
+                        </button>
+                      ))}
+                      {(() => {
+                        const cur = Math.max(0, targetMonthly - (selectedResidentForPay.jimpitanPaidMonth || 0));
+                        const prev = selectedResidentForPay.previousMonthsJimpitanDeficit || 0;
+                        const tot = cur + prev;
+                        if (tot > 0) {
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setPayAmountInput(tot)}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[11px] font-extrabold"
+                            >
+                              Lunasi Penuh (Rp {tot.toLocaleString('id-ID')})
+                            </button>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Payment Method */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1.5">
+                      Metode Pembayaran:
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPayMethod('qris')}
+                        className={`p-2.5 rounded-xl border text-center font-bold transition flex flex-col items-center gap-1 ${
+                          payMethod === 'qris'
+                            ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <QrCode size={16} className="text-emerald-600" />
+                        <span className="text-[11px]">QRIS Kas GSS</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPayMethod('transfer')}
+                        className={`p-2.5 rounded-xl border text-center font-bold transition flex flex-col items-center gap-1 ${
+                          payMethod === 'transfer'
+                            ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <CreditCard size={16} className="text-blue-600" />
+                        <span className="text-[11px]">Transfer BCA</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPayMethod('cash')}
+                        className={`p-2.5 rounded-xl border text-center font-bold transition flex flex-col items-center gap-1 ${
+                          payMethod === 'cash'
+                            ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Coins size={16} className="text-amber-600" />
+                        <span className="text-[11px]">Tunai Ronda</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Catatan (Opsional):
+                    </label>
+                    <input
+                      type="text"
+                      value={payNotes}
+                      onChange={(e) => setPayNotes(e.target.value)}
+                      placeholder="Contoh: Pelunasan kekurangan jimpitan Oktober 2026..."
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+                    />
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsPayModalOpen(false)}
+                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isProcessingPayment}
+                      className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2"
+                    >
+                      <CreditCard size={14} />
+                      <span>{isProcessingPayment ? 'Memproses...' : `Proses Pembayaran (Rp ${Number(payAmountInput || 0).toLocaleString('id-ID')})`}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

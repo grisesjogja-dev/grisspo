@@ -12,7 +12,8 @@ import {
   Announcement,
   UserRole,
   FasumBooking,
-  DayOfWeek
+  DayOfWeek,
+  WhatsAppNotificationLog
 } from '../types';
 import {
   initialResidents,
@@ -55,11 +56,18 @@ interface AppContextType {
 
   // Ronda & Jimpitan
   rondaSchedule: RondaGroup[];
+  updateRondaGroup: (group: RondaGroup) => Promise<void>;
   jimpitReports: JimpitDailyReport[];
   submitDailyJimpit: (report: Omit<JimpitDailyReport, 'id' | 'createdAt'>) => Promise<void>;
   deleteJimpitReport: (id: string) => Promise<void>;
+  payJimpitanDeficit: (residentId: string, amount: number, method: 'qris' | 'transfer' | 'cash', notes?: string) => Promise<{ success: boolean; message: string; transactionId?: string }>;
   removeRondaMember: (day: DayOfWeek, memberName: string) => Promise<void>;
   addRondaMember: (day: DayOfWeek, memberName: string) => Promise<void>;
+
+  // WhatsApp Iuran Warning
+  whatsAppLogs: WhatsAppNotificationLog[];
+  sendWhatsAppIuranWarning: (residentId: string) => Promise<{ success: boolean; url: string; log: WhatsAppNotificationLog }>;
+  deleteWhatsAppLog: (id: string) => Promise<void>;
 
   // Inventory
   inventory: InventoryItem[];
@@ -270,6 +278,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [emailAlerts, setEmailAlerts] = useState<EmailAlertLog[]>([]);
 
+  // Track permanently deleted IDs so deleted master data NEVER resurrects
+  const [deletedIds, setDeletedIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('grisspo_deleted_ids');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const markAsDeleted = (id: string) => {
+    setDeletedIds((prev) => {
+      const next = Array.from(new Set([...prev, id]));
+      localStorage.setItem('grisspo_deleted_ids', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // WhatsApp Notification Logs for Iuran Arrears
+  const [whatsAppLogs, setWhatsAppLogs] = useState<WhatsAppNotificationLog[]>(() => {
+    const saved = localStorage.getItem('grisspo_wa_logs');
+    if (saved) return JSON.parse(saved);
+    return [
+      {
+        id: 'wa-seed-1',
+        residentName: 'DWI',
+        residentHouse: 'A 05',
+        phoneNumber: '0812-3456-7805',
+        message: 'Pemberitahuan Tunggakan Iuran Paguyuban GSS 2 Bulan (September 2026, Oktober 2026) Rp 50.000',
+        unpaidMonthsCount: 2,
+        totalArrears: 50000,
+        timestamp: '2026-10-28 09:30',
+        status: 'Terkirim'
+      }
+    ];
+  });
+
   // Real-Time Firebase Firestore Integration
   useEffect(() => {
     let unsubWarga: (() => void) | undefined;
@@ -280,23 +321,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let unsubPengumuman: (() => void) | undefined;
     let unsubFasum: (() => void) | undefined;
 
+    const currentDeleted: string[] = JSON.parse(localStorage.getItem('grisspo_deleted_ids') || '[]');
+    const isDbSeeded = localStorage.getItem('grisspo_seeded_v1') === 'true';
+
     try {
       // 1. Warga listener
       unsubWarga = onSnapshot(collection(db, 'warga'), (snapshot) => {
         if (!snapshot.empty) {
           const cloudData: Resident[] = [];
           snapshot.forEach((d) => {
-            cloudData.push(d.data() as Resident);
+            if (!currentDeleted.includes(d.id)) {
+              cloudData.push(d.data() as Resident);
+            }
           });
           cloudData.sort((a, b) => (a.no || 0) - (b.no || 0));
           setResidents(cloudData);
           localStorage.setItem('grisspo_residents', JSON.stringify(cloudData));
           setIsCloudSynced(true);
-        } else {
-          // If Firestore collection is empty, seed initial residents to Cloud!
+        } else if (!isDbSeeded) {
           initialResidents.forEach((res) => {
             setDoc(doc(db, 'warga', res.id), res).catch(() => {});
           });
+          localStorage.setItem('grisspo_seeded_v1', 'true');
         }
       }, (err) => {
         console.warn('Firestore warga listener error:', err.message);
@@ -307,12 +353,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!snapshot.empty) {
           const cloudTrx: Transaction[] = [];
           snapshot.forEach((d) => {
-            cloudTrx.push(d.data() as Transaction);
+            if (!currentDeleted.includes(d.id)) {
+              cloudTrx.push(d.data() as Transaction);
+            }
           });
           cloudTrx.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
           setTransactions(cloudTrx);
           localStorage.setItem('grisspo_transactions', JSON.stringify(cloudTrx));
-        } else {
+        } else if (!isDbSeeded) {
           initialTransactions.forEach((trx) => {
             setDoc(doc(db, 'keuangan_transaksi', trx.id), trx).catch(() => {});
           });
@@ -326,7 +374,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!snapshot.empty) {
           const cloudJimpit: JimpitDailyReport[] = [];
           snapshot.forEach((d) => {
-            cloudJimpit.push(d.data() as JimpitDailyReport);
+            if (!currentDeleted.includes(d.id)) {
+              cloudJimpit.push(d.data() as JimpitDailyReport);
+            }
           });
           cloudJimpit.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           setJimpitReports(cloudJimpit);
@@ -341,12 +391,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!snapshot.empty) {
           const cloudInv: InventoryItem[] = [];
           snapshot.forEach((d) => {
-            cloudInv.push(d.data() as InventoryItem);
+            if (!currentDeleted.includes(d.id)) {
+              cloudInv.push(d.data() as InventoryItem);
+            }
           });
           cloudInv.sort((a, b) => (a.no || 0) - (b.no || 0));
           setInventory(cloudInv);
           localStorage.setItem('grisspo_inventory', JSON.stringify(cloudInv));
-        } else {
+        } else if (!isDbSeeded) {
           initialInventory.forEach((inv) => {
             setDoc(doc(db, 'inventaris', inv.id), inv).catch(() => {});
           });
@@ -360,11 +412,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!snapshot.empty) {
           const cloudForum: ForumPost[] = [];
           snapshot.forEach((d) => {
-            cloudForum.push(d.data() as ForumPost);
+            if (!currentDeleted.includes(d.id)) {
+              cloudForum.push(d.data() as ForumPost);
+            }
           });
           setForumPosts(cloudForum);
           localStorage.setItem('grisspo_forum_posts', JSON.stringify(cloudForum));
-        } else {
+        } else if (!isDbSeeded) {
           initialForumPosts.forEach((p) => {
             setDoc(doc(db, 'forum_posts', p.id), p).catch(() => {});
           });
@@ -378,11 +432,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!snapshot.empty) {
           const cloudAnn: Announcement[] = [];
           snapshot.forEach((d) => {
-            cloudAnn.push(d.data() as Announcement);
+            if (!currentDeleted.includes(d.id)) {
+              cloudAnn.push(d.data() as Announcement);
+            }
           });
           setAnnouncements(cloudAnn);
           localStorage.setItem('grisspo_announcements', JSON.stringify(cloudAnn));
-        } else {
+        } else if (!isDbSeeded) {
           initialAnnouncements.forEach((ann) => {
             setDoc(doc(db, 'pengumuman', ann.id), ann).catch(() => {});
           });
@@ -396,12 +452,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!snapshot.empty) {
           const cloudFasum: FasumBooking[] = [];
           snapshot.forEach((d) => {
-            cloudFasum.push(d.data() as FasumBooking);
+            if (!currentDeleted.includes(d.id)) {
+              cloudFasum.push(d.data() as FasumBooking);
+            }
           });
           cloudFasum.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
           setFasumBookings(cloudFasum);
           localStorage.setItem('grisspo_fasum_bookings', JSON.stringify(cloudFasum));
-        } else {
+        } else if (!isDbSeeded) {
           initialFasumBookings.forEach((b) => {
             setDoc(doc(db, 'fasum_bookings', b.id), b).catch(() => {});
           });
@@ -627,7 +685,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak akses menghapus data warga!');
       return;
     }
-    setResidents((prev) => prev.filter((r) => r.id !== id));
+    markAsDeleted(id);
+    const updated = residents.filter((r) => r.id !== id);
+    setResidents(updated);
+    localStorage.setItem('grisspo_residents', JSON.stringify(updated));
     try {
       await deleteDoc(doc(db, 'warga', id));
     } catch (err) {
@@ -664,7 +725,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak akses menghapus data inventaris!');
       return;
     }
-    setInventory((prev) => prev.filter((i) => i.id !== id));
+    markAsDeleted(id);
+    const updated = inventory.filter((i) => i.id !== id);
+    setInventory(updated);
+    localStorage.setItem('grisspo_inventory', JSON.stringify(updated));
     try {
       await deleteDoc(doc(db, 'inventaris', id));
     } catch (err) {
@@ -791,6 +855,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak menghapus laporan jimpitan!');
       return;
     }
+    markAsDeleted(id);
 
     const reportToDelete = jimpitReports.find((r) => r.id === id);
     if (reportToDelete) {
@@ -863,6 +928,198 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateRondaGroup = async (group: RondaGroup) => {
+    if (currentUser.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak mengedit jadwal ronda!');
+      return;
+    }
+    const updated = rondaSchedule.map((g) => (g.day === group.day ? group : g));
+    setRondaSchedule(updated);
+    localStorage.setItem('grisspo_ronda_schedule', JSON.stringify(updated));
+    try {
+      await setDoc(doc(db, 'ronda_schedules', group.day), group);
+    } catch (err) {
+      console.warn('Firestore update ronda group notice:', err);
+    }
+  };
+
+  // Feature: Pembayaran Kekurangan Jimpitan terintegrasi ke Laporan Keuangan Paguyuban
+  const payJimpitanDeficit = async (
+    residentId: string,
+    amount: number,
+    method: 'qris' | 'transfer' | 'cash',
+    notes?: string
+  ): Promise<{ success: boolean; message: string; transactionId?: string }> => {
+    const resident = residents.find((r) => r.id === residentId);
+    if (!resident) {
+      return { success: false, message: 'Data warga tidak ditemukan!' };
+    }
+    if (amount <= 0) {
+      return { success: false, message: 'Nominal pembayaran harus lebih besar dari Rp 0!' };
+    }
+
+    // 1. Deduct deficit: deduct previousMonthsJimpitanDeficit first, then surplus to jimpitanPaidMonth
+    let remaining = amount;
+    let prevDeficit = resident.previousMonthsJimpitanDeficit || 0;
+    const deductPrev = Math.min(prevDeficit, remaining);
+    prevDeficit -= deductPrev;
+    remaining -= deductPrev;
+
+    let curPaid = (resident.jimpitanPaidMonth || 0) + remaining;
+
+    const updatedRes: Resident = {
+      ...resident,
+      previousMonthsJimpitanDeficit: prevDeficit,
+      jimpitanPaidMonth: curPaid,
+      points: (resident.points || 0) + 15
+    };
+
+    setResidents((prev) => prev.map((r) => (r.id === residentId ? updatedRes : r)));
+    localStorage.setItem(
+      'grisspo_residents',
+      JSON.stringify(residents.map((r) => (r.id === residentId ? updatedRes : r)))
+    );
+    try {
+      await setDoc(doc(db, 'warga', resident.id), updatedRes);
+    } catch (err) {
+      console.warn('Firestore update warga notice:', err);
+    }
+
+    // 2. Automatically record income transaction in Keuangan Kas Paguyuban
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const now = Date.now();
+    const hash = await computeTransactionHash(
+      'pemasukan',
+      'Pemasukan Jimpitan Bulanan',
+      amount,
+      dateStr,
+      currentUser.name,
+      now
+    );
+
+    const newTrx: Transaction = {
+      id: `trx-jimpit-pay-${now}`,
+      type: 'pemasukan',
+      category: 'Pemasukan Jimpitan Bulanan',
+      amount,
+      date: dateStr,
+      description: `Pelunasan Kekurangan Jimpitan: ${resident.name} (${resident.houseNumber}) via ${method.toUpperCase()}${notes ? ` - ${notes}` : ''}`,
+      recordedBy: `${currentUser.name} (${currentUser.role.toUpperCase()})`,
+      userRole: currentUser.role,
+      sourceHouse: resident.houseNumber,
+      encryptedHash: hash,
+      isAnomaly: false,
+      timestamp: now
+    };
+
+    setTransactions((prev) => [newTrx, ...prev]);
+    localStorage.setItem('grisspo_transactions', JSON.stringify([newTrx, ...transactions]));
+    try {
+      await setDoc(doc(db, 'keuangan_transaksi', newTrx.id), newTrx);
+    } catch (err) {
+      console.warn('Firestore pay jimpit trx notice:', err);
+    }
+
+    // 3. Award loyalty points & push announcement
+    awardPoints(resident.id, 15, `Pelunasan kekurangan jimpitan via ${method.toUpperCase()}`);
+
+    addAnnouncement(
+      `Pelunasan Kekurangan Jimpitan: ${resident.name} (${resident.houseNumber})`,
+      `Pembayaran kekurangan jimpitan sebesar Rp ${amount.toLocaleString('id-ID')} via ${method.toUpperCase()} telah berhasil diverifikasi dan tercatat di Kas Paguyuban.`,
+      'Keuangan',
+      false
+    );
+
+    return {
+      success: true,
+      message: `Pembayaran kekurangan jimpitan Rp ${amount.toLocaleString('id-ID')} berhasil dicatat & otomatis masuk Laporan Kas Keuangan Paguyuban!`,
+      transactionId: newTrx.id
+    };
+  };
+
+  // Feature: Automated WhatsApp Notification for >= 2 months unpaid iuran
+  const sendWhatsAppIuranWarning = async (
+    residentId: string
+  ): Promise<{ success: boolean; url: string; log: WhatsAppNotificationLog }> => {
+    const resident = residents.find((r) => r.id === residentId);
+    if (!resident) throw new Error('Data warga tidak ditemukan!');
+
+    const unpaidMonths = resident.iuranUnpaidMonths || 2;
+    const totalArrears = unpaidMonths * 25000;
+    const monthListStr =
+      resident.unpaidMonthNames && resident.unpaidMonthNames.length > 0
+        ? resident.unpaidMonthNames.join(', ')
+        : `${unpaidMonths} bulan terakhir`;
+
+    const rawPhone = (resident.phone || '').replace(/[^0-9]/g, '');
+    let formattedPhone = rawPhone;
+    if (formattedPhone.startsWith('0')) {
+      formattedPhone = '62' + formattedPhone.slice(1);
+    } else if (!formattedPhone.startsWith('62')) {
+      formattedPhone = '62' + formattedPhone;
+    }
+
+    const messageText = `*PEMBERITAHUAN TUNGGAKAN IURAN PERUM GSS 1*\n` +
+      `Yth. Bpk/Ibu *${resident.name}* (Rumah *${resident.houseNumber}*)\n` +
+      `Paguyuban Griya Sedayu Selaras 1\n\n` +
+      `Berdasarkan pembukuan keuangan paguyuban warga, kami menginformasikan bahwa terdapat tunggakan Iuran Bulanan selama *${unpaidMonths} Bulan Berturut-turut* (${monthListStr}) dengan rincian kewajiban:\n` +
+      `• Nominal Iuran: Rp 25.000 / KK / bulan\n` +
+      `• Total Tunggakan: *Rp ${totalArrears.toLocaleString('id-ID')}*\n\n` +
+      `Sesuai Tata Tertib Warga Perum GSS 2026, mohon kerjasamanya untuk segera melakukan pelunasan melalui transfer kas atau konfirmasi ke:\n` +
+      `- Bendahara 1: Bpk. Ahmad (Rumah B 02)\n` +
+      `- Bendahara 2: Bpk. Robi (Rumah C 15)\n` +
+      `- Superadmin: Bpk. Beni (Rumah B 24)\n\n` +
+      `Terima kasih atas perhatian dan kerjasamanya demi kelancaran operasional keamanan & kebersihan lingkungan kita bersama.`;
+
+    const encodedUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(messageText)}`;
+
+    const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    const updatedResident: Resident = {
+      ...resident,
+      lastWhatsAppWarningSent: nowStr
+    };
+
+    setResidents((prev) => prev.map((r) => (r.id === residentId ? updatedResident : r)));
+    try {
+      await setDoc(doc(db, 'warga', resident.id), updatedResident);
+    } catch (err) {}
+
+    const newLog: WhatsAppNotificationLog = {
+      id: `walog-${Date.now()}`,
+      residentName: resident.name,
+      residentHouse: resident.houseNumber,
+      phoneNumber: resident.phone || formattedPhone,
+      message: messageText,
+      unpaidMonthsCount: unpaidMonths,
+      totalArrears: totalArrears,
+      timestamp: nowStr,
+      status: 'Terkirim'
+    };
+
+    const nextLogs = [newLog, ...whatsAppLogs];
+    setWhatsAppLogs(nextLogs);
+    localStorage.setItem('grisspo_wa_logs', JSON.stringify(nextLogs));
+    try {
+      await setDoc(doc(db, 'whatsapp_logs', newLog.id), newLog);
+    } catch (err) {}
+
+    return { success: true, url: encodedUrl, log: newLog };
+  };
+
+  const deleteWhatsAppLog = async (id: string) => {
+    if (currentUser.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin yang memiliki hak menghapus log WhatsApp!');
+      return;
+    }
+    markAsDeleted(id);
+    const updated = whatsAppLogs.filter((l) => l.id !== id);
+    setWhatsAppLogs(updated);
+    localStorage.setItem('grisspo_wa_logs', JSON.stringify(updated));
+    try {
+      await deleteDoc(doc(db, 'whatsapp_logs', id));
+    } catch (err) {}
+  };
+
   // Finance Transactions with Firestore sync
   const addTransaction = async (
     trxData: Omit<Transaction, 'id' | 'encryptedHash' | 'timestamp' | 'isAnomaly'>
@@ -915,7 +1172,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak akses menghapus transaksi keuangan!');
       return;
     }
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
+    markAsDeleted(id);
+    const updated = transactions.filter((t) => t.id !== id);
+    setTransactions(updated);
+    localStorage.setItem('grisspo_transactions', JSON.stringify(updated));
     try {
       await deleteDoc(doc(db, 'keuangan_transaksi', id));
     } catch (err) {
@@ -1014,7 +1274,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak moderasi menghapus topik diskusi!');
       return;
     }
-    setForumPosts((prev) => prev.filter((p) => p.id !== postId));
+    markAsDeleted(postId);
+    const updated = forumPosts.filter((p) => p.id !== postId);
+    setForumPosts(updated);
+    localStorage.setItem('grisspo_forum_posts', JSON.stringify(updated));
     try {
       await deleteDoc(doc(db, 'forum_posts', postId));
     } catch (err) {
@@ -1173,6 +1436,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak menghapus pengumuman!');
       return;
     }
+    markAsDeleted(id);
     const filtered = announcements.filter((a) => a.id !== id);
     setAnnouncements(filtered);
     localStorage.setItem('grisspo_announcements', JSON.stringify(filtered));
@@ -1341,6 +1605,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert('Hanya Superadmin (Bpk. Beni B24) yang memiliki hak menghapus data pemesanan fasum.');
       return;
     }
+    markAsDeleted(bookingId);
     const filtered = fasumBookings.filter((b) => b.id !== bookingId);
     setFasumBookings(filtered);
     localStorage.setItem('grisspo_fasum_bookings', JSON.stringify(filtered));
@@ -1366,11 +1631,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addResident,
 
         rondaSchedule,
+        updateRondaGroup,
         jimpitReports,
         submitDailyJimpit,
         deleteJimpitReport,
+        payJimpitanDeficit,
         removeRondaMember,
         addRondaMember,
+
+        whatsAppLogs,
+        sendWhatsAppIuranWarning,
+        deleteWhatsAppLog,
 
         inventory,
         updateInventoryItem,

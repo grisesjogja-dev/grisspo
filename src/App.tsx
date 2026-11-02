@@ -16,12 +16,28 @@ import { LoginModal } from './components/LoginModal';
 import { NotificationModal } from './components/NotificationModal';
 import { EmailAlertsModal } from './components/EmailAlertsModal';
 import { PengurusModal } from './components/PengurusModal';
+import { IuranWarningModal } from './components/IuranWarningModal';
 
 const MainApp: React.FC = () => {
-  const { activeView, isPengurusOpen, setIsPengurusOpen } = useApp();
+  const { activeView, isPengurusOpen, setIsPengurusOpen, currentUser, residents } = useApp();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isEmailAlertsOpen, setIsEmailAlertsOpen] = useState(false);
+  const [isIuranWarningOpen, setIsIuranWarningOpen] = useState(false);
+
+  // Trigger warning modal on login or user switch if resident has >= 2 months unpaid iuran
+  React.useEffect(() => {
+    const resident = residents.find(
+      (r) =>
+        r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentUser.houseNumber.replace(/\s+/g, '').toUpperCase() ||
+        r.id === currentUser.id
+    );
+    if (resident && (resident.iuranUnpaidMonths || 0) >= 2) {
+      setIsIuranWarningOpen(true);
+    } else {
+      setIsIuranWarningOpen(false);
+    }
+  }, [currentUser.id, currentUser.houseNumber, residents]);
 
   const renderCurrentView = () => {
     switch (activeView) {
@@ -95,6 +111,10 @@ const MainApp: React.FC = () => {
       <PengurusModal
         isOpen={isPengurusOpen}
         onClose={() => setIsPengurusOpen(false)}
+      />
+      <IuranWarningModal
+        isOpen={isIuranWarningOpen}
+        onClose={() => setIsIuranWarningOpen(false)}
       />
     </div>
   );
