@@ -11,7 +11,8 @@ import {
   PointLog,
   Announcement,
   UserRole,
-  FasumBooking
+  FasumBooking,
+  DayOfWeek
 } from '../types';
 import {
   initialResidents,
@@ -91,12 +92,14 @@ interface AppContextType {
   pointLogs: PointLog[];
   redeemReward: (rewardId: string) => { success: boolean; message: string };
   awardPoints: (userId: string, points: number, reason: string) => void;
+  deletePointLog: (id: string) => Promise<void>;
 
   // Announcements & Email Alerts
   announcements: Announcement[];
   addAnnouncement: (title: string, message: string, category: Announcement['category'], isImportant?: boolean) => Promise<void>;
   deleteAnnouncement: (id: string) => Promise<void>;
   emailAlerts: EmailAlertLog[];
+  clearEmailAlerts: () => void;
 
   // Fasum Booking & Automatic Payment
   fasumBookings: FasumBooking[];
@@ -180,7 +183,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   // Ronda Schedule
-  const [rondaSchedule] = useState<RondaGroup[]>(initialRondaSchedule);
+  const [rondaSchedule, setRondaSchedule] = useState<RondaGroup[]>(() => {
+    const saved = localStorage.getItem('grisspo_ronda_schedule');
+    return saved ? JSON.parse(saved) : initialRondaSchedule;
+  });
 
   // Jimpitan Reports
   const [jimpitReports, setJimpitReports] = useState<JimpitDailyReport[]>(() => {
@@ -1123,6 +1129,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  const deletePointLog = async (id: string) => {
+    if (currentUser.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak menghapus log poin warga!');
+      return;
+    }
+    setPointLogs((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const clearEmailAlerts = () => {
+    if (currentUser.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin yang memiliki hak membersihkan log anomali!');
+      return;
+    }
+    setEmailAlerts([]);
+  };
+
   // Announcements with Firestore sync
   const addAnnouncement = async (
     title: string,
@@ -1377,11 +1399,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         pointLogs,
         redeemReward,
         awardPoints,
+        deletePointLog,
 
         announcements,
         addAnnouncement,
         deleteAnnouncement,
         emailAlerts,
+        clearEmailAlerts,
 
         fasumBookings,
         addFasumBooking,

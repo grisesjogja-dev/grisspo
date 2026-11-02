@@ -8,7 +8,7 @@ interface EmailAlertsModalProps {
 }
 
 export const EmailAlertsModal: React.FC<EmailAlertsModalProps> = ({ isOpen, onClose }) => {
-  const { emailAlerts } = useApp();
+  const { emailAlerts, clearEmailAlerts, currentUser } = useApp();
 
   if (!isOpen) return null;
 
@@ -69,10 +69,22 @@ export const EmailAlertsModal: React.FC<EmailAlertsModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 text-center">
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex gap-2">
+          {currentUser.role === 'superadmin' && emailAlerts.length > 0 && (
+            <button
+              onClick={() => {
+                if (confirm('Bersihkan seluruh log anomali email ini?')) {
+                  clearEmailAlerts();
+                }
+              }}
+              className="py-2.5 px-4 bg-red-100 hover:bg-red-200 text-red-700 font-bold rounded-xl text-xs transition"
+            >
+              Hapus Semua Log (Superadmin)
+            </button>
+          )}
           <button
             onClick={onClose}
-            className="w-full py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition"
+            className="flex-1 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition"
           >
             Tutup Log Anomali
           </button>

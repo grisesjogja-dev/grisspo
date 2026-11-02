@@ -17,7 +17,7 @@ import {
 import confetti from 'canvas-confetti';
 
 export const LoyaltyPointsView: React.FC = () => {
-  const { currentUser, rewards, pointLogs, redeemReward, residents } = useApp();
+  const { currentUser, rewards, pointLogs, redeemReward, residents, deletePointLog } = useApp();
   const [activeTab, setActiveTab] = useState<'catalog' | 'history' | 'leaderboard'>('catalog');
 
   const getRank = (pts: number) => {
@@ -240,12 +240,27 @@ export const LoyaltyPointsView: React.FC = () => {
                     {log.userName} ({log.houseNumber}) &bull; {log.timestamp}
                   </div>
                 </div>
-                <div
-                  className={`font-black text-sm ${
-                    log.pointsChange > 0 ? 'text-emerald-600' : 'text-red-600'
-                  }`}
-                >
-                  {log.pointsChange > 0 ? `+${log.pointsChange}` : log.pointsChange} Poin
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`font-black text-sm ${
+                      log.pointsChange > 0 ? 'text-emerald-600' : 'text-red-600'
+                    }`}
+                  >
+                    {log.pointsChange > 0 ? `+${log.pointsChange}` : log.pointsChange} Poin
+                  </div>
+                  {currentUser.role === 'superadmin' && (
+                    <button
+                      onClick={() => {
+                        if (confirm(`Hapus catatan mutasi poin "${log.reason}"?`)) {
+                          deletePointLog(log.id);
+                        }
+                      }}
+                      className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                      title="Hapus Log Poin (Superadmin)"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

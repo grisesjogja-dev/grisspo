@@ -22,6 +22,7 @@ export const ForumView: React.FC = () => {
     forumPosts,
     createForumPost,
     addForumComment,
+    deleteForumComment,
     togglePostLike,
     deleteForumPost,
     togglePinPost,
@@ -266,9 +267,24 @@ export const ForumView: React.FC = () => {
                         <span className="font-bold text-slate-800">
                           {comm.authorName} <span className="font-mono text-slate-500 font-normal">({comm.authorHouse})</span>
                         </span>
-                        <span className="text-[10px] text-slate-400">
-                          {new Date(comm.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-slate-400">
+                            {new Date(comm.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          {currentUser.role === 'superadmin' && (
+                            <button
+                              onClick={() => {
+                                if (confirm('Hapus komentar ini?')) {
+                                  deleteForumComment(post.id, comm.id);
+                                }
+                              }}
+                              className="p-0.5 text-slate-400 hover:text-red-600 rounded transition"
+                              title="Hapus Komentar (Superadmin)"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <p className="text-slate-700 leading-relaxed">{comm.content}</p>
                     </div>
