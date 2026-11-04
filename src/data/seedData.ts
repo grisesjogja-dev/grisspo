@@ -376,6 +376,19 @@ export const fasumFacilities: FasumFacilityConfig[] = [
     badgeColor: 'bg-amber-100 text-amber-800 border-amber-200'
   },
   {
+    id: 'sendok_piring',
+    name: 'Sendok - Piring (mengisi kas ibu-ibu)',
+    category: 'Peralatan Acara',
+    defaultFee: 0,
+    unit: 'per hari',
+    capacity: '4 tikar',
+    description: 'Pinjam Sendok dan atau piring untuk acara warga atau pribadi dirumah.',
+    facilitiesIncluded: ['Tersedia 2 lusin yang bisa di gunakan'],
+    rules: ['Pengembalian maksimal H+1 setelah acara', 'Kerusakan atau kehilangan menjadi tanggung jawab peminjam'],
+    icon: 'Tent',
+    badgeColor: 'bg-amber-100 text-amber-800 border-amber-200'
+  },
+  {
     id: 'sound_proyektor',
     name: 'Sound System Portable & Mic Wireless',
     category: 'Elektronik & Multimedia',
