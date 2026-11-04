@@ -47,7 +47,10 @@ export const JimpitanView: React.FC = () => {
     submitDailyJimpit,
     deleteJimpitReport,
     payJimpitanDeficit,
-    currentUser
+    currentUser,
+    attendanceSessions,
+    submitAttendanceSession,
+    deleteAttendanceSession
   } = useApp();
 
   const isSuperadmin = currentUser.role === 'superadmin';
@@ -101,6 +104,73 @@ export const JimpitanView: React.FC = () => {
 
   // Find ronda members on duty for selected day
   const dutyGroup = rondaSchedule.find((g) => g.day === selectedDay);
+
+  // --- STATE FOR ABSENSI PETUGAS RONDA HARI INI (SEMUA ROLE BISA AKSES) ---
+  const [rondaAttendanceMap, setRondaAttendanceMap] = useState<Record<string, boolean>>({});
+  const [isSavingRondaAttendance, setIsSavingRondaAttendance] = useState(false);
+  const [rondaAttendanceSavedMsg, setRondaAttendanceSavedMsg] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (dutyGroup) {
+      const init: Record<string, boolean> = {};
+      dutyGroup.members.forEach((m) => {
+        init[m] = true;
+      });
+      setRondaAttendanceMap(init);
+    }
+  }, [dutyGroup?.day, selectedDate]);
+
+  const todayRondaSession = useMemo(() => {
+    return attendanceSessions.find((s) => s.type === 'ronda' && s.date === selectedDate);
+  }, [attendanceSessions, selectedDate]);
+
+  const handleSaveRondaAttendance = async () => {
+    if (!dutyGroup) return;
+    setIsSavingRondaAttendance(true);
+
+    const attendees = dutyGroup.members.map((memberName) => {
+      const res = residents.find(
+        (r) =>
+          r.name.trim().toLowerCase().includes(memberName.trim().toLowerCase()) ||
+          memberName.trim().toLowerCase().includes(r.name.trim().toLowerCase())
+      );
+      return {
+        residentId: res ? res.id : `ronda-${memberName}`,
+        residentName: res ? res.name : memberName,
+        residentHouse: res ? res.houseNumber : 'Petugas Ronda',
+        isPresent: rondaAttendanceMap[memberName] ?? true,
+        checkedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
+      };
+    });
+
+    const presentCount = attendees.filter((a) => a.isPresent).length;
+
+    try {
+      await submitAttendanceSession({
+        type: 'ronda',
+        title: `Absensi Petugas Ronda Hari ${selectedDay} (${selectedDate})`,
+        date: selectedDate,
+        day: selectedDay,
+        attendees,
+        recordedBy: `${currentUser.name} (${currentUser.houseNumber})`,
+        userRole: currentUser.role,
+        pointsAwarded: true
+      });
+
+      try {
+        confetti({ particleCount: 60, spread: 60 });
+      } catch {}
+
+      setRondaAttendanceSavedMsg(
+        `Absensi ronda berhasil disimpan! ${presentCount} petugas hadir dan memperoleh masing-masing +25 GRISS-POIN.`
+      );
+      setTimeout(() => setRondaAttendanceSavedMsg(null), 6000);
+    } catch (err: any) {
+      alert('Gagal menyimpan absensi ronda: ' + err.message);
+    } finally {
+      setIsSavingRondaAttendance(false);
+    }
+  };
 
   // Quick preset nominal options (multiples of 500)
   const quickNominals = [500, 1000, 1500, 2000, 2500, 5000];
@@ -498,24 +568,162 @@ export const JimpitanView: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Schedule Duty Reminder */}
+          {/* ABSENSI PETUGAS RONDA HARI INI (HANYA MUNCUL PETUGAS HARI ITU & SEMUA ROLE BISA AKSES) */}
           {dutyGroup && (
-            <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold">
-                  {dutyGroup.day.slice(0, 3)}
-                </div>
-                <div>
-                  <span className="font-bold text-amber-900">
-                    Jadwal Tim Ronda Hari {dutyGroup.day}:
-                  </span>
-                  <div className="text-slate-600 mt-0.5">
-                    Anggota Petugas: <span className="font-semibold text-slate-900">{dutyGroup.members.join(', ')}</span>
+            <div className="bg-white border-2 border-amber-300 rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-amber-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-sm shadow-md shadow-amber-500/20">
+                    {dutyGroup.day.slice(0, 3)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-extrabold text-slate-900 text-sm sm:text-base">
+                        Absensi Petugas Ronda Hari {dutyGroup.day}
+                      </h3>
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-extrabold text-[10px]">
+                        Semua Role Bisa Akses
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Checklist kehadiran petugas jaga ronda & jimpit hari {dutyGroup.day} ({selectedDate}). Hadir mendapatkan{' '}
+                      <span className="font-black text-amber-700">+25 GRISS-POIN</span> per petugas.
+                    </p>
                   </div>
                 </div>
+
+                {todayRondaSession ? (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+                    <CheckCircle2 size={15} className="text-emerald-600" />
+                    <span>Sudah Diabsen ({todayRondaSession.attendees.filter(a => a.isPresent).length} Hadir)</span>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+                    <Clock size={14} className="text-amber-600" />
+                    <span>Belum Diabsen Hari Ini</span>
+                  </div>
+                )}
               </div>
-              <div className="text-[11px] text-amber-800 font-semibold bg-white/80 px-3 py-1.5 rounded-lg border border-amber-200">
-                Wajib kunci portal pkl 21.00 WIB & sapu pendopo
+
+              {/* Duty Officers Checklist Grid (ONLY Duty Officers for this Day) */}
+              <div>
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-2">
+                  Daftar Petugas Ronda Hari {dutyGroup.day} ({dutyGroup.members.length} Orang):
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {dutyGroup.members.map((memberName) => {
+                    const isChecked = rondaAttendanceMap[memberName] ?? true;
+                    const res = residents.find(
+                      (r) =>
+                        r.name.trim().toLowerCase().includes(memberName.trim().toLowerCase()) ||
+                        memberName.trim().toLowerCase().includes(r.name.trim().toLowerCase())
+                    );
+                    const isCaptain = dutyGroup.captain === memberName;
+
+                    return (
+                      <div
+                        key={memberName}
+                        onClick={() =>
+                          setRondaAttendanceMap((prev) => ({
+                            ...prev,
+                            [memberName]: !isChecked
+                          }))
+                        }
+                        className={`p-3 rounded-xl border-2 cursor-pointer transition select-none flex flex-col justify-between ${
+                          isChecked
+                            ? 'bg-amber-50/80 border-amber-400 text-amber-950 shadow-xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-500 opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-2">
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-800 font-mono font-bold">
+                            {res?.houseNumber || 'GSS'}
+                          </span>
+                          {isCaptain && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-black">
+                              KAPTEN
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="font-extrabold text-xs sm:text-sm truncate">
+                          {memberName}
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between pt-2 border-t border-amber-200/50">
+                          <span
+                            className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                              isChecked
+                                ? 'bg-amber-600 text-white'
+                                : 'bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            {isChecked ? 'Hadir (+25 Poin)' : 'Tidak Hadir'}
+                          </span>
+
+                          {isChecked ? (
+                            <CheckCircle2 size={18} className="text-amber-600" />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full border-2 border-slate-300" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Attendance Saved Notification */}
+              {rondaAttendanceSavedMsg && (
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                  <span>{rondaAttendanceSavedMsg}</span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+                <div className="text-xs text-slate-500 flex items-center gap-2">
+                  <ShieldCheck size={14} className="text-amber-600" />
+                  <span>
+                    Petugas hadir:{' '}
+                    <strong className="text-slate-800">
+                      {Object.values(rondaAttendanceMap).filter(Boolean).length} dari {dutyGroup.members.length} orang
+                    </strong>
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isSavingRondaAttendance}
+                    onClick={handleSaveRondaAttendance}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white text-xs font-black rounded-xl shadow-md shadow-amber-600/20 transition"
+                  >
+                    <CheckSquare size={14} />
+                    <span>
+                      {isSavingRondaAttendance
+                        ? 'Menyimpan...'
+                        : `Simpan Absensi Ronda (+25 Poin / Petugas)`}
+                    </span>
+                  </button>
+
+                  {todayRondaSession && isSuperadmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm('Hapus sesi absensi ronda tanggal ini?')) {
+                          deleteAttendanceSession(todayRondaSession.id);
+                        }
+                      }}
+                      className="p-2.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition"
+                      title="Hapus Absensi Ronda Hari Ini (Superadmin)"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}

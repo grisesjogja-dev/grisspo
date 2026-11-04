@@ -19,7 +19,8 @@ import {
   Wallet,
   CheckCircle2,
   CalendarCheck,
-  Building2
+  Building2,
+  FileText
 } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
@@ -95,6 +96,14 @@ export const DashboardView: React.FC = () => {
             >
               <Building2 size={16} className="text-blue-300" />
               <span>Sewa Fasum GSS</span>
+            </button>
+
+            <button
+              onClick={() => setActiveView('notulen')}
+              className="px-5 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-white text-xs font-bold rounded-xl border border-emerald-400/40 transition flex items-center gap-2"
+            >
+              <FileText size={16} className="text-emerald-300" />
+              <span>Notulen & Absensi</span>
             </button>
           </div>
         </div>

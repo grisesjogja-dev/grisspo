@@ -12,6 +12,7 @@ import { TataTertibView } from './components/TataTertibView';
 import { ForumView } from './components/ForumView';
 import { LoyaltyPointsView } from './components/LoyaltyPointsView';
 import { FasumBookingView } from './components/FasumBookingView';
+import { NotulenDanAbsensiView } from './components/NotulenDanAbsensiView';
 import { LoginModal } from './components/LoginModal';
 import { NotificationModal } from './components/NotificationModal';
 import { EmailAlertsModal } from './components/EmailAlertsModal';
@@ -61,6 +62,8 @@ const MainApp: React.FC = () => {
         return <ForumView />;
       case 'poin':
         return <LoyaltyPointsView />;
+      case 'notulen':
+        return <NotulenDanAbsensiView />;
       default:
         return <DashboardView />;
     }

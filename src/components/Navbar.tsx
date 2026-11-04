@@ -10,7 +10,8 @@ import {
   BookOpen,
   MessageSquare,
   Award,
-  Building2
+  Building2,
+  FileText
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -19,6 +20,7 @@ export const Navbar: React.FC = () => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'jimpitan', label: 'Jimpit Online', icon: Coins, highlight: true },
+    { id: 'notulen', label: 'Notulen & Absensi', icon: FileText },
     { id: 'fasum', label: 'Sewa Fasum', icon: Building2 },
     { id: 'keuangan', label: 'Keuangan Kas', icon: ReceiptText },
     { id: 'warga', label: 'Data Warga', icon: Users },
@@ -115,17 +117,17 @@ export const Navbar: React.FC = () => {
             <span className="text-[9px] mt-0.5">Warga</span>
           </button>
 
-          {/* More menu drawer trigger: toggles view to forum, inventaris, or tatib */}
+          {/* More menu drawer trigger: toggles view to notulen, forum, inventaris, or tatib */}
           <button
             onClick={() => {
-              if (['inventaris', 'ronda', 'tatib', 'forum', 'poin'].includes(activeView)) {
+              if (['notulen', 'inventaris', 'ronda', 'tatib', 'forum', 'poin'].includes(activeView)) {
                 setActiveView('dashboard');
               } else {
-                setActiveView('forum');
+                setActiveView('notulen');
               }
             }}
             className={`flex flex-col items-center py-1.5 rounded-xl transition ${
-              ['inventaris', 'ronda', 'tatib', 'forum', 'poin'].includes(activeView)
+              ['notulen', 'inventaris', 'ronda', 'tatib', 'forum', 'poin'].includes(activeView)
                 ? 'text-indigo-400 font-bold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}

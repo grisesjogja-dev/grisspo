@@ -1,4 +1,4 @@
-import { Resident, InventoryItem, RondaGroup, Transaction, ForumPost, LoyaltyReward, Announcement, FasumBooking, FasumFacilityConfig } from '../types';
+import { Resident, InventoryItem, RondaGroup, Transaction, ForumPost, LoyaltyReward, Announcement, FasumBooking, FasumFacilityConfig, MeetingNote, AttendanceSession } from '../types';
 
 /**
  * 58 Data Warga Perum Griya Sedayu Selaras 1
@@ -6,68 +6,68 @@ import { Resident, InventoryItem, RondaGroup, Transaction, ForumPost, LoyaltyRew
  */
 export const initialResidents: Resident[] = [
   // BLOK A
-  { id: 'w-a01', no: 1, name: 'BU DESTI', houseNumber: 'A 01', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7801', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 140 },
-  { id: 'w-a02', no: 2, name: 'BAPAK AGUS', houseNumber: 'A 02', block: 'A', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7802', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 10000, points: 60 },
-  { id: 'w-a03', no: 3, name: 'BAPAK DANANG', houseNumber: 'A 03', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7803', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 210 },
-  { id: 'w-a04', no: 4, name: 'BAPAK NANDO', houseNumber: 'A 04', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7804', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 180 },
-  { id: 'w-a05', no: 5, name: 'BAPAK DWI', houseNumber: 'A 05', block: 'A', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7805', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 2, unpaidMonthNames: ['September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 15000, points: 20 },
-  { id: 'w-a06', no: 6, name: 'BAPAK HANTORO', houseNumber: 'A 06', block: 'A', statusRumah: 'DI HUNI KONTRAK', role: 'warga', phone: '0812-3456-7806', familyMembers: 2, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 120 },
-  { id: 'w-a07', no: 7, name: 'BAPAK ANGGO', houseNumber: 'A 07', block: 'A', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7807', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 1, unpaidMonthNames: ['Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 5000, points: 10 },
-  { id: 'w-a08', no: 8, name: 'BAPAK IRVAN', houseNumber: 'A 08', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7808', familyMembers: 4, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 195 },
-  { id: 'w-a09', no: 9, name: 'BAPAK TRI S', houseNumber: 'A 09', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7809', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 175 },
-  { id: 'w-a10', no: 10, name: 'BAPAK ILHAM', houseNumber: 'A 10', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7810', familyMembers: 2, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 160 },
-  { id: 'w-a11', no: 11, name: 'BAPAK CATUR', houseNumber: 'A 11', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7811', familyMembers: 4, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 220 },
-  { id: 'w-a12', no: 12, name: 'BAPAK IDHAM', houseNumber: 'A 12', block: 'A', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7812', familyMembers: 1, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 12000, previousMonthsJimpitanDeficit: 5000, points: 70 },
-  { id: 'w-a13', no: 13, name: 'BAPAK WALUYO', houseNumber: 'A 13', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7813', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 260 },
-  { id: 'w-a14', no: 14, name: 'BAPAK OCHIN/ BAPAK TONO', houseNumber: 'A 14', block: 'A', statusRumah: 'DI HUNI KONTRAK', role: 'warga', phone: '0812-3456-7814', familyMembers: 2, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 145 },
-  { id: 'w-a15', no: 15, name: 'BAPAK FAJAR', houseNumber: 'A 15', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7815', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 190 },
-  { id: 'w-a16', no: 16, name: 'BAPAK EDI', houseNumber: 'A 16', block: 'A', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7816', familyMembers: 1, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 10000, previousMonthsJimpitanDeficit: 5000, points: 85 },
+  { id: 'w-a01', no: 1, name: 'BU DESTI', houseNumber: 'A 01', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7801', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-a02', no: 2, name: 'BAPAK AGUS', houseNumber: 'A 02', block: 'A', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7802', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 10000, points: 0 },
+  { id: 'w-a03', no: 3, name: 'BAPAK DANANG', houseNumber: 'A 03', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7803', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-a04', no: 4, name: 'BAPAK NANDO', houseNumber: 'A 04', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7804', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-a05', no: 5, name: 'BAPAK DWI', houseNumber: 'A 05', block: 'A', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7805', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 2, unpaidMonthNames: ['September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 15000, points: 0 },
+  { id: 'w-a06', no: 6, name: 'BAPAK HANTORO', houseNumber: 'A 06', block: 'A', statusRumah: 'DI HUNI KONTRAK', role: 'warga', phone: '0812-3456-7806', familyMembers: 2, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-a07', no: 7, name: 'BAPAK ANGGO', houseNumber: 'A 07', block: 'A', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7807', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 1, unpaidMonthNames: ['Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 5000, points: 0 },
+  { id: 'w-a08', no: 8, name: 'BAPAK IRVAN', houseNumber: 'A 08', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7808', familyMembers: 4, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-a09', no: 9, name: 'BAPAK TRI S', houseNumber: 'A 09', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7809', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-a10', no: 10, name: 'BAPAK ILHAM', houseNumber: 'A 10', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7810', familyMembers: 2, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-a11', no: 11, name: 'BAPAK CATUR', houseNumber: 'A 11', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7811', familyMembers: 4, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-a12', no: 12, name: 'BAPAK IDHAM', houseNumber: 'A 12', block: 'A', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7812', familyMembers: 1, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 12000, previousMonthsJimpitanDeficit: 5000, points: 0 },
+  { id: 'w-a13', no: 13, name: 'BAPAK WALUYO', houseNumber: 'A 13', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7813', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-a14', no: 14, name: 'BAPAK OCHIN/ BAPAK TONO', houseNumber: 'A 14', block: 'A', statusRumah: 'DI HUNI KONTRAK', role: 'warga', phone: '0812-3456-7814', familyMembers: 2, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-a15', no: 15, name: 'BAPAK FAJAR', houseNumber: 'A 15', block: 'A', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7815', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-a16', no: 16, name: 'BAPAK EDI', houseNumber: 'A 16', block: 'A', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7816', familyMembers: 1, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 10000, previousMonthsJimpitanDeficit: 5000, points: 0 },
 
   // BLOK B
-  { id: 'w-b01', no: 17, name: 'BAPAK GALIH (B01)', houseNumber: 'B 01', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7817', familyMembers: 1, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 10000, previousMonthsJimpitanDeficit: 5000, points: 65 },
-  { id: 'w-b02', no: 18, name: 'BAPAK AHMAD', houseNumber: 'B 02', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'bendahara1', phone: '0812-3456-7818', familyMembers: 4, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 350 },
-  { id: 'w-b03', no: 19, name: 'BAPAK WIBI', houseNumber: 'B 03', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7819', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 2, unpaidMonthNames: ['September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 20000, points: 15 },
-  { id: 'w-b04', no: 20, name: 'BAPAK FIRMAN', houseNumber: 'B 04', block: 'B', statusRumah: 'DI HUNI KONTRAK', role: 'warga', phone: '0812-3456-7820', familyMembers: 2, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 130 },
-  { id: 'w-b05', no: 21, name: 'BAPAK ANDRE', houseNumber: 'B 05', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7821', familyMembers: 1, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 90 },
-  { id: 'w-b06', no: 22, name: 'IBU RATNA/FITRAH', houseNumber: 'B 06', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7822', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 160 },
-  { id: 'w-b07', no: 23, name: 'BAPAK ANANG', houseNumber: 'B 07', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7823', familyMembers: 4, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 220 },
-  { id: 'w-b08', no: 24, name: 'BAPAK ASROFI', houseNumber: 'B 08', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7824', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 175 },
-  { id: 'w-b09', no: 25, name: 'BAPAK D. SUNYOTO', houseNumber: 'B 09', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7825', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 2, unpaidMonthNames: ['September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 30000, points: 20 },
-  { id: 'w-b10', no: 26, name: 'IBU ELVIRA', houseNumber: 'B 10', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7826', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 3, unpaidMonthNames: ['Agustus 2026', 'September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 45000, points: 25 },
-  { id: 'w-b11', no: 27, name: 'BAPAK RIMBA', houseNumber: 'B 11', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7827', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 2, unpaidMonthNames: ['September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 20000, points: 10 },
-  { id: 'w-b12', no: 28, name: 'RESKY', houseNumber: 'B 12', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7828', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 10000, points: 70 },
-  { id: 'w-b13', no: 29, name: 'BAPAK GALIH (B13)', houseNumber: 'B 13', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7829', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 190 },
-  { id: 'w-b14', no: 30, name: 'BAPAK GALIH (B14)', houseNumber: 'B 14', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7830', familyMembers: 2, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 140 },
-  { id: 'w-b15', no: 31, name: 'BAPAK GALIH (B15)', houseNumber: 'B 15', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7831', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 5000, points: 40 },
-  { id: 'w-b16', no: 32, name: 'BAPAK IRWAN', houseNumber: 'B 16', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7832', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 10000, points: 80 },
-  { id: 'w-b17', no: 33, name: 'BAPAK WINARDI', houseNumber: 'B 17', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7833', familyMembers: 0, monthlyIuranPaid: false, jimpitanPaidMonth: 0, points: 10 },
-  { id: 'w-b18', no: 34, name: 'BAPAK GALIH (B18)', houseNumber: 'B 18', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7834', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 5000, points: 45 },
-  { id: 'w-b19', no: 35, name: 'BAPAK EKO', houseNumber: 'B 19', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7835', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 215 },
-  { id: 'w-b20', no: 36, name: 'BAPAK DYO', houseNumber: 'B 20', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7836', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 185 },
-  { id: 'w-b21', no: 37, name: 'BAPAK RONI', houseNumber: 'B 21', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7837', familyMembers: 0, monthlyIuranPaid: false, jimpitanPaidMonth: 0, points: 15 },
-  { id: 'w-b22', no: 38, name: 'MBAK BELLA', houseNumber: 'B 22', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7838', familyMembers: 0, monthlyIuranPaid: false, jimpitanPaidMonth: 0, points: 30 },
-  { id: 'w-b23', no: 39, name: 'BAPAK SONY', houseNumber: 'B 23', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'admin_inventaris', phone: '0812-3456-7839', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 300 },
-  { id: 'w-b24', no: 40, name: 'BAPAK BENI', houseNumber: 'B 24', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'superadmin', phone: '0812-3456-7840', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 450 },
-  { id: 'w-b25', no: 41, name: 'BAPAK DEWO', houseNumber: 'B 25', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7841', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 170 },
-  { id: 'w-b26', no: 42, name: 'BAPAK HENGKI', houseNumber: 'B 26', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7842', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 200 },
-  { id: 'w-b27', no: 43, name: 'BAPAK DWINOP (B27)', houseNumber: 'B 27', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7843', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 175 },
+  { id: 'w-b01', no: 17, name: 'BAPAK GALIH (B01)', houseNumber: 'B 01', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7817', familyMembers: 1, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 10000, previousMonthsJimpitanDeficit: 5000, points: 0 },
+  { id: 'w-b02', no: 18, name: 'BAPAK AHMAD', houseNumber: 'B 02', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'bendahara1', phone: '0812-3456-7818', familyMembers: 4, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-b03', no: 19, name: 'BAPAK WIBI', houseNumber: 'B 03', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7819', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 2, unpaidMonthNames: ['September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 20000, points: 0 },
+  { id: 'w-b04', no: 20, name: 'BAPAK FIRMAN', houseNumber: 'B 04', block: 'B', statusRumah: 'DI HUNI KONTRAK', role: 'warga', phone: '0812-3456-7820', familyMembers: 2, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-b05', no: 21, name: 'BAPAK ANDRE', houseNumber: 'B 05', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7821', familyMembers: 1, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-b06', no: 22, name: 'IBU RATNA/FITRAH', houseNumber: 'B 06', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7822', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-b07', no: 23, name: 'BAPAK ANANG', houseNumber: 'B 07', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7823', familyMembers: 4, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-b08', no: 24, name: 'BAPAK ASROFI', houseNumber: 'B 08', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7824', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-b09', no: 25, name: 'BAPAK D. SUNYOTO', houseNumber: 'B 09', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7825', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 2, unpaidMonthNames: ['September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 30000, points: 0 },
+  { id: 'w-b10', no: 26, name: 'IBU ELVIRA', houseNumber: 'B 10', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7826', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 3, unpaidMonthNames: ['Agustus 2026', 'September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 45000, points: 0 },
+  { id: 'w-b11', no: 27, name: 'BAPAK RIMBA', houseNumber: 'B 11', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7827', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 2, unpaidMonthNames: ['September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 20000, points: 0 },
+  { id: 'w-b12', no: 28, name: 'RESKY', houseNumber: 'B 12', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7828', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 10000, points: 0 },
+  { id: 'w-b13', no: 29, name: 'BAPAK GALIH (B13)', houseNumber: 'B 13', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7829', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-b14', no: 30, name: 'BAPAK GALIH (B14)', houseNumber: 'B 14', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7830', familyMembers: 2, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-b15', no: 31, name: 'BAPAK GALIH (B15)', houseNumber: 'B 15', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7831', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 5000, points: 0 },
+  { id: 'w-b16', no: 32, name: 'BAPAK IRWAN', houseNumber: 'B 16', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7832', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 10000, points: 0 },
+  { id: 'w-b17', no: 33, name: 'BAPAK WINARDI', houseNumber: 'B 17', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7833', familyMembers: 0, monthlyIuranPaid: false, jimpitanPaidMonth: 0, points: 0 },
+  { id: 'w-b18', no: 34, name: 'BAPAK GALIH (B18)', houseNumber: 'B 18', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7834', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 5000, points: 0 },
+  { id: 'w-b19', no: 35, name: 'BAPAK EKO', houseNumber: 'B 19', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7835', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-b20', no: 36, name: 'BAPAK DYO', houseNumber: 'B 20', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7836', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-b21', no: 37, name: 'BAPAK RONI', houseNumber: 'B 21', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7837', familyMembers: 0, monthlyIuranPaid: false, jimpitanPaidMonth: 0, points: 0 },
+  { id: 'w-b22', no: 38, name: 'MBAK BELLA', houseNumber: 'B 22', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7838', familyMembers: 0, monthlyIuranPaid: false, jimpitanPaidMonth: 0, points: 0 },
+  { id: 'w-b23', no: 39, name: 'BAPAK SONY', houseNumber: 'B 23', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'admin_inventaris', phone: '0812-3456-7839', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-b24', no: 40, name: 'BAPAK BENI', houseNumber: 'B 24', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'superadmin', phone: '0812-3456-7840', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-b25', no: 41, name: 'BAPAK DEWO', houseNumber: 'B 25', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7841', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-b26', no: 42, name: 'BAPAK HENGKI', houseNumber: 'B 26', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7842', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-b27', no: 43, name: 'BAPAK DWINOP (B27)', houseNumber: 'B 27', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7843', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
 
   // BLOK C
-  { id: 'w-c01', no: 44, name: 'BAPAK GAPTA', houseNumber: 'C 01', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7844', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 180 },
-  { id: 'w-c02', no: 45, name: 'BAPAK GALIH (C02)', houseNumber: 'C 02', block: 'C', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7845', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 10000, points: 60 },
-  { id: 'w-c03', no: 46, name: 'BAPAK TRI CAHYADI', houseNumber: 'C 03', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7846', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 195 },
-  { id: 'w-c04', no: 47, name: 'BAPAK GALIH (C04)', houseNumber: 'C 04', block: 'C', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7847', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 10000, points: 65 },
-  { id: 'w-c05', no: 48, name: 'BAPAK ALID', houseNumber: 'C 05', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7848', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 170 },
-  { id: 'w-c06', no: 49, name: 'IBU YULIA', houseNumber: 'C 06', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7849', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 165 },
+  { id: 'w-c01', no: 44, name: 'BAPAK GAPTA', houseNumber: 'C 01', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7844', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-c02', no: 45, name: 'BAPAK GALIH (C02)', houseNumber: 'C 02', block: 'C', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7845', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 10000, points: 0 },
+  { id: 'w-c03', no: 46, name: 'BAPAK TRI CAHYADI', houseNumber: 'C 03', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7846', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-c04', no: 47, name: 'BAPAK GALIH (C04)', houseNumber: 'C 04', block: 'C', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7847', familyMembers: 1, monthlyIuranPaid: true, jimpitanPaidMonth: 10000, points: 0 },
+  { id: 'w-c05', no: 48, name: 'BAPAK ALID', houseNumber: 'C 05', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7848', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-c06', no: 49, name: 'IBU YULIA', houseNumber: 'C 06', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7849', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
   { id: 'w-c07', no: 50, name: 'KOSONG BLOK C-07', houseNumber: 'C 07', block: 'C', statusRumah: 'BELUM ADA PEMILIK', role: 'warga', phone: '-', familyMembers: 0, monthlyIuranPaid: false, jimpitanPaidMonth: 0, points: 0 },
-  { id: 'w-c08', no: 51, name: 'BAPAK HANS', houseNumber: 'C 08', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7851', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 185 },
-  { id: 'w-c09', no: 52, name: 'BAPAK RANTO', houseNumber: 'C 09', block: 'C', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7852', familyMembers: 0, monthlyIuranPaid: false, jimpitanPaidMonth: 0, points: 10 },
-  { id: 'w-c10', no: 53, name: 'BAPAK RUDI', houseNumber: 'C 10', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7853', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 280 },
-  { id: 'w-c11', no: 54, name: 'BAPAK FALLAH', houseNumber: 'C 11', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7854', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 175 },
-  { id: 'w-c12', no: 55, name: 'BAPAK JOKO TRI', houseNumber: 'C 12', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7855', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 230 },
-  { id: 'w-c13', no: 56, name: 'BAPAK SAYOGO', houseNumber: 'C 13', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7856', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 210 },
-  { id: 'w-c14', no: 57, name: 'BAPAK DIAN', houseNumber: 'C 14', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7857', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 180 },
-  { id: 'w-c15', no: 58, name: 'BAPAK ROBY', houseNumber: 'C 15', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'bendahara2', phone: '0812-3456-7858', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 340 },
+  { id: 'w-c08', no: 51, name: 'BAPAK HANS', houseNumber: 'C 08', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7851', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-c09', no: 52, name: 'BAPAK RANTO', houseNumber: 'C 09', block: 'C', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7852', familyMembers: 0, monthlyIuranPaid: false, jimpitanPaidMonth: 0, points: 0 },
+  { id: 'w-c10', no: 53, name: 'BAPAK RUDI', houseNumber: 'C 10', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7853', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-c11', no: 54, name: 'BAPAK FALLAH', houseNumber: 'C 11', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7854', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-c12', no: 55, name: 'BAPAK JOKO TRI', houseNumber: 'C 12', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7855', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-c13', no: 56, name: 'BAPAK SAYOGO', houseNumber: 'C 13', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7856', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-c14', no: 57, name: 'BAPAK DIAN', houseNumber: 'C 14', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7857', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-c15', no: 58, name: 'BAPAK ROBY', houseNumber: 'C 15', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'bendahara2', phone: '0812-3456-7858', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
 ];
 
 /**
@@ -673,6 +673,66 @@ export const initialFasumBookings: FasumBooking[] = [
     notes: 'Uang titip di Bendahara 2 (Pak Robi C15)',
     createdAt: '2026-10-31 08:30',
     e2eHash: 'c4e901a884ef23b7a123'
+  }
+];
+
+/**
+ * Notulen Rapat Paguyuban Perum Griya Sedayu Selaras 1
+ */
+export const initialMeetingNotes: MeetingNote[] = [
+  {
+    id: 'notulen-1',
+    meetingDate: '2026-10-15',
+    title: 'Rapat Evaluasi Keamanan Lingkungan & Pengadaan Portal Baru',
+    content: 'Evaluasi jadwal ronda malam dan penegakan batas jam tutup portal gerbang perumahan pukul 21.00 WIB. Warga sepakat memperkuat pengamanan dan mengganti gembok fisik jika ada kerusakan.',
+    status: 'terlaksana',
+    personInCharge: 'Bpk. BENI (Ketua Paguyuban)',
+    recordedBy: 'Bpk. BENI',
+    createdAt: '2026-10-15T21:00:00Z'
+  },
+  {
+    id: 'notulen-2',
+    meetingDate: '2026-10-25',
+    title: 'Kerja Bakti Saluran Air & Drainase Menghadapi Musim Hujan',
+    content: 'Pembersihan saluran got di Blok A, B, dan C serta penataan tanaman liar di fasilitas umum perumahan. Dihimbau setiap warga menyediakan kantong sampah mandiri.',
+    status: 'on_proses',
+    personInCharge: 'Bpk. WALUYO (Sie Lapangan)',
+    recordedBy: 'Bpk. BENI',
+    createdAt: '2026-10-25T10:30:00Z'
+  },
+  {
+    id: 'notulen-3',
+    meetingDate: '2026-11-10',
+    title: 'Rencana Pengadaan Lampu Sorot LED & Pengecatan Gapura',
+    content: 'Peremajaan gapura depan perumahan dan penambahan penerangan di pojok tikungan fasum Blok C untuk meningkatkan kenyamanan warga saat malam hari.',
+    status: 'belum_terlaksana',
+    personInCharge: 'Bpk. SONY (Admin Inventaris)',
+    recordedBy: 'Bpk. BENI',
+    createdAt: '2026-10-30T19:00:00Z'
+  }
+];
+
+/**
+ * Data Awal Sesi Absensi Warga (Ronda, Kerjabakti, Rapat Bulanan)
+ */
+export const initialAttendanceSessions: AttendanceSession[] = [
+  {
+    id: 'att-session-1',
+    type: 'rapat',
+    title: 'Absensi Rapat Rutin Bulanan Oktober 2026',
+    date: '2026-10-15',
+    attendees: [
+      { residentId: 'w-b24', residentName: 'BENI', residentHouse: 'B 24', isPresent: true, checkedAt: '2026-10-15 19:30' },
+      { residentId: 'w-b02', residentName: 'AHMAD', residentHouse: 'B 02', isPresent: true, checkedAt: '2026-10-15 19:32' },
+      { residentId: 'w-c15', residentName: 'ROBY', residentHouse: 'C 15', isPresent: true, checkedAt: '2026-10-15 19:35' },
+      { residentId: 'w-b23', residentName: 'SONY', residentHouse: 'B 23', isPresent: true, checkedAt: '2026-10-15 19:40' },
+      { residentId: 'w-a13', residentName: 'WALUYO', residentHouse: 'A 13', isPresent: true, checkedAt: '2026-10-15 19:42' },
+      { residentId: 'w-a03', residentName: 'DANANG', residentHouse: 'A 03', isPresent: true, checkedAt: '2026-10-15 19:45' }
+    ],
+    recordedBy: 'Bpk. BENI',
+    userRole: 'superadmin',
+    pointsAwarded: true,
+    createdAt: '2026-10-15T19:50:00Z'
   }
 ];
 

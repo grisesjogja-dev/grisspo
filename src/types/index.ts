@@ -238,3 +238,41 @@ export interface FasumBooking {
   e2eHash?: string;
 }
 
+export type AttendanceType = 'ronda' | 'kerjabakti' | 'rapat';
+
+export interface AttendanceItem {
+  residentId: string;
+  residentName: string;
+  residentHouse: string;
+  isPresent: boolean;
+  notes?: string;
+  checkedAt?: string;
+}
+
+export interface AttendanceSession {
+  id: string;
+  type: AttendanceType;
+  title: string;
+  date: string; // YYYY-MM-DD
+  day?: DayOfWeek;
+  attendees: AttendanceItem[];
+  recordedBy: string;
+  userRole: UserRole;
+  pointsAwarded: boolean;
+  createdAt: string;
+}
+
+export type MeetingNoteStatus = 'terlaksana' | 'on_proses' | 'belum_terlaksana';
+
+export interface MeetingNote {
+  id: string;
+  meetingDate: string; // YYYY-MM-DD
+  title: string;
+  content: string; // isi notulen
+  status: MeetingNoteStatus; // terlaksana, on proses, belum terlaksana
+  personInCharge: string; // penanggungjawab
+  recordedBy: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+

@@ -96,41 +96,57 @@ export const LoyaltyPointsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Ways to Earn Points */}
+      {/* Ways to Earn Points - Official 5 New Rules */}
       <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-        <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-          <Sparkles size={16} className="text-amber-600" />
-          <span>Cara Mendapatkan GRISS-Poin:</span>
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
-          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-center">
-            <span className="font-black text-amber-800 text-lg block">+10 Poin</span>
-            <span className="font-semibold text-slate-700">Jimpitan Ronda</span>
-            <p className="text-[10px] text-slate-500 mt-0.5">Tiap kali menjimpit</p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
+          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <Sparkles size={16} className="text-amber-600" />
+            <span>Rincian Resmi GRISS-POIN Baru:</span>
+          </h3>
+          <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold">
+            Poin Lama Telah Direset & Diperbarui
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 text-xs">
+          <div className="p-3.5 rounded-xl bg-amber-50 border-2 border-amber-200 text-center flex flex-col justify-between">
+            <div>
+              <span className="font-black text-amber-800 text-xl block">+25 Poin</span>
+              <span className="font-extrabold text-slate-900 block mt-1">Hadir Ronda / Jimpit</span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-2">Kehadiran jadwal ronda & jimpit malam</p>
           </div>
 
-          <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-center">
-            <span className="font-black text-blue-800 text-lg block">+50 Poin</span>
-            <span className="font-semibold text-slate-700">Ronda Malam</span>
-            <p className="text-[10px] text-slate-500 mt-0.5">Kehadiran jaga malam</p>
+          <div className="p-3.5 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center flex flex-col justify-between">
+            <div>
+              <span className="font-black text-emerald-800 text-xl block">+40 Poin</span>
+              <span className="font-extrabold text-slate-900 block mt-1">Hadir Kerja Bakti</span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-2">Gotong royong lingkungan warga GSS</p>
           </div>
 
-          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
-            <span className="font-black text-emerald-800 text-lg block">+30 Poin</span>
-            <span className="font-semibold text-slate-700">Kerja Bakti</span>
-            <p className="text-[10px] text-slate-500 mt-0.5">Gotong royong warga</p>
+          <div className="p-3.5 rounded-xl bg-blue-50 border-2 border-blue-200 text-center flex flex-col justify-between">
+            <div>
+              <span className="font-black text-blue-800 text-xl block">+25 Poin</span>
+              <span className="font-extrabold text-slate-900 block mt-1">Hadir Rapat Bulanan</span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-2">Pertemuan musyawarah rutin paguyuban</p>
           </div>
 
-          <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 text-center">
-            <span className="font-black text-purple-800 text-lg block">+25 Poin</span>
-            <span className="font-semibold text-slate-700">Sumbangan Warga</span>
-            <p className="text-[10px] text-slate-500 mt-0.5">Donasi & tali asih</p>
+          <div className="p-3.5 rounded-xl bg-purple-50 border-2 border-purple-200 text-center flex flex-col justify-between">
+            <div>
+              <span className="font-black text-purple-800 text-xl block">+50 Poin</span>
+              <span className="font-extrabold text-slate-900 block mt-1">Partisipasi Sumbangan</span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-2">Sumbangan sukarela minimal Rp 100.000</p>
           </div>
 
-          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-center col-span-2 sm:col-span-1">
-            <span className="font-black text-rose-800 text-lg block">+5 Poin</span>
-            <span className="font-semibold text-slate-700">Aspirasi Forum</span>
-            <p className="text-[10px] text-slate-500 mt-0.5">Topik diskusi rukun</p>
+          <div className="p-3.5 rounded-xl bg-rose-50 border-2 border-rose-200 text-center flex flex-col justify-between">
+            <div>
+              <span className="font-black text-rose-800 text-xl block">+10 Poin</span>
+              <span className="font-extrabold text-slate-900 block mt-1">Aktif Jimpitan 1 Bulan</span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-2">Min Rp 500 tiap hari tanpa kosong 1 bulan</p>
           </div>
         </div>
       </div>
