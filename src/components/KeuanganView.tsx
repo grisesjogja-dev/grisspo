@@ -37,7 +37,8 @@ export const KeuanganView: React.FC = () => {
     totalExpense,
     currentBalance,
     currentUser,
-    emailAlerts
+    emailAlerts,
+    resetFeatureData
   } = useApp();
 
   // Filters
@@ -64,7 +65,7 @@ export const KeuanganView: React.FC = () => {
   const [editHouse, setEditHouse] = useState<string>('');
 
   const handleOpenEdit = (trx: Transaction) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak akses master edit transaksi kas!');
       return;
     }

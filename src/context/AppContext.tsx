@@ -50,11 +50,14 @@ import {
 } from 'firebase/firestore';
 
 interface AppContextType {
-  currentUser: User;
-  setCurrentUser: (user: User) => void;
+  currentUser: User | null;
+  setCurrentUser: (user: User | null) => void;
   loginWithHouseNumber: (houseInput: string, passInput: string) => { success: boolean; message: string };
   switchRoleWithPassword: (houseNumber: string, passwordInput: string) => { success: boolean; message: string };
   logout: () => void;
+  updateResidentProfile: (updates: { name: string; phone: string; familyMembers?: number; password?: string }) => Promise<void>;
+  resetFeatureData: (feature: string) => Promise<void>;
+  masterResetAllFeatures: () => Promise<void>;
 
   // Residents
   residents: Resident[];
@@ -161,26 +164,29 @@ const defaultUser: User = {
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeView, setActiveView] = useState<string>('dashboard');
-  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(true);
-  const [isPengurusOpen, setIsPengurusOpen] = useState<boolean>(false);
-
-  // User state
-  const [currentUser, setCurrentUser] = useState<User>(() => {
+  // User state - start null if not logged in
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('grisspo_user');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.houseNumber === 'B 24' || parsed.username === 'GrissB24') {
+        if (parsed && (parsed.houseNumber === 'B 24' || parsed.username === 'GrissB24')) {
           return { ...parsed, role: 'superadmin', name: 'BENI' };
         }
         return parsed;
       } catch {
-        return defaultUser;
+        return null;
       }
     }
-    return defaultUser;
+    return null;
   });
+
+  const [activeView, setActiveView] = useState<string>(() => {
+    const saved = localStorage.getItem('grisspo_user');
+    return saved ? 'dashboard' : 'jimpitan';
+  });
+  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(true);
+  const [isPengurusOpen, setIsPengurusOpen] = useState<boolean>(false);
 
   // Track permanently deleted IDs so deleted master data NEVER resurrects across any device
   const initialDeletedIds: string[] = (() => {
@@ -248,26 +254,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return [];
       }
     }
-    const defaultReports: JimpitDailyReport[] = [
-      {
-        id: 'jimpit-demo-01',
-        date: new Date().toISOString().slice(0, 10),
-        day: 'Sabtu' as DayOfWeek,
-        collectedBy: 'WALUYO & HENGKI',
-        entries: [
-          { houseNumber: 'A 01', residentName: 'DESTI', nominal: 1000, paymentMethod: 'cash' as const, timestamp: '20:15 WIB', collectedBy: 'WALUYO' },
-          { houseNumber: 'A 03', residentName: 'DANANG', nominal: 1500, paymentMethod: 'cash' as const, timestamp: '20:18 WIB', collectedBy: 'WALUYO' },
-          { houseNumber: 'A 04', residentName: 'NANDO', nominal: 1000, paymentMethod: 'cash' as const, timestamp: '20:20 WIB', collectedBy: 'WALUYO' },
-          { houseNumber: 'B 02', residentName: 'AHMAD 2', nominal: 2000, paymentMethod: 'transfer' as const, timestamp: '20:40 WIB', collectedBy: 'WALUYO' },
-          { houseNumber: 'B 24', residentName: 'BENI', nominal: 2000, paymentMethod: 'cash' as const, timestamp: '20:55 WIB', collectedBy: 'WALUYO' },
-          { houseNumber: 'C 15', residentName: 'ROBY C', nominal: 1500, paymentMethod: 'cash' as const, timestamp: '21:05 WIB', collectedBy: 'WALUYO' }
-        ],
-        totalNominal: 9000,
-        notes: 'Portal dikunci tepat pukul 21.00 WIB. Pendopo disapu dan dipel bersih.',
-        createdAt: new Date().toISOString()
-      }
-    ];
-    return defaultReports.filter((j) => !initialDeletedIds.includes(j.id));
+    return [];
   });
 
   // Transactions
@@ -353,7 +340,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id,
         collection: collectionName || 'general',
         deletedAt: new Date().toISOString(),
-        deletedBy: currentUser.name || 'Superadmin'
+        deletedBy: currentUser?.name || 'Superadmin'
       });
     } catch (err) {
       console.warn('Firestore system_deleted_ids sync notice:', err);
@@ -363,20 +350,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // WhatsApp Notification Logs for Iuran Arrears
   const [whatsAppLogs, setWhatsAppLogs] = useState<WhatsAppNotificationLog[]>(() => {
     const saved = localStorage.getItem('grisspo_wa_logs');
-    if (saved) return JSON.parse(saved);
-    return [
-      {
-        id: 'wa-seed-1',
-        residentName: 'DWI',
-        residentHouse: 'A 05',
-        phoneNumber: '0812-3456-7805',
-        message: 'Pemberitahuan Tunggakan Iuran Paguyuban GSS 2 Bulan (September 2026, Oktober 2026) Rp 50.000',
-        unpaidMonthsCount: 2,
-        totalArrears: 50000,
-        timestamp: '2026-10-28 09:30',
-        status: 'Terkirim'
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
       }
-    ];
+    }
+    return [];
   });
 
   // Watch deletedIds to ensure any real-time deletion from other devices purges local state instantly
@@ -811,6 +792,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setCurrentUser(loggedUser);
+    localStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
+    setActiveView('dashboard');
     return {
       success: true,
       message: `Login berhasil! Selamat datang Bpk/Ibu ${resident.name} (${resident.houseNumber}) - Role: ${resident.role.toUpperCase()}`
@@ -851,6 +834,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setCurrentUser(newUser);
+    localStorage.setItem('grisspo_user', JSON.stringify(newUser));
     return {
       success: true,
       message: `Otorisasi berhasil! Anda kini beralih sebagai ${resident.name} (${resident.role.toUpperCase()}).`
@@ -858,16 +842,230 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logout = () => {
-    const guestResident = residents.find((r) => r.houseNumber === 'A 03') || initialResidents[2];
-    setCurrentUser({
-      id: guestResident.id,
-      username: 'GrissA03',
-      name: guestResident.name,
-      houseNumber: guestResident.houseNumber,
-      role: 'warga',
-      points: guestResident.points,
-      phone: guestResident.phone
+    setCurrentUser(null);
+    localStorage.removeItem('grisspo_user');
+    setActiveView('jimpitan');
+  };
+
+  // Feature: Edit Profile for all roles with Firestore sync
+  const updateResidentProfile = async (updates: {
+    name: string;
+    phone: string;
+    familyMembers?: number;
+    password?: string;
+  }) => {
+    if (!currentUser) return;
+    const cleanName = updates.name.trim().toUpperCase();
+    const cleanPhone = updates.phone.trim();
+
+    const updatedUser: User = {
+      ...currentUser,
+      name: cleanName,
+      phone: cleanPhone
+    };
+    setCurrentUser(updatedUser);
+    localStorage.setItem('grisspo_user', JSON.stringify(updatedUser));
+
+    const updatedResidents = residents.map((r) => {
+      if (
+        r.id === currentUser.id ||
+        r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentUser.houseNumber.replace(/\s+/g, '').toUpperCase()
+      ) {
+        return {
+          ...r,
+          name: cleanName,
+          phone: cleanPhone,
+          familyMembers: updates.familyMembers !== undefined ? updates.familyMembers : r.familyMembers,
+          password: updates.password ? updates.password : r.password
+        };
+      }
+      return r;
     });
+    setResidents(updatedResidents);
+    localStorage.setItem('grisspo_residents', JSON.stringify(updatedResidents));
+
+    try {
+      const resDoc = updatedResidents.find(
+        (r) =>
+          r.id === currentUser.id ||
+          r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentUser.houseNumber.replace(/\s+/g, '').toUpperCase()
+      );
+      if (resDoc) {
+        await setDoc(doc(db, 'warga', resDoc.id), resDoc);
+      }
+    } catch (err) {
+      console.warn('Firestore updateResidentProfile sync error:', err);
+    }
+  };
+
+  // Feature: Delete / Reset data per feature (Superadmin)
+  const resetFeatureData = async (feature: string) => {
+    if (currentUser?.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang berhak melakukan reset data!');
+      return;
+    }
+
+    const idsToMark: string[] = [];
+
+    switch (feature) {
+      case 'keuangan': {
+        transactions.forEach((t) => idsToMark.push(t.id));
+        setTransactions([]);
+        localStorage.setItem('grisspo_transactions', JSON.stringify([]));
+        try {
+          const snap = await getDocs(collection(db, 'keuangan_transaksi'));
+          snap.forEach((d) => {
+            idsToMark.push(d.id);
+            deleteDoc(doc(db, 'keuangan_transaksi', d.id)).catch(() => {});
+          });
+        } catch (e) {
+          console.warn('Reset keuangan error:', e);
+        }
+        break;
+      }
+      case 'jimpitan': {
+        jimpitReports.forEach((j) => idsToMark.push(j.id));
+        setJimpitReports([]);
+        localStorage.setItem('grisspo_jimpit_reports', JSON.stringify([]));
+        try {
+          const snap = await getDocs(collection(db, 'jimpitan_records'));
+          snap.forEach((d) => {
+            idsToMark.push(d.id);
+            deleteDoc(doc(db, 'jimpitan_records', d.id)).catch(() => {});
+          });
+        } catch (e) {
+          console.warn('Reset jimpitan error:', e);
+        }
+        break;
+      }
+      case 'absensi': {
+        attendanceSessions.forEach((s) => idsToMark.push(s.id));
+        setAttendanceSessions([]);
+        localStorage.setItem('grisspo_attendance_sessions', JSON.stringify([]));
+        try {
+          const snap = await getDocs(collection(db, 'absensi_records'));
+          snap.forEach((d) => {
+            idsToMark.push(d.id);
+            deleteDoc(doc(db, 'absensi_records', d.id)).catch(() => {});
+          });
+        } catch (e) {
+          console.warn('Reset absensi error:', e);
+        }
+        break;
+      }
+      case 'notulen': {
+        meetingNotes.forEach((m) => idsToMark.push(m.id));
+        setMeetingNotes([]);
+        localStorage.setItem('grisspo_meeting_notes', JSON.stringify([]));
+        try {
+          const snap = await getDocs(collection(db, 'notulen_rapat'));
+          snap.forEach((d) => {
+            idsToMark.push(d.id);
+            deleteDoc(doc(db, 'notulen_rapat', d.id)).catch(() => {});
+          });
+        } catch (e) {
+          console.warn('Reset notulen error:', e);
+        }
+        break;
+      }
+      case 'fasum': {
+        fasumBookings.forEach((b) => idsToMark.push(b.id));
+        setFasumBookings([]);
+        localStorage.setItem('grisspo_fasum_bookings', JSON.stringify([]));
+        try {
+          const snap = await getDocs(collection(db, 'fasum_bookings'));
+          snap.forEach((d) => {
+            idsToMark.push(d.id);
+            deleteDoc(doc(db, 'fasum_bookings', d.id)).catch(() => {});
+          });
+        } catch (e) {
+          console.warn('Reset fasum error:', e);
+        }
+        break;
+      }
+      case 'forum': {
+        forumPosts.forEach((f) => idsToMark.push(f.id));
+        setForumPosts([]);
+        localStorage.setItem('grisspo_forum_posts', JSON.stringify([]));
+        try {
+          const snap = await getDocs(collection(db, 'forum_posts'));
+          snap.forEach((d) => {
+            idsToMark.push(d.id);
+            deleteDoc(doc(db, 'forum_posts', d.id)).catch(() => {});
+          });
+        } catch (e) {
+          console.warn('Reset forum error:', e);
+        }
+        break;
+      }
+      case 'pengumuman': {
+        announcements.forEach((a) => idsToMark.push(a.id));
+        setAnnouncements([]);
+        localStorage.setItem('grisspo_announcements', JSON.stringify([]));
+        try {
+          const snap = await getDocs(collection(db, 'pengumuman'));
+          snap.forEach((d) => {
+            idsToMark.push(d.id);
+            deleteDoc(doc(db, 'pengumuman', d.id)).catch(() => {});
+          });
+        } catch (e) {
+          console.warn('Reset pengumuman error:', e);
+        }
+        break;
+      }
+      case 'wa_logs': {
+        whatsAppLogs.forEach((w) => idsToMark.push(w.id));
+        setWhatsAppLogs([]);
+        localStorage.setItem('grisspo_wa_logs', JSON.stringify([]));
+        break;
+      }
+      case 'poin': {
+        pointLogs.forEach((p) => idsToMark.push(p.id));
+        setPointLogs([]);
+        localStorage.setItem('grisspo_point_logs', JSON.stringify([]));
+        const resetRes = residents.map((r) => ({ ...r, points: 0 }));
+        setResidents(resetRes);
+        localStorage.setItem('grisspo_residents', JSON.stringify(resetRes));
+        resetRes.forEach((r) => {
+          setDoc(doc(db, 'warga', r.id), r).catch(() => {});
+        });
+        if (currentUser) {
+          setCurrentUser((prev) => (prev ? { ...prev, points: 0 } : null));
+        }
+        break;
+      }
+    }
+
+    if (idsToMark.length > 0) {
+      const uniqueIds = Array.from(new Set(idsToMark));
+      setDeletedIds((prev) => {
+        const merged = Array.from(new Set([...prev, ...uniqueIds]));
+        localStorage.setItem('grisspo_deleted_ids', JSON.stringify(merged));
+        deletedIdsRef.current = merged;
+        return merged;
+      });
+
+      for (const did of uniqueIds) {
+        setDoc(doc(db, 'system_deleted_ids', did), {
+          id: did,
+          feature,
+          deletedAt: new Date().toISOString(),
+          deletedBy: currentUser?.name || 'Superadmin'
+        }).catch(() => {});
+      }
+    }
+  };
+
+  // Master reset all feature data across portal
+  const masterResetAllFeatures = async () => {
+    if (currentUser?.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang berhak melakukan master reset!');
+      return;
+    }
+    const features = ['keuangan', 'jimpitan', 'absensi', 'notulen', 'fasum', 'forum', 'pengumuman', 'wa_logs', 'poin'];
+    for (const feat of features) {
+      await resetFeatureData(feat);
+    }
   };
 
   // Resident actions with Firestore sync
@@ -2018,6 +2216,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loginWithHouseNumber,
         switchRoleWithPassword,
         logout,
+        updateResidentProfile,
+        resetFeatureData,
+        masterResetAllFeatures,
 
         residents,
         updateResident,

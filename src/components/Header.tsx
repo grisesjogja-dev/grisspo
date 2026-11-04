@@ -13,19 +13,25 @@ import {
   Lock,
   Users,
   CheckCircle2,
-  X
+  X,
+  Edit3,
+  ShieldAlert
 } from 'lucide-react';
 
 interface HeaderProps {
   onOpenLogin: () => void;
   onOpenNotifications: () => void;
   onOpenEmailAlerts: () => void;
+  onOpenEditProfile: () => void;
+  onOpenMasterReset: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenLogin,
   onOpenNotifications,
-  onOpenEmailAlerts
+  onOpenEmailAlerts,
+  onOpenEditProfile,
+  onOpenMasterReset
 }) => {
   const {
     currentUser,
@@ -59,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  const badge = getRoleBadge(currentUser.role);
+  const badge = currentUser ? getRoleBadge(currentUser.role) : null;
   const unreadCount = announcements.length;
 
   const handlePromptRolePassword = (roleName: string, residentName: string, houseNumber: string) => {
@@ -112,7 +118,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right controls */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Struktur Pengurus Paguyuban Button */}
+            {/* Struktur Pengurus Paguyuban Button (Always visible) */}
             <button
               onClick={() => setIsPengurusOpen(true)}
               className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-indigo-900/40 hover:bg-indigo-800/60 text-indigo-300 border border-indigo-700/50 transition flex items-center gap-1.5 text-xs font-bold"
@@ -122,149 +128,195 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden md:inline">Pengurus Paguyuban</span>
             </button>
 
-            {/* Anomaly email notification indicator */}
-            {emailAlerts.length > 0 && (
+            {!currentUser ? (
+              /* Unauthenticated / Guest state: Only show Login Warga button */
               <button
-                onClick={onOpenEmailAlerts}
-                className="relative p-2 rounded-xl bg-red-900/40 text-red-400 border border-red-800 hover:bg-red-800/50 transition flex items-center gap-1.5 text-xs font-semibold"
-                title="Notifikasi Anomali Transaksi Kas (Terkirim ke Email)"
+                onClick={onOpenLogin}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-blue-500/25 border border-blue-400/30 transition transform active:scale-95"
               >
-                <AlertTriangle size={16} className="text-red-400 animate-bounce" />
-                <span className="hidden md:inline">Anomali Kas ({emailAlerts.length})</span>
+                <LogIn size={15} />
+                <span>Login Warga</span>
               </button>
+            ) : (
+              /* Authenticated state: Show points, notifications, and user profile menu */
+              <>
+                {/* Anomaly email notification indicator */}
+                {emailAlerts.length > 0 && (
+                  <button
+                    onClick={onOpenEmailAlerts}
+                    className="relative p-2 rounded-xl bg-red-900/40 text-red-400 border border-red-800 hover:bg-red-800/50 transition flex items-center gap-1.5 text-xs font-semibold"
+                    title="Notifikasi Anomali Transaksi Kas (Terkirim ke Email)"
+                  >
+                    <AlertTriangle size={16} className="text-red-400 animate-bounce" />
+                    <span className="hidden md:inline">Anomali Kas ({emailAlerts.length})</span>
+                  </button>
+                )}
+
+                {/* Points Badge */}
+                <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold">
+                  <Coins size={14} className="text-amber-400" />
+                  <span>{currentUser.points || 0} Poin</span>
+                </div>
+
+                {/* Announcements Notification */}
+                <button
+                  onClick={onOpenNotifications}
+                  className="relative p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700"
+                  title="Pengumuman Warga"
+                >
+                  <Bell size={18} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* User profile / Role Switcher Menu */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowRoleMenu(!showRoleMenu)}
+                    className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 transition text-left"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-xs text-white uppercase">
+                      {currentUser.name.slice(0, 2)}
+                    </div>
+                    <div className="hidden sm:block">
+                      <div className="text-xs font-bold text-white flex items-center gap-1">
+                        <span>{currentUser.name}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">({currentUser.houseNumber})</span>
+                      </div>
+                      <div className={`text-[9px] font-semibold tracking-wider px-1.5 py-0.2 rounded border ${badge?.bg || 'bg-slate-800 text-slate-300'} inline-block`}>
+                        {badge?.label || 'WARGA GSS'}
+                      </div>
+                    </div>
+                    <ChevronDown size={14} className="text-slate-400 ml-0.5" />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {showRoleMenu && (
+                    <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-3 py-2 border-b border-slate-800 mb-2">
+                        <p className="text-xs text-slate-400">Sedang aktif sebagai:</p>
+                        <p className="text-sm font-bold text-white">{currentUser.name}</p>
+                        <p className="text-xs text-blue-400 font-mono">Rumah {currentUser.houseNumber} ({currentUser.role.toUpperCase()})</p>
+                        <div className="mt-1 flex items-center gap-1 text-[11px] text-amber-400 font-semibold">
+                          <Coins size={12} />
+                          <span>{currentUser.points || 0} Poin Loyalitas</span>
+                        </div>
+                      </div>
+
+                      {/* Profile & Superadmin Tools */}
+                      <div className="space-y-1 mb-2 pb-2 border-b border-slate-800">
+                        {/* Edit Profile Button for ALL roles */}
+                        <button
+                          onClick={() => {
+                            setShowRoleMenu(false);
+                            onOpenEditProfile();
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-blue-300 font-bold flex items-center gap-2 transition"
+                        >
+                          <Edit3 size={13} className="text-blue-400" />
+                          <span>Edit Profil Saya</span>
+                        </button>
+
+                        {/* Master Reset Button for Superadmin */}
+                        {currentUser.role === 'superadmin' && (
+                          <button
+                            onClick={() => {
+                              setShowRoleMenu(false);
+                              onOpenMasterReset();
+                            }}
+                            className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-red-950/40 text-red-300 font-bold flex items-center justify-between transition"
+                          >
+                            <span className="flex items-center gap-2">
+                              <ShieldAlert size={13} className="text-red-400" />
+                              <span>Hapus / Reset Master Data</span>
+                            </span>
+                            <span className="text-[9px] bg-red-900/60 text-red-200 border border-red-700 px-1 rounded font-mono">SA</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase px-2 py-1 flex items-center gap-1">
+                          <Lock size={11} className="text-amber-400" />
+                          <span>Ganti Role (Wajib Password):</span>
+                        </div>
+
+                        {/* 1. Superadmin (Beni B24) */}
+                        <button
+                          onClick={() => handlePromptRolePassword('Superadmin', 'BENI', 'B 24')}
+                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-red-300 font-semibold flex items-center justify-between"
+                        >
+                          <span>Superadmin (BENI - B 24)</span>
+                          <span className="text-[9px] bg-red-950 border border-red-700 px-1 rounded">Pass</span>
+                        </button>
+
+                        {/* 2. Bendahara 1 (Ahmad B02) */}
+                        <button
+                          onClick={() => handlePromptRolePassword('Bendahara 1', 'AHMAD', 'B 02')}
+                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-emerald-300 font-semibold flex items-center justify-between"
+                        >
+                          <span>Bendahara 1 (AHMAD - B 02)</span>
+                          <span className="text-[9px] bg-emerald-950 border border-emerald-700 px-1 rounded">Pass</span>
+                        </button>
+
+                        {/* 3. Bendahara 2 (Robi C15) */}
+                        <button
+                          onClick={() => handlePromptRolePassword('Bendahara 2', 'ROBI', 'C 15')}
+                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-teal-300 font-semibold flex items-center justify-between"
+                        >
+                          <span>Bendahara 2 (ROBI - C 15)</span>
+                          <span className="text-[9px] bg-teal-950 border border-teal-700 px-1 rounded">Pass</span>
+                        </button>
+
+                        {/* 4. Admin Inventaris (Sony B23) */}
+                        <button
+                          onClick={() => handlePromptRolePassword('Admin Inventaris', 'SONY', 'B 23')}
+                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-amber-300 font-semibold flex items-center justify-between"
+                        >
+                          <span>Admin Inventaris (SONY - B 23)</span>
+                          <span className="text-[9px] bg-amber-950 border border-amber-700 px-1 rounded">Pass</span>
+                        </button>
+
+                        {/* 5. Warga Biasa (Danang A03) */}
+                        <button
+                          onClick={() => handlePromptRolePassword('Warga', 'DANANG', 'A 03')}
+                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-slate-300 font-semibold flex items-center justify-between"
+                        >
+                          <span>Warga (DANANG - A 03)</span>
+                          <span className="text-[9px] bg-slate-800 border border-slate-700 px-1 rounded">Pass</span>
+                        </button>
+                      </div>
+
+                      <div className="pt-2 mt-2 border-t border-slate-800 flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setShowRoleMenu(false);
+                            onOpenLogin();
+                          }}
+                          className="flex-1 px-3 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-1.5"
+                        >
+                          <LogIn size={13} />
+                          <span>Form Login Warga</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowRoleMenu(false);
+                            logout();
+                          }}
+                          className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
+                          title="Keluar / Reset"
+                        >
+                          <LogOut size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
-
-            {/* Points Badge */}
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold">
-              <Coins size={14} className="text-amber-400" />
-              <span>{currentUser.points || 0} Poin</span>
-            </div>
-
-            {/* Announcements Notification */}
-            <button
-              onClick={onOpenNotifications}
-              className="relative p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700"
-              title="Pengumuman Warga"
-            >
-              <Bell size={18} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-
-            {/* User profile / Role Switcher Menu */}
-            <div className="relative">
-              <button
-                onClick={() => setShowRoleMenu(!showRoleMenu)}
-                className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 transition text-left"
-              >
-                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-xs text-white uppercase">
-                  {currentUser.name.slice(0, 2)}
-                </div>
-                <div className="hidden sm:block">
-                  <div className="text-xs font-bold text-white flex items-center gap-1">
-                    <span>{currentUser.name}</span>
-                    <span className="text-[10px] text-slate-400 font-mono">({currentUser.houseNumber})</span>
-                  </div>
-                  <div className={`text-[9px] font-semibold tracking-wider px-1.5 py-0.2 rounded border ${badge.bg} inline-block`}>
-                    {badge.label}
-                  </div>
-                </div>
-                <ChevronDown size={14} className="text-slate-400 ml-0.5" />
-              </button>
-
-              {/* Dropdown Menu */}
-              {showRoleMenu && (
-                <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-3 py-2 border-b border-slate-800 mb-2">
-                    <p className="text-xs text-slate-400">Sedang aktif sebagai:</p>
-                    <p className="text-sm font-bold text-white">{currentUser.name}</p>
-                    <p className="text-xs text-blue-400 font-mono">Rumah {currentUser.houseNumber} ({currentUser.role.toUpperCase()})</p>
-                    <div className="mt-1 flex items-center gap-1 text-[11px] text-amber-400 font-semibold">
-                      <Coins size={12} />
-                      <span>{currentUser.points || 0} Poin Loyalitas</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase px-2 py-1 flex items-center gap-1">
-                      <Lock size={11} className="text-amber-400" />
-                      <span>Ganti Role (Wajib Password):</span>
-                    </div>
-
-                    {/* 1. Superadmin (Beni B24) */}
-                    <button
-                      onClick={() => handlePromptRolePassword('Superadmin', 'BENI', 'B 24')}
-                      className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-red-300 font-semibold flex items-center justify-between"
-                    >
-                      <span>Superadmin (BENI - B 24)</span>
-                      <span className="text-[9px] bg-red-950 border border-red-700 px-1 rounded">Pass</span>
-                    </button>
-
-                    {/* 2. Bendahara 1 (Ahmad B02) */}
-                    <button
-                      onClick={() => handlePromptRolePassword('Bendahara 1', 'AHMAD', 'B 02')}
-                      className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-emerald-300 font-semibold flex items-center justify-between"
-                    >
-                      <span>Bendahara 1 (AHMAD - B 02)</span>
-                      <span className="text-[9px] bg-emerald-950 border border-emerald-700 px-1 rounded">Pass</span>
-                    </button>
-
-                    {/* 3. Bendahara 2 (Robi C15) */}
-                    <button
-                      onClick={() => handlePromptRolePassword('Bendahara 2', 'ROBI', 'C 15')}
-                      className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-teal-300 font-semibold flex items-center justify-between"
-                    >
-                      <span>Bendahara 2 (ROBI - C 15)</span>
-                      <span className="text-[9px] bg-teal-950 border border-teal-700 px-1 rounded">Pass</span>
-                    </button>
-
-                    {/* 4. Admin Inventaris (Sony B23) */}
-                    <button
-                      onClick={() => handlePromptRolePassword('Admin Inventaris', 'SONY', 'B 23')}
-                      className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-amber-300 font-semibold flex items-center justify-between"
-                    >
-                      <span>Admin Inventaris (SONY - B 23)</span>
-                      <span className="text-[9px] bg-amber-950 border border-amber-700 px-1 rounded">Pass</span>
-                    </button>
-
-                    {/* 5. Warga Biasa (Danang A03) */}
-                    <button
-                      onClick={() => handlePromptRolePassword('Warga', 'DANANG', 'A 03')}
-                      className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-slate-300 font-semibold flex items-center justify-between"
-                    >
-                      <span>Warga (DANANG - A 03)</span>
-                      <span className="text-[9px] bg-slate-800 border border-slate-700 px-1 rounded">Pass</span>
-                    </button>
-                  </div>
-
-                  <div className="pt-2 mt-2 border-t border-slate-800 flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        setShowRoleMenu(false);
-                        onOpenLogin();
-                      }}
-                      className="flex-1 px-3 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-1.5"
-                    >
-                      <LogIn size={13} />
-                      <span>Form Login Warga</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowRoleMenu(false);
-                        logout();
-                      }}
-                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
-                      title="Keluar / Reset"
-                    >
-                      <LogOut size={15} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </header>

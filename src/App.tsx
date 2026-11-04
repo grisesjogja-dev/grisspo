@@ -18,6 +18,8 @@ import { NotificationModal } from './components/NotificationModal';
 import { EmailAlertsModal } from './components/EmailAlertsModal';
 import { PengurusModal } from './components/PengurusModal';
 import { IuranWarningModal } from './components/IuranWarningModal';
+import { EditProfileModal } from './components/EditProfileModal';
+import { MasterResetModal } from './components/MasterResetModal';
 
 const MainApp: React.FC = () => {
   const { activeView, isPengurusOpen, setIsPengurusOpen, currentUser, residents } = useApp();
@@ -25,9 +27,15 @@ const MainApp: React.FC = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isEmailAlertsOpen, setIsEmailAlertsOpen] = useState(false);
   const [isIuranWarningOpen, setIsIuranWarningOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isMasterResetOpen, setIsMasterResetOpen] = useState(false);
 
   // Trigger warning modal on login or user switch if resident has >= 2 months unpaid iuran
   React.useEffect(() => {
+    if (!currentUser) {
+      setIsIuranWarningOpen(false);
+      return;
+    }
     const resident = residents.find(
       (r) =>
         r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentUser.houseNumber.replace(/\s+/g, '').toUpperCase() ||
@@ -38,14 +46,19 @@ const MainApp: React.FC = () => {
     } else {
       setIsIuranWarningOpen(false);
     }
-  }, [currentUser.id, currentUser.houseNumber, residents]);
+  }, [currentUser, residents]);
 
+  // When user is NOT logged in: strictly lock to Jimpitan Online landing page
   const renderCurrentView = () => {
+    if (!currentUser) {
+      return <JimpitanView onOpenLogin={() => setIsLoginOpen(true)} />;
+    }
+
     switch (activeView) {
       case 'dashboard':
         return <DashboardView />;
       case 'jimpitan':
-        return <JimpitanView />;
+        return <JimpitanView onOpenLogin={() => setIsLoginOpen(true)} />;
       case 'fasum':
         return <FasumBookingView />;
       case 'keuangan':
@@ -76,10 +89,12 @@ const MainApp: React.FC = () => {
         onOpenLogin={() => setIsLoginOpen(true)}
         onOpenNotifications={() => setIsNotificationOpen(true)}
         onOpenEmailAlerts={() => setIsEmailAlertsOpen(true)}
+        onOpenEditProfile={() => setIsEditProfileOpen(true)}
+        onOpenMasterReset={() => setIsMasterResetOpen(true)}
       />
 
-      {/* Navigation (Desktop horizontal bar & mobile drawer) */}
-      <Navbar />
+      {/* Navigation Menu: Only visible when user is logged in! */}
+      {currentUser && <Navbar />}
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -118,6 +133,14 @@ const MainApp: React.FC = () => {
       <IuranWarningModal
         isOpen={isIuranWarningOpen}
         onClose={() => setIsIuranWarningOpen(false)}
+      />
+      <EditProfileModal
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+      />
+      <MasterResetModal
+        isOpen={isMasterResetOpen}
+        onClose={() => setIsMasterResetOpen(false)}
       />
     </div>
   );

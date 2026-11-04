@@ -36,10 +36,18 @@ import {
   QrCode,
   Receipt,
   ArrowRight,
-  Wallet
+  Wallet,
+  Lock,
+  LogIn,
+  AlertTriangle,
+  Key
 } from 'lucide-react';
 
-export const JimpitanView: React.FC = () => {
+interface JimpitanViewProps {
+  onOpenLogin?: () => void;
+}
+
+export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   const {
     residents,
     rondaSchedule,
@@ -50,10 +58,26 @@ export const JimpitanView: React.FC = () => {
     currentUser,
     attendanceSessions,
     submitAttendanceSession,
-    deleteAttendanceSession
+    deleteAttendanceSession,
+    resetFeatureData,
+    loginWithHouseNumber
   } = useApp();
 
-  const isSuperadmin = currentUser.role === 'superadmin';
+  const isSuperadmin = currentUser?.role === 'superadmin';
+
+  // Inline login state for landing page
+  const [inlineHouse, setInlineHouse] = useState('');
+  const [inlinePass, setInlinePass] = useState('');
+  const [inlineLoginError, setInlineLoginError] = useState('');
+
+  const handleInlineLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setInlineLoginError('');
+    const res = loginWithHouseNumber(inlineHouse, inlinePass);
+    if (!res.success) {
+      setInlineLoginError(res.message);
+    }
+  };
 
   // Active sub-tab: 'input' | 'laporan_harian' | 'laporan_bulanan' | 'riwayat'
   const [tab, setTab] = useState<'input' | 'laporan_harian' | 'laporan_bulanan' | 'riwayat'>('input');
@@ -71,7 +95,7 @@ export const JimpitanView: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(getDayName(todayStr));
   const [collectorName, setCollectorName] = useState<string>(
-    currentUser.name ? `${currentUser.name} (${currentUser.houseNumber})` : 'Petugas Ronda'
+    currentUser?.name ? `${currentUser.name} (${currentUser.houseNumber})` : 'Petugas Ronda'
   );
   const [notes, setNotes] = useState<string>('Portal ditutup dan dikunci pukul 21.00 WIB. Pendopo disapu bersih.');
 
@@ -152,8 +176,8 @@ export const JimpitanView: React.FC = () => {
         date: selectedDate,
         day: selectedDay,
         attendees,
-        recordedBy: `${currentUser.name} (${currentUser.houseNumber})`,
-        userRole: currentUser.role,
+        recordedBy: currentUser ? `${currentUser.name} (${currentUser.houseNumber})` : 'Petugas Ronda',
+        userRole: currentUser?.role || 'warga',
         pointsAwarded: true
       });
 
@@ -350,7 +374,7 @@ export const JimpitanView: React.FC = () => {
   }, [residents]);
 
   const handleOpenPayModal = (resident?: Resident) => {
-    const target = resident || residents.find((r) => r.houseNumber === currentUser.houseNumber) || residents[0];
+    const target = resident || (currentUser ? residents.find((r) => r.houseNumber === currentUser.houseNumber) : undefined) || residents[0];
     setSelectedResidentForPay(target);
     const curDef = Math.max(0, targetMonthly - (target.jimpitanPaidMonth || 0));
     const prevDef = target.previousMonthsJimpitanDeficit || 0;
@@ -459,6 +483,130 @@ export const JimpitanView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* INLINE LOGIN FORM CARD: Shown on landing page when user is NOT logged in */}
+      {!currentUser && (
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            <div className="lg:col-span-7 space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold border border-amber-500/30">
+                <Lock size={13} className="text-amber-400" />
+                <span>Portal Jimpit Online & Absensi Terbuka untuk Umum</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
+                Selamat Datang di Portal Warga Griya Sedayu Selaras 1
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Anda dapat langsung menggunakan <strong>Input Jimpitan</strong> dan <strong>Absensi Petugas Ronda Hari Ini</strong> di bawah. Untuk membuka seluruh menu portal (Buku Kas Keuangan, Notulen Rapat, Data Warga, Inventaris, Booking Fasum, Forum, dan Poin Loyalitas), silakan login akun warga Anda:
+              </p>
+              
+              {/* Quick Login Presets for convenience */}
+              <div className="pt-2">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                  Akses Cepat Pengujian Role:
+                </span>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInlineHouse('GrissB24');
+                      setInlinePass('Griss123');
+                    }}
+                    className="px-2.5 py-1 bg-red-950/70 border border-red-700/60 hover:bg-red-900 text-red-200 rounded-lg font-mono font-bold transition flex items-center gap-1.5"
+                  >
+                    <span>Superadmin (BENI - B 24)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInlineHouse('GrissB02');
+                      setInlinePass('Griss123');
+                    }}
+                    className="px-2.5 py-1 bg-emerald-950/70 border border-emerald-700/60 hover:bg-emerald-900 text-emerald-200 rounded-lg font-mono font-bold transition flex items-center gap-1.5"
+                  >
+                    <span>Bendahara 1 (AHMAD - B 02)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInlineHouse('GrissA03');
+                      setInlinePass('Griss123');
+                    }}
+                    className="px-2.5 py-1 bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-200 rounded-lg font-mono font-bold transition flex items-center gap-1.5"
+                  >
+                    <span>Warga (DANANG - A 03)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Inline Login Form */}
+            <div className="lg:col-span-5 bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                  <Key size={14} />
+                  <span>Form Login Warga GSS</span>
+                </h4>
+                {onOpenLogin && (
+                  <button
+                    type="button"
+                    onClick={onOpenLogin}
+                    className="text-[11px] text-blue-300 hover:text-white underline font-medium"
+                  >
+                    Buka Popup Modal
+                  </button>
+                )}
+              </div>
+
+              {inlineLoginError && (
+                <div className="p-2.5 bg-red-500/20 border border-red-500/40 rounded-xl text-xs text-red-200 flex items-start gap-2">
+                  <AlertTriangle size={15} className="shrink-0 text-red-400 mt-0.5" />
+                  <span>{inlineLoginError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleInlineLogin} className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Nomor Rumah / Username:
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: GrissB24 atau B 24"
+                    value={inlineHouse}
+                    onChange={(e) => setInlineHouse(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900/80 border border-slate-600 rounded-xl text-white placeholder-slate-400 font-mono text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Password Akun:
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Password (default: Griss123)"
+                    value={inlinePass}
+                    onChange={(e) => setInlinePass(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900/80 border border-slate-600 rounded-xl text-white placeholder-slate-400 font-mono text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg transition active:scale-95"
+                >
+                  <LogIn size={15} />
+                  <span>Masuk ke Portal Lengkap</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Sub-Tabs */}
       <div className="flex border-b border-slate-200 gap-2 overflow-x-auto no-scrollbar">
@@ -1423,7 +1571,22 @@ export const JimpitanView: React.FC = () => {
               <Calendar size={16} className="text-amber-600" />
               <span>Daftar Seluruh Laporan Pendapatan Jimpitan ({jimpitReports.length} Laporan)</span>
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {isSuperadmin && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (confirm('Yakin ingin mereset dan mengosongkan seluruh arsip laporan jimpitan? Seluruh data jimpitan akan dihapus permanen di cloud Firebase & semua perangkat.')) {
+                      await resetFeatureData('jimpitan');
+                      alert('Seluruh arsip laporan jimpitan berhasil di-reset bersih!');
+                    }
+                  }}
+                  className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+                >
+                  <Trash2 size={14} />
+                  <span>Reset Laporan Jimpitan</span>
+                </button>
+              )}
               <button
                 onClick={() => exportJimpitanReportToExcel(residents, jimpitReports)}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
@@ -1434,12 +1597,31 @@ export const JimpitanView: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {jimpitReports.map((report) => (
-              <div
-                key={report.id}
-                className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs hover:border-amber-300 transition flex flex-col justify-between"
+          {jimpitReports.length === 0 ? (
+            <div className="bg-white rounded-3xl p-10 border border-slate-200 text-center space-y-3 shadow-xs">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Coins size={32} />
+              </div>
+              <h4 className="text-base font-bold text-slate-800">Belum Ada Arsip Laporan Jimpitan</h4>
+              <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                Seluruh arsip jimpitan telah di-reset bersih. Petugas ronda yang bertugas malam ini dapat mencatat perolehan jimpitan pada tab <strong>"Input Jimpitan Hari Ini"</strong>.
+              </p>
+              <button
+                type="button"
+                onClick={() => setTab('input')}
+                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs inline-flex items-center gap-2 shadow-sm transition"
               >
+                <Coins size={15} />
+                <span>Input Jimpitan Sekarang</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {jimpitReports.map((report) => (
+                <div
+                  key={report.id}
+                  className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs hover:border-amber-300 transition flex flex-col justify-between"
+                >
                 <div>
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-2">
