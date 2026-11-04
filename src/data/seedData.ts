@@ -363,7 +363,7 @@ export const fasumFacilities: FasumFacilityConfig[] = [
     badgeColor: 'bg-teal-100 text-teal-800 border-teal-200'
   },
   {
-    id: 'tenda_kursi',
+    id: 'tikar',
     name: 'Tikar (mengisi kas ibu-ibu)',
     category: 'Peralatan Acara',
     defaultFee: 0,
