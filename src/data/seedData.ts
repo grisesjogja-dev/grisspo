@@ -283,7 +283,7 @@ export const initialRewards: LoyaltyReward[] = [
   {
     id: 'rew-1',
     title: 'Bebas Iuran Sampah 1 Bulan',
-    pointsCost: 150,
+    pointsCost: 250,
     description: 'Gratis pembayaran iuran retribusi sampah 1 bulan penuh senilai Rp 25.000.',
     icon: 'Trash2',
     stock: 20
@@ -291,24 +291,24 @@ export const initialRewards: LoyaltyReward[] = [
   {
     id: 'rew-2',
     title: 'Bebas Biaya Sewa Fasum Carport 1 Bulan',
-    pointsCost: 200,
+    pointsCost: 300,
     description: 'Voucher sewa 1 slot carport lahan fasum timur Blok C senilai Rp 30.000.',
     icon: 'Car',
     stock: 5
   },
   {
     id: 'rew-3',
-    title: 'Merchandise Kaos Eksklusif Warga GSS',
-    pointsCost: 250,
-    description: 'Kaos polo katun bordir Paguyuban Griya Sedayu Selaras kualitas premium.',
+    title: 'Merchandise Eksklusif Warga GSS',
+    pointsCost: 500,
+    description: 'Merchandise dari warga GSS.',
     icon: 'Shirt',
     stock: 15
   },
   {
     id: 'rew-4',
     title: 'Paket Sembako Paguyuban',
-    pointsCost: 300,
-    description: 'Minyak goreng 2L, beras 5kg, dan gula pasir 1kg dari koperasi warga.',
+    pointsCost: 650,
+    description: 'Minyak goreng 2L, beras 5kg, dan gula pasir 1kg dari warga.',
     icon: 'Gift',
     stock: 10
   }
@@ -325,14 +325,14 @@ export const initialAnnouncements: Announcement[] = [];
 export const fasumFacilities: FasumFacilityConfig[] = [
   {
     id: 'balai_warga',
-    name: 'Balai Pertemuan Warga / Pendopo GSS',
+    name: 'Balai Warga/ Pendopo GSS',
     category: 'Gedung Pertemuan',
-    defaultFee: 30000,
+    defaultFee: 50000,
     unit: 'per acara / sesi',
     capacity: '60 - 80 Orang',
     description: 'Pendopo serbaguna warga untuk rapat warga, arisan, syukuran, hajatan keluarga, pengajian, atau acara paguyuban.',
-    facilitiesIncluded: ['Meja & Kursi Napolly (tersedia hingga 50 kursi)', 'Akses Listrik & Stopkontak', 'Toilet & Wastafel Fasum', 'Area Parkir Luas'],
-    rules: ['Wajib menjaga kebersihan setelah acara', 'Matikan lampu dan kran air setelah selesai', 'Dilarang merokok di dalam area tertutup pendopo', 'Batas maksimal suara bising pukul 22.00 WIB'],
+    facilitiesIncluded: ['Meja & Kursi Napolly (tersedia hingga 0 kursi)', 'Akses Listrik & Stopkontak', 'Toilet & Wastafel Fasum', 'Area Parkir Luas'],
+    rules: ['Wajib menjaga kebersihan setelah acara', 'Batas maksimal suara bising pukul 22.00 WIB'],
     icon: 'Building2',
     badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
   },
