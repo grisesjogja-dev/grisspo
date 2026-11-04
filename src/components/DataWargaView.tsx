@@ -61,7 +61,7 @@ export const DataWargaView: React.FC = () => {
   const [formPassword, setFormPassword] = useState<string>('Griss123');
 
   // Permission check: only Superadmin can edit or delete residents
-  const canEditOrDelete = permissions.canManageResidents(currentUser.role);
+  const canEditOrDelete = currentUser ? permissions.canManageResidents(currentUser.role) : false;
 
   // Filtered residents list
   const filteredResidents = useMemo(() => {

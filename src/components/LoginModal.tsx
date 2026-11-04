@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { KeyRound, Shield, UserCheck, X, Home, Lock, AlertCircle, Sparkles } from 'lucide-react';
+import { KeyRound, X, Home, Lock, AlertCircle, UserCheck } from 'lucide-react';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -8,9 +8,10 @@ interface LoginModalProps {
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
-  const { loginWithHouseNumber, switchRoleWithPassword } = useApp();
+  const { loginWithHouseNumber } = useApp();
+  // Form login otomatis kosong, semua user wajib input username dan password
   const [usernameInput, setUsernameInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('Griss123');
+  const [passwordInput, setPasswordInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -22,7 +23,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     setSuccessMsg('');
 
     if (!usernameInput.trim()) {
-      setErrorMsg('Masukkan username nomor rumah (contoh: GrissB24, GrissB02, GrissC15)');
+      setErrorMsg('Masukkan username nomor rumah (contoh: GrissB24, GrissB02, GrissC15, atau B 24)');
       return;
     }
     if (!passwordInput.trim()) {
@@ -40,12 +41,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     } else {
       setErrorMsg(res.message);
     }
-  };
-
-  const handleSelectPreset = (houseNumber: string, defaultUsername: string) => {
-    setUsernameInput(defaultUsername);
-    setErrorMsg('');
-    setSuccessMsg(`Akun Rumah ${houseNumber} dipilih. Masukkan kata sandi (password) di bawah untuk memverifikasi.`);
   };
 
   return (
@@ -89,7 +84,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Username Warga (Format: <span className="text-blue-600 font-mono font-bold">Griss[NomorRumah]</span>)
+                Username Warga (Format: <span className="text-blue-600 font-mono font-bold">Griss[NomorRumah]</span> atau <span className="text-blue-600 font-mono font-bold">Nomor Rumah</span>)
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
@@ -97,7 +92,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 </span>
                 <input
                   type="text"
-                  placeholder="Contoh: GrissB24, GrissB02, GrissC15, GrissB23"
+                  placeholder="Contoh: GrissB24, GrissB02, atau B 24"
                   value={usernameInput}
                   onChange={(e) => setUsernameInput(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
@@ -107,7 +102,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Password Wajib (Setiap akun memiliki verifikasi sandi)
+                Password Akun (Wajib Diinput)
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
@@ -123,7 +118,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 />
               </div>
               <p className="text-[10px] text-slate-400 mt-1">
-                Standar default password: <span className="font-mono text-blue-600 font-bold">Griss123</span>
+                Gunakan password pribadi Anda atau default <span className="font-mono text-blue-600 font-bold">Griss123</span>
               </p>
             </div>
 
@@ -135,80 +130,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               <span>Verifikasi Sandi & Masuk</span>
             </button>
           </form>
-
-          {/* Quick preset selector for testing (requires password) */}
-          <div className="mt-6 pt-5 border-t border-slate-200">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-              <Shield size={13} className="text-blue-600" />
-              <span>Pilih Akun Pengurus / Warga (Wajib Masukkan Password):</span>
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {/* Superadmin Beni B24 */}
-              <button
-                type="button"
-                onClick={() => handleSelectPreset('B 24', 'GrissB24')}
-                className="p-2.5 rounded-xl border border-red-200 bg-red-50/60 hover:bg-red-100/80 text-left transition"
-              >
-                <div className="font-bold text-red-800 flex items-center justify-between">
-                  <span>Superadmin</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-200 text-red-900 font-mono">B 24</span>
-                </div>
-                <div className="text-[11px] text-red-600 mt-0.5 font-medium">Bpk. BENI</div>
-              </button>
-
-              {/* Bendahara 1 Ahmad B02 */}
-              <button
-                type="button"
-                onClick={() => handleSelectPreset('B 02', 'GrissB02')}
-                className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/80 text-left transition"
-              >
-                <div className="font-bold text-emerald-800 flex items-center justify-between">
-                  <span>Bendahara 1</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-900 font-mono">B 02</span>
-                </div>
-                <div className="text-[11px] text-emerald-600 mt-0.5 font-medium">Bpk. AHMAD</div>
-              </button>
-
-              {/* Bendahara 2 Robi C15 */}
-              <button
-                type="button"
-                onClick={() => handleSelectPreset('C 15', 'GrissC15')}
-                className="p-2.5 rounded-xl border border-teal-200 bg-teal-50/60 hover:bg-teal-100/80 text-left transition"
-              >
-                <div className="font-bold text-teal-800 flex items-center justify-between">
-                  <span>Bendahara 2</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-200 text-teal-900 font-mono">C 15</span>
-                </div>
-                <div className="text-[11px] text-teal-600 mt-0.5 font-medium">Bpk. ROBY C</div>
-              </button>
-
-              {/* Admin Inventaris Sony B23 */}
-              <button
-                type="button"
-                onClick={() => handleSelectPreset('B 23', 'GrissB23')}
-                className="p-2.5 rounded-xl border border-amber-200 bg-amber-50/60 hover:bg-amber-100/80 text-left transition"
-              >
-                <div className="font-bold text-amber-800 flex items-center justify-between">
-                  <span>Admin Inventaris</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-mono">B 23</span>
-                </div>
-                <div className="text-[11px] text-amber-600 mt-0.5 font-medium">Bpk. SONY</div>
-              </button>
-
-              {/* Warga Danang A03 */}
-              <button
-                type="button"
-                onClick={() => handleSelectPreset('A 03', 'GrissA03')}
-                className="col-span-2 p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-left transition flex items-center justify-between"
-              >
-                <div>
-                  <span className="font-bold text-slate-800">Warga: </span>
-                  <span className="text-slate-600">Bpk. DANANG (Rumah A 03)</span>
-                </div>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-medium">Pilih</span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

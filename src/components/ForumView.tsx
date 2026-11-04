@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, defaultGuestUser } from '../context/AppContext';
 import { ForumPost } from '../types';
 import { permissions } from '../utils/security';
 import {
@@ -26,8 +26,9 @@ export const ForumView: React.FC = () => {
     togglePostLike,
     deleteForumPost,
     togglePinPost,
-    currentUser
+    currentUser: authUser
   } = useApp();
+  const currentUser = authUser || defaultGuestUser;
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [showNewPostModal, setShowNewPostModal] = useState(false);

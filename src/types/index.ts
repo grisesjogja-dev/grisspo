@@ -276,3 +276,15 @@ export interface MeetingNote {
   updatedAt?: string;
 }
 
+export interface ActiveSession {
+  sessionId: string;
+  userId: string;
+  name: string;
+  houseNumber: string;
+  role: UserRole;
+  loginTime: string;
+  lastActive: string;
+  deviceInfo?: string;
+}
+
+

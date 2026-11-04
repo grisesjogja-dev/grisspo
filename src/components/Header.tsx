@@ -24,6 +24,7 @@ interface HeaderProps {
   onOpenEmailAlerts: () => void;
   onOpenEditProfile: () => void;
   onOpenMasterReset: () => void;
+  onOpenActiveSessions?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -31,13 +32,15 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNotifications,
   onOpenEmailAlerts,
   onOpenEditProfile,
-  onOpenMasterReset
+  onOpenMasterReset,
+  onOpenActiveSessions
 }) => {
   const {
     currentUser,
     isCloudSynced,
     emailAlerts,
     announcements,
+    activeSessions,
     logout,
     switchRoleWithPassword,
     setIsPengurusOpen
@@ -152,6 +155,25 @@ export const Header: React.FC<HeaderProps> = ({
                   </button>
                 )}
 
+                {/* Superadmin Active Sessions Monitor */}
+                {currentUser.role === 'superadmin' && onOpenActiveSessions && (
+                  <button
+                    onClick={onOpenActiveSessions}
+                    className="relative px-2.5 py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-700/50 transition flex items-center gap-1.5 text-xs font-bold shadow-xs"
+                    title="Monitoring Pengguna Sedang Login Portal (Superadmin)"
+                  >
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <Users size={14} className="text-emerald-400" />
+                    <span className="hidden lg:inline">Online:</span>
+                    <span className="font-mono bg-emerald-900/80 px-1.5 py-0.5 rounded text-[11px] text-emerald-200">
+                      {activeSessions.length}
+                    </span>
+                  </button>
+                )}
+
                 {/* Points Badge */}
                 <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold">
                   <Coins size={14} className="text-amber-400" />
@@ -222,19 +244,39 @@ export const Header: React.FC<HeaderProps> = ({
 
                         {/* Master Reset Button for Superadmin */}
                         {currentUser.role === 'superadmin' && (
-                          <button
-                            onClick={() => {
-                              setShowRoleMenu(false);
-                              onOpenMasterReset();
-                            }}
-                            className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-red-950/40 text-red-300 font-bold flex items-center justify-between transition"
-                          >
-                            <span className="flex items-center gap-2">
-                              <ShieldAlert size={13} className="text-red-400" />
-                              <span>Hapus / Reset Master Data</span>
-                            </span>
-                            <span className="text-[9px] bg-red-900/60 text-red-200 border border-red-700 px-1 rounded font-mono">SA</span>
-                          </button>
+                          <>
+                            {onOpenActiveSessions && (
+                              <button
+                                onClick={() => {
+                                  setShowRoleMenu(false);
+                                  onOpenActiveSessions();
+                                }}
+                                className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-emerald-950/40 text-emerald-300 font-bold flex items-center justify-between transition"
+                              >
+                                <span className="flex items-center gap-2">
+                                  <Users size={13} className="text-emerald-400" />
+                                  <span>Pantau Pengguna Online</span>
+                                </span>
+                                <span className="text-[9px] bg-emerald-900 text-emerald-200 border border-emerald-700 px-1.5 py-0.2 rounded font-mono font-bold">
+                                  {activeSessions.length} Online
+                                </span>
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => {
+                                setShowRoleMenu(false);
+                                onOpenMasterReset();
+                              }}
+                              className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-red-950/40 text-red-300 font-bold flex items-center justify-between transition"
+                            >
+                              <span className="flex items-center gap-2">
+                                <ShieldAlert size={13} className="text-red-400" />
+                                <span>Hapus / Reset Master Data</span>
+                              </span>
+                              <span className="text-[9px] bg-red-900/60 text-red-200 border border-red-700 px-1 rounded font-mono">SA</span>
+                            </button>
+                          </>
                         )}
                       </div>
 

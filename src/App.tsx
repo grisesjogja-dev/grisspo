@@ -20,15 +20,26 @@ import { PengurusModal } from './components/PengurusModal';
 import { IuranWarningModal } from './components/IuranWarningModal';
 import { EditProfileModal } from './components/EditProfileModal';
 import { MasterResetModal } from './components/MasterResetModal';
+import { ActiveSessionsModal } from './components/ActiveSessionsModal';
+import { Clock } from 'lucide-react';
 
 const MainApp: React.FC = () => {
-  const { activeView, isPengurusOpen, setIsPengurusOpen, currentUser, residents } = useApp();
+  const {
+    activeView,
+    isPengurusOpen,
+    setIsPengurusOpen,
+    currentUser,
+    residents,
+    inactivityNotice,
+    clearInactivityNotice
+  } = useApp();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isEmailAlertsOpen, setIsEmailAlertsOpen] = useState(false);
   const [isIuranWarningOpen, setIsIuranWarningOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isMasterResetOpen, setIsMasterResetOpen] = useState(false);
+  const [isActiveSessionsOpen, setIsActiveSessionsOpen] = useState(false);
 
   // Trigger warning modal on login or user switch if resident has >= 2 months unpaid iuran
   React.useEffect(() => {
@@ -91,6 +102,7 @@ const MainApp: React.FC = () => {
         onOpenEmailAlerts={() => setIsEmailAlertsOpen(true)}
         onOpenEditProfile={() => setIsEditProfileOpen(true)}
         onOpenMasterReset={() => setIsMasterResetOpen(true)}
+        onOpenActiveSessions={() => setIsActiveSessionsOpen(true)}
       />
 
       {/* Navigation Menu: Only visible when user is logged in! */}
@@ -142,6 +154,35 @@ const MainApp: React.FC = () => {
         isOpen={isMasterResetOpen}
         onClose={() => setIsMasterResetOpen(false)}
       />
+      <ActiveSessionsModal
+        isOpen={isActiveSessionsOpen}
+        onClose={() => setIsActiveSessionsOpen(false)}
+      />
+
+      {/* 30-min Inactivity Auto-logout Alert Modal */}
+      {inactivityNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 p-6 text-center space-y-4">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-inner">
+              <Clock size={30} className="animate-pulse" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-black text-slate-900">Sesi Berakhir Demi Keamanan</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {inactivityNotice}
+              </p>
+            </div>
+            <div className="pt-2">
+              <button
+                onClick={clearInactivityNotice}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition"
+              >
+                Mengerti & Lanjutkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

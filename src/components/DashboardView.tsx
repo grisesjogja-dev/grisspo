@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, defaultGuestUser } from '../context/AppContext';
 import { DayOfWeek } from '../types';
 import {
   Coins,
@@ -25,7 +25,7 @@ import {
 
 export const DashboardView: React.FC = () => {
   const {
-    currentUser,
+    currentUser: authUser,
     residents,
     totalIncome,
     totalExpense,
@@ -34,13 +34,10 @@ export const DashboardView: React.FC = () => {
     announcements,
     setActiveView
   } = useApp();
+  const currentUser = authUser || defaultGuestUser;
 
-  // Find today's day of week
-  const todayDay: DayOfWeek = useMemo(() => {
-    const days: DayOfWeek[] = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    const d = new Date();
-    return days[d.getDay()] || 'Sabtu';
-  }, []);
+  const days: DayOfWeek[] = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const todayDay: DayOfWeek = days[new Date().getDay()] || 'Sabtu';
 
   const dutyGroup = rondaSchedule.find((g) => g.day === todayDay);
 

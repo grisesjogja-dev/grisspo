@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, defaultGuestUser } from '../context/AppContext';
 import { fasumFacilities } from '../data/seedData';
 import {
   FasumBooking,
@@ -42,10 +42,11 @@ export const FasumBookingView: React.FC = () => {
     confirmFasumPayment,
     updateFasumBookingStatus,
     deleteFasumBooking,
-    currentUser,
+    currentUser: authUser,
     residents,
     totalIncome
   } = useApp();
+  const currentUser = authUser || defaultGuestUser;
 
   // Tab state: 'katalog' | 'jadwal' | 'pemesanan_saya' | 'semua_pemesanan'
   const [activeTab, setActiveTab] = useState<'katalog' | 'jadwal' | 'pemesanan_saya' | 'semua_pemesanan'>('katalog');

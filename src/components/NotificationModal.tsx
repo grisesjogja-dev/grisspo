@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, defaultGuestUser } from '../context/AppContext';
 import { Bell, XCircle, PlusCircle, AlertTriangle, ShieldCheck, Sparkles, Send, Trash2 } from 'lucide-react';
 import { Announcement } from '../types';
 
@@ -9,7 +9,8 @@ interface NotificationModalProps {
 }
 
 export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose }) => {
-  const { announcements, addAnnouncement, deleteAnnouncement, currentUser } = useApp();
+  const { announcements, addAnnouncement, deleteAnnouncement, currentUser: authUser } = useApp();
+  const currentUser = authUser || defaultGuestUser;
   const isSuperadmin = currentUser.role === 'superadmin';
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTitle, setNewTitle] = useState('');

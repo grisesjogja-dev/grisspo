@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, defaultGuestUser } from '../context/AppContext';
 import { Transaction, IncomeCategory, ExpenseCategory } from '../types';
 import { exportFinanceToPDF, exportFinanceToExcel } from '../utils/exportUtils';
 import { permissions, verifyTransactionIntegrity } from '../utils/security';
@@ -36,10 +36,11 @@ export const KeuanganView: React.FC = () => {
     totalIncome,
     totalExpense,
     currentBalance,
-    currentUser,
+    currentUser: authUser,
     emailAlerts,
     resetFeatureData
   } = useApp();
+  const currentUser = authUser || defaultGuestUser;
 
   // Filters
   const [filterType, setFilterType] = useState<'ALL' | 'pemasukan' | 'pengeluaran'>('ALL');

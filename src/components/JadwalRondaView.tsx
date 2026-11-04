@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, defaultGuestUser } from '../context/AppContext';
 import { DayOfWeek } from '../types';
 import {
   Shield,
@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 
 export const JadwalRondaView: React.FC = () => {
-  const { rondaSchedule, setActiveView, currentUser, removeRondaMember, addRondaMember, residents } = useApp();
+  const { rondaSchedule, setActiveView, currentUser: authUser, removeRondaMember, addRondaMember, residents } = useApp();
+  const currentUser = authUser || defaultGuestUser;
   const isSuperadmin = currentUser.role === 'superadmin';
 
   // State to add a member to a day

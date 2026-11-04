@@ -70,7 +70,7 @@ export const EmailAlertsModal: React.FC<EmailAlertsModalProps> = ({ isOpen, onCl
 
         {/* Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex gap-2">
-          {currentUser.role === 'superadmin' && emailAlerts.length > 0 && (
+          {currentUser?.role === 'superadmin' && emailAlerts.length > 0 && (
             <button
               onClick={() => {
                 if (confirm('Bersihkan seluruh log anomali email ini?')) {

@@ -18,7 +18,8 @@ import {
   AttendanceItem,
   AttendanceType,
   MeetingNote,
-  MeetingNoteStatus
+  MeetingNoteStatus,
+  ActiveSession
 } from '../types';
 import {
   initialResidents,
@@ -144,6 +145,12 @@ interface AppContextType {
   isPengurusOpen: boolean;
   setIsPengurusOpen: (open: boolean) => void;
 
+  // Active Sessions & Auto-Logout
+  activeSessions: ActiveSession[];
+  kickSession: (userId: string) => Promise<void>;
+  inactivityNotice: string | null;
+  clearInactivityNotice: () => void;
+
   // Sync state
   isCloudSynced: boolean;
   activeView: string;
@@ -151,6 +158,16 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+// Default guest fallback user
+export const defaultGuestUser: User = {
+  id: '',
+  username: 'Tamu',
+  name: 'Tamu Warga',
+  houseNumber: '',
+  role: 'warga',
+  points: 0
+};
 
 // Default logged in user: Beni, B 24 (Superadmin)
 const defaultUser: User = {
@@ -187,6 +204,125 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(true);
   const [isPengurusOpen, setIsPengurusOpen] = useState<boolean>(false);
+
+  // Active Sessions & 30-min Inactivity Tracking
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
+  const [inactivityNotice, setInactivityNotice] = useState<string | null>(null);
+  const clearInactivityNotice = () => setInactivityNotice(null);
+
+  const currentUserRef = useRef<User | null>(currentUser);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
+
+  const lastActivityTimeRef = useRef<number>(Date.now());
+  const hasRegisteredSessionRef = useRef<boolean>(false);
+
+  const getClientDeviceInfo = (): string => {
+    if (typeof navigator === 'undefined') return 'Desktop Browser';
+    const ua = navigator.userAgent;
+    if (/Android/i.test(ua)) return 'Android Smartphone';
+    if (/iPhone/i.test(ua)) return 'Apple iPhone';
+    if (/iPad/i.test(ua)) return 'Apple iPad';
+    if (/Windows/i.test(ua)) return 'Windows PC';
+    if (/Macintosh|Mac OS/i.test(ua)) return 'macOS Laptop';
+    if (/Linux/i.test(ua)) return 'Linux PC';
+    return 'Web Browser';
+  };
+
+  const syncActiveSessionToCloud = async (user: User) => {
+    try {
+      const nowStr = new Date().toISOString();
+      const sessionRef = doc(db, 'active_sessions', user.id);
+      await setDoc(
+        sessionRef,
+        {
+          sessionId: `sess_${user.id}_${Date.now()}`,
+          userId: user.id,
+          name: user.name,
+          houseNumber: user.houseNumber,
+          role: user.role,
+          loginTime: nowStr,
+          lastActive: nowStr,
+          deviceInfo: getClientDeviceInfo()
+        },
+        { merge: true }
+      );
+      hasRegisteredSessionRef.current = true;
+    } catch (e) {
+      console.warn('Firestore active_sessions sync error:', e);
+    }
+  };
+
+  const removeActiveSessionFromCloud = async (userId: string) => {
+    try {
+      hasRegisteredSessionRef.current = false;
+      await deleteDoc(doc(db, 'active_sessions', userId));
+    } catch (e) {
+      console.warn('Firestore active_sessions remove error:', e);
+    }
+  };
+
+  const kickSession = async (userId: string) => {
+    try {
+      await deleteDoc(doc(db, 'active_sessions', userId));
+      setActiveSessions((prev) => prev.filter((s) => s.userId !== userId));
+    } catch (e) {
+      console.warn('Firestore kickSession error:', e);
+    }
+  };
+
+  // Sync active session whenever currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      syncActiveSessionToCloud(currentUser);
+    }
+  }, [currentUser?.id]);
+
+  // 30 Minutes Inactivity Auto-Logout
+  const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    lastActivityTimeRef.current = Date.now();
+
+    const handleUserActivity = () => {
+      lastActivityTimeRef.current = Date.now();
+    };
+
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach((ev) => window.addEventListener(ev, handleUserActivity, { passive: true }));
+
+    const checkInterval = setInterval(() => {
+      const now = Date.now();
+      const elapsed = now - lastActivityTimeRef.current;
+
+      if (elapsed >= INACTIVITY_TIMEOUT_MS) {
+        // Trigger auto-logout due to 30 minutes of inactivity
+        console.warn('GRISSPO Security: Auto-logout triggered after 30 minutes of user inactivity.');
+        const userToLogout = currentUserRef.current;
+        if (userToLogout) {
+          removeActiveSessionFromCloud(userToLogout.id);
+        }
+        setCurrentUser(null);
+        localStorage.removeItem('grisspo_user');
+        setActiveView('jimpitan');
+        setInactivityNotice(
+          'Sesi login Anda telah berakhir otomatis setelah 30 menit tidak ada aktivitas untuk alasan keamanan. Anda telah dialihkan ke halaman utama Jimpit Online.'
+        );
+      } else if (currentUserRef.current && elapsed < 60000) {
+        // Send heartbeat every check interval if user has been active recently
+        const sessionRef = doc(db, 'active_sessions', currentUserRef.current.id);
+        setDoc(sessionRef, { lastActive: new Date().toISOString() }, { merge: true }).catch(() => {});
+      }
+    }, 15000);
+
+    return () => {
+      activityEvents.forEach((ev) => window.removeEventListener(ev, handleUserActivity));
+      clearInterval(checkInterval);
+    };
+  }, [currentUser]);
 
   // Track permanently deleted IDs so deleted master data NEVER resurrects across any device
   const initialDeletedIds: string[] = (() => {
@@ -387,6 +523,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let unsubFasum: (() => void) | undefined;
     let unsubAbsensi: (() => void) | undefined;
     let unsubNotulen: (() => void) | undefined;
+    let unsubActiveSessions: (() => void) | undefined;
 
     // Check Cloud Seed Status so other devices NEVER resurrect deleted documents
     const checkCloudSeedStatus = async () => {
@@ -637,6 +774,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }, (err) => {
         console.warn('Firestore notulen listener error:', err.message);
       });
+
+      // 10. Active Sessions Real-Time Listener (Monitoring Pengguna Online)
+      unsubActiveSessions = onSnapshot(collection(db, 'active_sessions'), (snapshot) => {
+        const sessions: ActiveSession[] = [];
+        const now = Date.now();
+        snapshot.forEach((d) => {
+          const s = d.data() as ActiveSession;
+          const lastActiveTime = new Date(s.lastActive || s.loginTime).getTime();
+          // Filter out sessions older than 30 minutes inactivity
+          if (now - lastActiveTime <= 30 * 60 * 1000) {
+            sessions.push(s);
+          } else {
+            // Proactively clean up expired session
+            deleteDoc(doc(db, 'active_sessions', d.id)).catch(() => {});
+          }
+        });
+
+        sessions.sort((a, b) => new Date(b.lastActive || b.loginTime).getTime() - new Date(a.lastActive || a.loginTime).getTime());
+        setActiveSessions(sessions);
+
+        // Check if current user was kicked remotely by Superadmin
+        if (currentUserRef.current && hasRegisteredSessionRef.current) {
+          const stillActive = sessions.some((s) => s.userId === currentUserRef.current?.id);
+          if (!stillActive && snapshot.docs.length > 0) {
+            setCurrentUser(null);
+            localStorage.removeItem('grisspo_user');
+            setActiveView('jimpitan');
+            setInactivityNotice('Sesi login Anda telah diputuskan oleh Superadmin.');
+          }
+        }
+      }, (err) => {
+        console.warn('Firestore active_sessions listener error:', err.message);
+      });
     } catch (e) {
       console.warn('Firebase Firestore initialization notice:', e);
     }
@@ -652,6 +822,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubFasum?.();
       unsubAbsensi?.();
       unsubNotulen?.();
+      unsubActiveSessions?.();
     };
   }, []);
 
@@ -791,8 +962,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       phone: resident.phone
     };
 
+    lastActivityTimeRef.current = Date.now();
     setCurrentUser(loggedUser);
     localStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
+    syncActiveSessionToCloud(loggedUser);
     setActiveView('dashboard');
     return {
       success: true,
@@ -833,8 +1006,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       phone: resident.phone
     };
 
+    lastActivityTimeRef.current = Date.now();
     setCurrentUser(newUser);
     localStorage.setItem('grisspo_user', JSON.stringify(newUser));
+    syncActiveSessionToCloud(newUser);
     return {
       success: true,
       message: `Otorisasi berhasil! Anda kini beralih sebagai ${resident.name} (${resident.role.toUpperCase()}).`
@@ -842,6 +1017,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logout = () => {
+    if (currentUser) {
+      removeActiveSessionFromCloud(currentUser.id);
+    }
     setCurrentUser(null);
     localStorage.removeItem('grisspo_user');
     setActiveView('jimpitan');
@@ -1079,7 +1257,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteResident = async (id: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak akses menghapus data warga!');
       return;
     }
@@ -1119,7 +1297,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteInventoryItem = async (id: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak akses menghapus data inventaris!');
       return;
     }
@@ -1226,7 +1404,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: dateStr,
       description: `Pemasukan Jimpitan Ronda Online (${reportData.day}, ${dateStr}) oleh ${reportData.collectedBy}`,
       recordedBy: reportData.collectedBy,
-      userRole: currentUser.role,
+      userRole: currentUser ? currentUser.role : 'warga',
       encryptedHash: hash,
       isAnomaly: false,
       timestamp: now
@@ -1249,7 +1427,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteJimpitReport = async (id: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak menghapus laporan jimpitan!');
       return;
     }
@@ -1284,7 +1462,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const removeRondaMember = async (day: DayOfWeek, memberName: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak mengedit jadwal ronda!');
       return;
     }
@@ -1304,7 +1482,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addRondaMember = async (day: DayOfWeek, memberName: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak mengedit jadwal ronda!');
       return;
     }
@@ -1327,7 +1505,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateRondaGroup = async (group: RondaGroup) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak mengedit jadwal ronda!');
       return;
     }
@@ -1386,12 +1564,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 2. Automatically record income transaction in Keuangan Kas Paguyuban
     const dateStr = new Date().toISOString().slice(0, 10);
     const now = Date.now();
+    const currentName = currentUser?.name || 'Petugas Jimpit';
+    const userRole = currentUser?.role || 'warga';
     const hash = await computeTransactionHash(
       'pemasukan',
       'Pemasukan Jimpitan Bulanan',
       amount,
       dateStr,
-      currentUser.name,
+      currentName,
       now
     );
 
@@ -1402,8 +1582,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       amount,
       date: dateStr,
       description: `Pelunasan Kekurangan Jimpitan: ${resident.name} (${resident.houseNumber}) via ${method.toUpperCase()}${notes ? ` - ${notes}` : ''}`,
-      recordedBy: `${currentUser.name} (${currentUser.role.toUpperCase()})`,
-      userRole: currentUser.role,
+      recordedBy: currentUser ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : 'Petugas Jimpit',
+      userRole,
       sourceHouse: resident.houseNumber,
       encryptedHash: hash,
       isAnomaly: false,
@@ -1505,7 +1685,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteWhatsAppLog = async (id: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin yang memiliki hak menghapus log WhatsApp!');
       return;
     }
@@ -1567,7 +1747,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTransaction = async (id: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak akses menghapus transaksi keuangan!');
       return;
     }
@@ -1606,6 +1786,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     content: string,
     category: ForumPost['category']
   ) => {
+    if (!currentUser) {
+      alert('Silakan login terlebih dahulu untuk membuat postingan diskusi!');
+      return;
+    }
     const newPost: ForumPost = {
       id: `post-${Date.now()}`,
       title,
@@ -1629,6 +1813,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addForumComment = async (postId: string, content: string) => {
+    if (!currentUser) {
+      alert('Silakan login terlebih dahulu untuk berkomentar!');
+      return;
+    }
     const targetPost = forumPosts.find((p) => p.id === postId);
     if (!targetPost) return;
 
@@ -1651,6 +1839,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const togglePostLike = async (postId: string) => {
+    if (!currentUser) return;
     const targetPost = forumPosts.find((p) => p.id === postId);
     if (!targetPost) return;
 
@@ -1669,7 +1858,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteForumPost = async (postId: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak moderasi menghapus topik diskusi!');
       return;
     }
@@ -1685,7 +1874,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteForumComment = async (postId: string, commentId: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak menghapus komentar!');
       return;
     }
@@ -1719,7 +1908,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const awardPoints = (userId: string, points: number, reason: string) => {
     setResidents((prev) =>
       prev.map((r) => {
-        if (r.id === userId || r.houseNumber === currentUser.houseNumber) {
+        if (r.id === userId || (currentUser && r.houseNumber === currentUser.houseNumber)) {
           const updated = { ...r, points: (r.points || 0) + points };
           setDoc(doc(db, 'warga', r.id), updated).catch(() => {});
           return updated;
@@ -1728,15 +1917,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
 
-    if (currentUser.id === userId || currentUser.houseNumber) {
-      setCurrentUser((prev) => ({ ...prev, points: (prev.points || 0) + points }));
+    if (currentUser && (currentUser.id === userId || currentUser.houseNumber)) {
+      setCurrentUser((prev) => (prev ? { ...prev, points: (prev.points || 0) + points } : null));
     }
 
     const log: PointLog = {
       id: `pl-${Date.now()}`,
       userId,
-      houseNumber: currentUser.houseNumber,
-      userName: currentUser.name,
+      houseNumber: currentUser?.houseNumber || '',
+      userName: currentUser?.name || 'Warga GSS',
       pointsChange: points,
       reason,
       timestamp: new Date().toISOString().slice(0, 16).replace('T', ' ')
@@ -1747,6 +1936,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const redeemReward = (rewardId: string): { success: boolean; message: string } => {
     const reward = rewards.find((r) => r.id === rewardId);
     if (!reward) return { success: false, message: 'Hadiah tidak ditemukan' };
+    if (!currentUser) {
+      return { success: false, message: 'Silakan login terlebih dahulu untuk menukarkan poin!' };
+    }
     if (currentUser.points < reward.pointsCost) {
       return {
         success: false,
@@ -1758,7 +1950,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const remaining = currentUser.points - reward.pointsCost;
-    setCurrentUser((prev) => ({ ...prev, points: remaining }));
+    setCurrentUser((prev) => (prev ? { ...prev, points: remaining } : null));
     setResidents((prev) =>
       prev.map((r) => {
         if (r.id === currentUser.id) {
@@ -1792,7 +1984,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deletePointLog = async (id: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak menghapus log poin warga!');
       return;
     }
@@ -1800,7 +1992,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const clearEmailAlerts = () => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin yang memiliki hak membersihkan log anomali!');
       return;
     }
@@ -1831,7 +2023,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAnnouncement = async (id: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak menghapus pengumuman!');
       return;
     }
@@ -1852,12 +2044,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ): Promise<FasumBooking> => {
     const id = `fsm-${Date.now()}`;
     const createdAt = new Date().toISOString();
+    const actorName = currentUser ? currentUser.name : 'Warga GSS';
+    const actorRole = currentUser ? currentUser.role : 'warga';
     const hash = await computeTransactionHash(
       'pemasukan',
       'Sewa Fasum (Rp 30.000/bln)',
       bookingData.rentalFee,
       bookingData.date,
-      currentUser.name,
+      actorName,
       Date.now()
     );
 
@@ -1873,7 +2067,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
       newBooking.paymentDate = nowStr;
       newBooking.status = 'disetujui';
-      newBooking.approvedBy = currentUser.name;
+      newBooking.approvedBy = actorName;
       newBooking.approvedAt = nowStr;
 
       // Automatically post income to Paguyuban Book of Accounts
@@ -1883,8 +2077,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         amount: newBooking.rentalFee,
         date: newBooking.date,
         description: `Sewa Fasum: ${newBooking.facilityName} - ${newBooking.residentName} (${newBooking.residentHouse}) - Acara: ${newBooking.purpose}`,
-        recordedBy: currentUser.name,
-        userRole: currentUser.role,
+        recordedBy: actorName,
+        userRole: actorRole,
         sourceHouse: newBooking.residentHouse
       });
       newBooking.transactionId = trx.id;
@@ -1923,7 +2117,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!booking) return;
 
     const paymentDate = new Date().toISOString().replace('T', ' ').substring(0, 16);
-    const verifier = approvedBy || currentUser.name;
+    const verifier = approvedBy || (currentUser ? currentUser.name : 'Pengurus Paguyuban');
+    const verifierRole = currentUser ? currentUser.role : 'bendahara1';
 
     // Automatically record income in Keuangan Kas!
     const trx = await addTransaction({
@@ -1933,7 +2128,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: booking.date,
       description: `Sewa Fasum: ${booking.facilityName} - ${booking.residentName} (${booking.residentHouse}) - Acara: ${booking.purpose}`,
       recordedBy: verifier,
-      userRole: currentUser.role,
+      userRole: verifierRole,
       sourceHouse: booking.residentHouse
     });
 
@@ -2000,7 +2195,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteFasumBooking = async (bookingId: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Hanya Superadmin (Bpk. Beni B24) yang memiliki hak menghapus data pemesanan fasum.');
       return;
     }
@@ -2059,8 +2254,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setResidents((prev) => prev.map((r) => (r.id === targetRes.id ? updatedRes : r)));
         setDoc(doc(db, 'warga', targetRes.id), updatedRes).catch(() => {});
 
-        if (currentUser.id === targetRes.id || currentUser.houseNumber === targetRes.houseNumber) {
-          setCurrentUser((prev) => ({ ...prev, points: nextPoints }));
+        if (currentUser && (currentUser.id === targetRes.id || currentUser.houseNumber === targetRes.houseNumber)) {
+          setCurrentUser((prev) => (prev ? { ...prev, points: nextPoints } : null));
         }
 
         const log: PointLog = {
@@ -2093,7 +2288,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAttendanceSession = async (id: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak menghapus data absensi!');
       return;
     }
@@ -2162,7 +2357,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteMeetingNote = async (id: string) => {
-    if (currentUser.role !== 'superadmin') {
+    if (currentUser?.role !== 'superadmin') {
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak menghapus notulen rapat!');
       return;
     }
@@ -2187,8 +2382,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const nextPoints = (target.points || 0) + points;
     const updated = { ...target, points: nextPoints };
     setResidents((prev) => prev.map((r) => (r.id === target.id ? updated : r)));
-    if (currentUser.id === target.id || currentUser.houseNumber === target.houseNumber) {
-      setCurrentUser((prev) => ({ ...prev, points: nextPoints }));
+    if (currentUser && (currentUser.id === target.id || currentUser.houseNumber === target.houseNumber)) {
+      setCurrentUser((prev) => (prev ? { ...prev, points: nextPoints } : null));
     }
     const log: PointLog = {
       id: `pl-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -2292,6 +2487,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         isPengurusOpen,
         setIsPengurusOpen,
+
+        activeSessions,
+        kickSession,
+        inactivityNotice,
+        clearInactivityNotice,
 
         isCloudSynced,
         activeView,

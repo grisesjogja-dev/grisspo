@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, defaultGuestUser } from '../context/AppContext';
 import {
   Award,
   Coins,
@@ -17,7 +17,8 @@ import {
 import confetti from 'canvas-confetti';
 
 export const LoyaltyPointsView: React.FC = () => {
-  const { currentUser, rewards, pointLogs, redeemReward, residents, deletePointLog } = useApp();
+  const { currentUser: authUser, rewards, pointLogs, redeemReward, residents, deletePointLog } = useApp();
+  const currentUser = authUser || defaultGuestUser;
   const [activeTab, setActiveTab] = useState<'catalog' | 'history' | 'leaderboard'>('catalog');
 
   const getRank = (pts: number) => {

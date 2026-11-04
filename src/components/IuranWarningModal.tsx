@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, defaultGuestUser } from '../context/AppContext';
 import {
   AlertTriangle,
   X,
@@ -21,11 +21,14 @@ interface IuranWarningModalProps {
 }
 
 export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, onClose }) => {
-  const { currentUser, residents, updateResident, addTransaction, awardPoints, addAnnouncement } = useApp();
+  const { currentUser: authUser, residents, updateResident, addTransaction, awardPoints, addAnnouncement } = useApp();
+  const currentUser = authUser || defaultGuestUser;
   const [isPayingNow, setIsPayingNow] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'qris' | 'transfer' | 'cash'>('qris');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  if (!isOpen || !authUser) return null;
 
   // Find full resident record for current user
   const resident = residents.find(

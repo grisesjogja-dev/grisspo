@@ -249,9 +249,19 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     }, 0);
   }, [selectedMap]);
 
+  // Check if jimpitan for selectedDate has already been processed (enforcing 1x per day rule)
+  const isAlreadySubmittedToday = useMemo(() => {
+    return jimpitReports.some((r) => r.date === selectedDate);
+  }, [jimpitReports, selectedDate]);
+
   // Form submit handler
   const handleSubmitJimpit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isAlreadySubmittedToday) {
+      alert('jimpitan hari ini sudah di input');
+      return;
+    }
 
     if (totalSelectedCount === 0) {
       alert('Pilih minimal satu warga yang diambil jimpitannya!');
@@ -501,43 +511,11 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 Anda dapat langsung menggunakan <strong>Input Jimpitan</strong> dan <strong>Absensi Petugas Ronda Hari Ini</strong> di bawah. Untuk membuka seluruh menu portal (Buku Kas Keuangan, Notulen Rapat, Data Warga, Inventaris, Booking Fasum, Forum, dan Poin Loyalitas), silakan login akun warga Anda:
               </p>
               
-              {/* Quick Login Presets for convenience */}
-              <div className="pt-2">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-                  Akses Cepat Pengujian Role:
-                </span>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setInlineHouse('GrissB24');
-                      setInlinePass('Griss123');
-                    }}
-                    className="px-2.5 py-1 bg-red-950/70 border border-red-700/60 hover:bg-red-900 text-red-200 rounded-lg font-mono font-bold transition flex items-center gap-1.5"
-                  >
-                    <span>Superadmin (BENI - B 24)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setInlineHouse('GrissB02');
-                      setInlinePass('Griss123');
-                    }}
-                    className="px-2.5 py-1 bg-emerald-950/70 border border-emerald-700/60 hover:bg-emerald-900 text-emerald-200 rounded-lg font-mono font-bold transition flex items-center gap-1.5"
-                  >
-                    <span>Bendahara 1 (AHMAD - B 02)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setInlineHouse('GrissA03');
-                      setInlinePass('Griss123');
-                    }}
-                    className="px-2.5 py-1 bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-200 rounded-lg font-mono font-bold transition flex items-center gap-1.5"
-                  >
-                    <span>Warga (DANANG - A 03)</span>
-                  </button>
-                </div>
+              <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-xs text-slate-300 space-y-1">
+                <p className="font-semibold text-white">Panduan Login Warga:</p>
+                <p className="text-[11px] text-slate-300">
+                  Masukkan nomor rumah (misal: <span className="font-mono text-amber-300 font-bold">GrissB24</span> atau <span className="font-mono text-amber-300 font-bold">B 24</span>) dan password akun pribadi Anda pada form di samping.
+                </p>
               </div>
             </div>
 
@@ -667,6 +645,33 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
       {/* ========================================================================= */}
       {tab === 'input' && (
         <form onSubmit={handleSubmitJimpit} className="space-y-6">
+          {/* Notification if today is already submitted */}
+          {isAlreadySubmittedToday && (
+            <div className="p-4 bg-amber-50 border-2 border-amber-400 rounded-2xl flex items-start gap-3 text-amber-950 shadow-sm animate-in fade-in duration-150">
+              <AlertTriangle size={20} className="shrink-0 text-amber-600 mt-0.5" />
+              <div className="text-xs space-y-1">
+                <p className="font-black text-sm text-amber-950">
+                  Pemberitahuan: Jimpitan hari ini sudah di input!
+                </p>
+                <p className="text-amber-800 leading-relaxed font-medium">
+                  Laporan jimpitan untuk tanggal <strong>{selectedDate} ({selectedDay})</strong> telah selesai diproses dan tercatat di kas paguyuban. Dalam satu hari hanya bisa memproses <strong>1 kali proses input jimpitan</strong> untuk menghindari penginputan jimpitan double (yang sama).
+                </p>
+                <div className="pt-1.5 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDailyReportDate(selectedDate);
+                      setTab('laporan_harian');
+                    }}
+                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs transition inline-flex items-center gap-1 shadow-xs"
+                  >
+                    <span>Lihat Laporan Jimpitan Tanggal Ini</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Schedule & Collector Card */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -1096,10 +1101,19 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
               <button
                 type="submit"
-                className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-black rounded-xl text-sm shadow-lg shadow-amber-600/30 flex items-center justify-center gap-2 transition"
+                disabled={isAlreadySubmittedToday}
+                className={`w-full sm:w-auto px-8 py-3.5 text-white font-black rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 transition ${
+                  isAlreadySubmittedToday
+                    ? 'bg-slate-400 cursor-not-allowed shadow-none'
+                    : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-amber-600/30 active:scale-95'
+                }`}
               >
                 <Send size={16} />
-                <span>Kirim Jimpit & Cetak Laporan (Rp {currentTotalRevenue.toLocaleString('id-ID')})</span>
+                <span>
+                  {isAlreadySubmittedToday
+                    ? 'Jimpitan Hari Ini Sudah Di-input (Maks. 1x / Hari)'
+                    : `Kirim Jimpit & Cetak Laporan (Rp ${currentTotalRevenue.toLocaleString('id-ID')})`}
+                </span>
               </button>
             </div>
           </div>
@@ -1713,14 +1727,9 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                   )}
                 </div>
               </div>
-            ))}
-
-            {jimpitReports.length === 0 && (
-              <div className="col-span-2 text-center py-10 bg-white rounded-2xl border border-slate-200 text-slate-400">
-                Belum ada laporan jimpitan yang dicatat.
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

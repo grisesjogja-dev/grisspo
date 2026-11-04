@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, defaultGuestUser } from '../context/AppContext';
 import {
   MeetingNote,
   MeetingNoteStatus,
@@ -33,7 +33,7 @@ import {
 
 export const NotulenDanAbsensiView: React.FC = () => {
   const {
-    currentUser,
+    currentUser: authUser,
     meetingNotes,
     addMeetingNote,
     updateMeetingNoteStatus,
@@ -44,6 +44,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
     deleteAttendanceSession,
     residents
   } = useApp();
+  const currentUser = authUser || defaultGuestUser;
 
   const isSuperadmin = currentUser.role === 'superadmin';
   const isPengurus = [

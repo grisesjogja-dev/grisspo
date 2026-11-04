@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, defaultGuestUser } from '../context/AppContext';
 import { InventoryItem, InventoryCondition } from '../types';
 import { permissions } from '../utils/security';
 import {
@@ -27,8 +27,9 @@ export const InventarisView: React.FC = () => {
     addInventoryItem,
     borrowInventoryItem,
     returnInventoryItem,
-    currentUser
+    currentUser: authUser
   } = useApp();
+  const currentUser = authUser || defaultGuestUser;
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
