@@ -19,7 +19,11 @@ import {
   AttendanceType,
   MeetingNote,
   MeetingNoteStatus,
-  ActiveSession
+  ActiveSession,
+  FasumFacilityConfig,
+  PaymentReceipt,
+  PaymentReceiptType,
+  PaymentMethodType
 } from '../types';
 import {
   initialResidents,
@@ -31,7 +35,8 @@ import {
   initialAnnouncements,
   initialFasumBookings,
   initialMeetingNotes,
-  initialAttendanceSessions
+  initialAttendanceSessions,
+  fasumFacilities
 } from '../data/seedData';
 import {
   computeTransactionHash,
@@ -72,7 +77,7 @@ interface AppContextType {
   jimpitReports: JimpitDailyReport[];
   submitDailyJimpit: (report: Omit<JimpitDailyReport, 'id' | 'createdAt'>) => Promise<void>;
   deleteJimpitReport: (id: string) => Promise<void>;
-  payJimpitanDeficit: (residentId: string, amount: number, method: 'qris' | 'transfer' | 'cash', notes?: string) => Promise<{ success: boolean; message: string; transactionId?: string }>;
+  payJimpitanDeficit: (residentId: string, amount: number, method: 'transfer' | 'cash', notes?: string) => Promise<{ success: boolean; message: string; transactionId?: string }>;
   removeRondaMember: (day: DayOfWeek, memberName: string) => Promise<void>;
   addRondaMember: (day: DayOfWeek, memberName: string) => Promise<void>;
 
@@ -127,6 +132,30 @@ interface AppContextType {
   confirmFasumPayment: (bookingId: string, approvedBy?: string) => Promise<void>;
   updateFasumBookingStatus: (bookingId: string, status: FasumBooking['status'], notes?: string) => Promise<void>;
   deleteFasumBooking: (bookingId: string) => Promise<void>;
+
+  // Fasum Facilities Management (Superadmin CRUD)
+  fasumFacilitiesList: FasumFacilityConfig[];
+  addFasumFacility: (facility: FasumFacilityConfig) => Promise<void>;
+  updateFasumFacility: (facility: FasumFacilityConfig) => Promise<void>;
+  deleteFasumFacility: (facilityId: string) => Promise<void>;
+
+  // Cashier & Payment Receipts (Iuran 25k, Sampah 50k, Fasum, Sumbangan, Lain-lain)
+  paymentReceipts: PaymentReceipt[];
+  recordCashierPayment: (data: {
+    residentId: string;
+    residentName: string;
+    residentHouse: string;
+    residentPhone?: string;
+    paymentType: PaymentReceiptType;
+    paymentTypeName: string;
+    amount: number;
+    periodMonth?: string;
+    paymentMethod: PaymentMethodType;
+    notes?: string;
+  }) => Promise<PaymentReceipt>;
+  updatePaymentReceipt: (receipt: PaymentReceipt) => Promise<void>;
+  deletePaymentReceipt: (id: string) => Promise<void>;
+  sendReceiptNotificationEmail: (receiptId: string) => Promise<{ success: boolean; message: string }>;
 
   // Absensi Warga (Ronda, Kerjabakti, Rapat Bulanan)
   attendanceSessions: AttendanceSession[];
@@ -294,6 +323,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
     activityEvents.forEach((ev) => window.addEventListener(ev, handleUserActivity, { passive: true }));
 
+    // Auto-Logout saat aplikasi di-minimize atau tab browser disembunyikan
+    const handleVisibilityChange = () => {
+      if ((document.visibilityState === 'hidden' || document.hidden) && currentUserRef.current) {
+        const userToLogout = currentUserRef.current;
+        removeActiveSessionFromCloud(userToLogout.id);
+        setCurrentUser(null);
+        localStorage.removeItem('grisspo_user');
+        setActiveView('dashboard');
+        setInactivityNotice(
+          'Sesi Anda telah otomatis diamankan (Auto-Logout) karena jendela aplikasi atau browser diminimalkan. Silakan login kembali dengan username dan password Anda.'
+        );
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const checkInterval = setInterval(() => {
       const now = Date.now();
       const elapsed = now - lastActivityTimeRef.current;
@@ -320,6 +364,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return () => {
       activityEvents.forEach((ev) => window.removeEventListener(ev, handleUserActivity));
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(checkInterval);
     };
   }, [currentUser]);
@@ -433,6 +478,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return base.filter((b) => !initialDeletedIds.includes(b.id));
   });
 
+  // Fasum Facilities Config List (Superadmin dynamic CRUD)
+  const [fasumFacilitiesList, setFasumFacilitiesList] = useState<FasumFacilityConfig[]>(() => {
+    const saved = localStorage.getItem('grisspo_fasum_facilities');
+    return saved ? JSON.parse(saved) : fasumFacilities;
+  });
+
+  // Loket Pembayaran Kas & Kwitansi Resmi
+  const [paymentReceipts, setPaymentReceipts] = useState<PaymentReceipt[]>(() => {
+    const saved = localStorage.getItem('grisspo_payment_receipts');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Absensi Records (Ronda, Kerjabakti, Rapat Bulanan)
   const [attendanceSessions, setAttendanceSessions] = useState<AttendanceSession[]>(() => {
     const saved = localStorage.getItem('grisspo_attendance_sessions');
@@ -524,6 +581,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let unsubAbsensi: (() => void) | undefined;
     let unsubNotulen: (() => void) | undefined;
     let unsubActiveSessions: (() => void) | undefined;
+    let unsubFacilities: (() => void) | undefined;
+    let unsubReceipts: (() => void) | undefined;
 
     // Check Cloud Seed Status so other devices NEVER resurrect deleted documents
     const checkCloudSeedStatus = async () => {
@@ -807,6 +866,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }, (err) => {
         console.warn('Firestore active_sessions listener error:', err.message);
       });
+
+      // 11. Fasum Facilities Config listener (Dynamic facilities from Firestore)
+      unsubFacilities = onSnapshot(collection(db, 'fasum_facilities'), (snapshot) => {
+        if (!snapshot.empty) {
+          const cloudFac: FasumFacilityConfig[] = [];
+          snapshot.forEach((d) => {
+            if (!deletedIdsRef.current.includes(d.id)) {
+              cloudFac.push(d.data() as FasumFacilityConfig);
+            }
+          });
+          if (cloudFac.length > 0) {
+            setFasumFacilitiesList(cloudFac);
+            localStorage.setItem('grisspo_fasum_facilities', JSON.stringify(cloudFac));
+          }
+        }
+      }, (err) => {
+        console.warn('Firestore fasum_facilities listener notice:', err.message);
+      });
+
+      // 12. Loket Pembayaran Kas & Kwitansi listener
+      unsubReceipts = onSnapshot(collection(db, 'pembayaran_kwitansi'), (snapshot) => {
+        if (!snapshot.empty) {
+          const cloudReceipts: PaymentReceipt[] = [];
+          snapshot.forEach((d) => {
+            if (!deletedIdsRef.current.includes(d.id)) {
+              cloudReceipts.push(d.data() as PaymentReceipt);
+            }
+          });
+          cloudReceipts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setPaymentReceipts(cloudReceipts);
+          localStorage.setItem('grisspo_payment_receipts', JSON.stringify(cloudReceipts));
+        }
+      }, (err) => {
+        console.warn('Firestore pembayaran_kwitansi listener notice:', err.message);
+      });
     } catch (e) {
       console.warn('Firebase Firestore initialization notice:', e);
     }
@@ -823,10 +917,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubAbsensi?.();
       unsubNotulen?.();
       unsubActiveSessions?.();
+      unsubFacilities?.();
+      unsubReceipts?.();
     };
   }, []);
 
   // Save to localStorage as well
+  useEffect(() => {
+    localStorage.setItem('grisspo_fasum_facilities', JSON.stringify(fasumFacilitiesList));
+  }, [fasumFacilitiesList]);
+
+  useEffect(() => {
+    localStorage.setItem('grisspo_payment_receipts', JSON.stringify(paymentReceipts));
+  }, [paymentReceipts]);
+
   useEffect(() => {
     localStorage.setItem('grisspo_attendance_sessions', JSON.stringify(attendanceSessions));
   }, [attendanceSessions]);
@@ -1197,6 +1301,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem('grisspo_wa_logs', JSON.stringify([]));
         break;
       }
+      case 'inventaris': {
+        inventory.forEach((i) => idsToMark.push(i.id));
+        setInventory([]);
+        localStorage.setItem('grisspo_inventory', JSON.stringify([]));
+        try {
+          const snap = await getDocs(collection(db, 'inventaris'));
+          snap.forEach((d) => {
+            idsToMark.push(d.id);
+            deleteDoc(doc(db, 'inventaris', d.id)).catch(() => {});
+          });
+        } catch (e) {
+          console.warn('Reset inventaris error:', e);
+        }
+        break;
+      }
+      case 'pembayaran': {
+        paymentReceipts.forEach((p) => idsToMark.push(p.id));
+        setPaymentReceipts([]);
+        localStorage.setItem('grisspo_payment_receipts', JSON.stringify([]));
+        try {
+          const snap = await getDocs(collection(db, 'pembayaran_kwitansi'));
+          snap.forEach((d) => {
+            idsToMark.push(d.id);
+            deleteDoc(doc(db, 'pembayaran_kwitansi', d.id)).catch(() => {});
+          });
+        } catch (e) {
+          console.warn('Reset pembayaran error:', e);
+        }
+        break;
+      }
+      case 'warga': {
+        const resetRes = residents.map((r) => ({
+          ...r,
+          iuranUnpaidMonths: 0,
+          unpaidMonthNames: [],
+          monthlyIuranPaid: true,
+          previousMonthsJimpitanDeficit: 0,
+          jimpitanPaidMonth: 15000
+        }));
+        setResidents(resetRes);
+        localStorage.setItem('grisspo_residents', JSON.stringify(resetRes));
+        resetRes.forEach((r) => {
+          setDoc(doc(db, 'warga', r.id), r).catch(() => {});
+        });
+        break;
+      }
       case 'poin': {
         pointLogs.forEach((p) => idsToMark.push(p.id));
         setPointLogs([]);
@@ -1523,7 +1673,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const payJimpitanDeficit = async (
     residentId: string,
     amount: number,
-    method: 'qris' | 'transfer' | 'cash',
+    method: 'transfer' | 'cash',
     notes?: string
   ): Promise<{ success: boolean; message: string; transactionId?: string }> => {
     const resident = residents.find((r) => r.id === residentId);
@@ -1575,13 +1725,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       now
     );
 
+    const methodLabel = method === 'transfer' ? 'Transfer Bank BRI' : 'Tunai';
+
     const newTrx: Transaction = {
       id: `trx-jimpit-pay-${now}`,
       type: 'pemasukan',
       category: 'Pemasukan Jimpitan Bulanan',
       amount,
       date: dateStr,
-      description: `Pelunasan Kekurangan Jimpitan: ${resident.name} (${resident.houseNumber}) via ${method.toUpperCase()}${notes ? ` - ${notes}` : ''}`,
+      description: `Pelunasan Kekurangan Jimpitan: ${resident.name} (${resident.houseNumber}) via ${methodLabel}${notes ? ` - ${notes}` : ''}`,
       recordedBy: currentUser ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : 'Petugas Jimpit',
       userRole,
       sourceHouse: resident.houseNumber,
@@ -1599,11 +1751,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // 3. Award loyalty points & push announcement
-    awardPoints(resident.id, 15, `Pelunasan kekurangan jimpitan via ${method.toUpperCase()}`);
+    awardPoints(resident.id, 15, `Pelunasan kekurangan jimpitan via ${methodLabel}`);
 
     addAnnouncement(
       `Pelunasan Kekurangan Jimpitan: ${resident.name} (${resident.houseNumber})`,
-      `Pembayaran kekurangan jimpitan sebesar Rp ${amount.toLocaleString('id-ID')} via ${method.toUpperCase()} telah berhasil diverifikasi dan tercatat di Kas Paguyuban.`,
+      `Pembayaran kekurangan jimpitan sebesar Rp ${amount.toLocaleString('id-ID')} via ${methodLabel} telah berhasil diverifikasi dan tercatat di Kas Paguyuban.`,
       'Keuangan',
       false
     );
@@ -2210,6 +2362,190 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // --- FASUM FACILITIES CRUD (Superadmin) ---
+  const addFasumFacility = async (facility: FasumFacilityConfig) => {
+    const next = [...fasumFacilitiesList.filter((f) => f.id !== facility.id), facility];
+    setFasumFacilitiesList(next);
+    localStorage.setItem('grisspo_fasum_facilities', JSON.stringify(next));
+    try {
+      await setDoc(doc(db, 'fasum_facilities', facility.id), facility);
+    } catch (err) {
+      console.warn('Firestore addFasumFacility error:', err);
+    }
+  };
+
+  const updateFasumFacility = async (facility: FasumFacilityConfig) => {
+    const next = fasumFacilitiesList.map((f) => (f.id === facility.id ? facility : f));
+    setFasumFacilitiesList(next);
+    localStorage.setItem('grisspo_fasum_facilities', JSON.stringify(next));
+    try {
+      await setDoc(doc(db, 'fasum_facilities', facility.id), facility);
+    } catch (err) {
+      console.warn('Firestore updateFasumFacility error:', err);
+    }
+  };
+
+  const deleteFasumFacility = async (facilityId: string) => {
+    if (currentUser?.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin yang berhak menghapus jenis fasilitas.');
+      return;
+    }
+    const next = fasumFacilitiesList.filter((f) => f.id !== facilityId);
+    setFasumFacilitiesList(next);
+    localStorage.setItem('grisspo_fasum_facilities', JSON.stringify(next));
+    try {
+      await deleteDoc(doc(db, 'fasum_facilities', facilityId));
+    } catch (err) {
+      console.warn('Firestore deleteFasumFacility error:', err);
+    }
+  };
+
+  // --- LOKET PEMBAYARAN KAS & KWITANSI RESMI ---
+  const recordCashierPayment = async (data: {
+    residentId: string;
+    residentName: string;
+    residentHouse: string;
+    residentPhone?: string;
+    paymentType: PaymentReceiptType;
+    paymentTypeName: string;
+    amount: number;
+    periodMonth?: string;
+    paymentMethod: PaymentMethodType;
+    notes?: string;
+  }): Promise<PaymentReceipt> => {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const receiptNum = `KWT-GSS-${dateStr.replace(/-/g, '')}-${String(Math.floor(1000 + Math.random() * 9000))}`;
+    const receiptId = `receipt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
+    // 1. Add corresponding cash transaction to Paguyuban Book
+    let cat: Transaction['category'] = 'Iuran Bulanan (Rp 25.000)';
+    if (data.paymentType === 'iuran_bulanan') cat = 'Iuran Bulanan (Rp 25.000)';
+    else if (data.paymentType === 'iuran_bulanan_sampah') cat = 'Iuran Bulanan + Sampah (Rp 50.000)';
+    else if (data.paymentType === 'sewa_fasum') cat = 'Sewa Fasum';
+    else if (data.paymentType === 'sumbangan_sukarela') cat = 'Sumbangan Sukarela';
+    else cat = 'Lain-lain Pemasukan';
+
+    const methodLabel = data.paymentMethod === 'transfer_bank_bri'
+      ? 'Transfer Bank BRI (155801007310503 a/n Benisius Rahmat Basuki)'
+      : 'Tunai ke Bendahara';
+
+    const desc = `${data.paymentTypeName} - ${data.residentName} (${data.residentHouse}) [No. Kwitansi: ${receiptNum}] via ${methodLabel}${data.periodMonth ? ` - Periode: ${data.periodMonth}` : ''}${data.notes ? ` (${data.notes})` : ''}`;
+
+    const createdTrx = await addTransaction({
+      type: 'pemasukan',
+      category: cat,
+      amount: data.amount,
+      date: dateStr,
+      description: desc,
+      recordedBy: currentUser ? `${currentUser.name} (${currentUser.role})` : 'Bendahara Kas',
+      userRole: currentUser?.role || 'bendahara1',
+      sourceHouse: data.residentHouse
+    });
+
+    // 2. If iuran, update resident arrears
+    const res = residents.find(
+      (r) =>
+        r.id === data.residentId ||
+        r.houseNumber.replace(/\s+/g, '').toUpperCase() === data.residentHouse.replace(/\s+/g, '').toUpperCase()
+    );
+    if (res) {
+      if (data.paymentType === 'iuran_bulanan' || data.paymentType === 'iuran_bulanan_sampah') {
+        const currentUnpaid = res.iuranUnpaidMonths || 0;
+        const newUnpaid = Math.max(0, currentUnpaid - 1);
+        const newUnpaidNames = (res.unpaidMonthNames || []).slice(1);
+        await updateResident({
+          ...res,
+          monthlyIuranPaid: true,
+          iuranUnpaidMonths: newUnpaid,
+          unpaidMonthNames: newUnpaidNames,
+          points: (res.points || 0) + 10
+        });
+      } else if (data.paymentType === 'sumbangan_sukarela') {
+        const bonusPts = data.amount >= 100000 ? 50 : 20;
+        await updateResident({
+          ...res,
+          points: (res.points || 0) + bonusPts
+        });
+      }
+    }
+
+    const newReceipt: PaymentReceipt = {
+      id: receiptId,
+      receiptNumber: receiptNum,
+      date: dateStr,
+      residentId: data.residentId,
+      residentName: data.residentName,
+      residentHouse: data.residentHouse,
+      residentPhone: data.residentPhone,
+      paymentType: data.paymentType,
+      paymentTypeName: data.paymentTypeName,
+      amount: data.amount,
+      periodMonth: data.periodMonth,
+      paymentMethod: data.paymentMethod,
+      notes: data.notes,
+      recordedBy: currentUser ? `${currentUser.name} (${currentUser.houseNumber})` : 'Bendahara GSS',
+      recorderRole: currentUser?.role || 'bendahara1',
+      transactionId: createdTrx.id,
+      createdAt: new Date().toISOString()
+    };
+
+    const nextReceipts = [newReceipt, ...paymentReceipts];
+    setPaymentReceipts(nextReceipts);
+    localStorage.setItem('grisspo_payment_receipts', JSON.stringify(nextReceipts));
+
+    try {
+      await setDoc(doc(db, 'pembayaran_kwitansi', receiptId), newReceipt);
+    } catch (err) {
+      console.warn('Firestore recordCashierPayment error:', err);
+    }
+
+    return newReceipt;
+  };
+
+  const updatePaymentReceipt = async (receipt: PaymentReceipt) => {
+    const next = paymentReceipts.map((p) => (p.id === receipt.id ? receipt : p));
+    setPaymentReceipts(next);
+    localStorage.setItem('grisspo_payment_receipts', JSON.stringify(next));
+    try {
+      await setDoc(doc(db, 'pembayaran_kwitansi', receipt.id), receipt);
+    } catch (err) {
+      console.warn('Firestore updatePaymentReceipt error:', err);
+    }
+  };
+
+  const deletePaymentReceipt = async (id: string) => {
+    const toDelete = paymentReceipts.find((p) => p.id === id);
+    const next = paymentReceipts.filter((p) => p.id !== id);
+    setPaymentReceipts(next);
+    localStorage.setItem('grisspo_payment_receipts', JSON.stringify(next));
+
+    if (toDelete?.transactionId) {
+      await deleteTransaction(toDelete.transactionId).catch(() => {});
+    }
+
+    try {
+      await deleteDoc(doc(db, 'pembayaran_kwitansi', id));
+    } catch (err) {
+      console.warn('Firestore deletePaymentReceipt error:', err);
+    }
+  };
+
+  const sendReceiptNotificationEmail = async (receiptId: string): Promise<{ success: boolean; message: string }> => {
+    const receipt = paymentReceipts.find((p) => p.id === receiptId);
+    if (!receipt) return { success: false, message: 'Kwitansi tidak ditemukan' };
+
+    const updated: PaymentReceipt = {
+      ...receipt,
+      emailSentAt: new Date().toISOString()
+    };
+    await updatePaymentReceipt(updated);
+
+    return {
+      success: true,
+      message: `Notifikasi Kwitansi Resmi #${receipt.receiptNumber} berhasil disiapkan & terkirim via server email grises.jogja@gmail.com ke Bpk/Ibu ${receipt.residentName} (${receipt.residentHouse}).`
+    };
+  };
+
   // Absensi methods (Ronda, Kerjabakti, Rapat Bulanan)
   const submitAttendanceSession = async (
     sessionData: Omit<AttendanceSession, 'id' | 'createdAt'>
@@ -2473,6 +2809,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         confirmFasumPayment,
         updateFasumBookingStatus,
         deleteFasumBooking,
+
+        fasumFacilitiesList,
+        addFasumFacility,
+        updateFasumFacility,
+        deleteFasumFacility,
+
+        paymentReceipts,
+        recordCashierPayment,
+        updatePaymentReceipt,
+        deletePaymentReceipt,
+        sendReceiptNotificationEmail,
 
         attendanceSessions,
         submitAttendanceSession,

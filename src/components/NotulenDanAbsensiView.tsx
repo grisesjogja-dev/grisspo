@@ -28,7 +28,8 @@ import {
   Square,
   Lock,
   Send,
-  Building
+  Building,
+  RotateCcw
 } from 'lucide-react';
 
 export const NotulenDanAbsensiView: React.FC = () => {
@@ -42,7 +43,8 @@ export const NotulenDanAbsensiView: React.FC = () => {
     attendanceSessions,
     submitAttendanceSession,
     deleteAttendanceSession,
-    residents
+    residents,
+    resetFeatureData
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
 
@@ -54,8 +56,13 @@ export const NotulenDanAbsensiView: React.FC = () => {
     'admin_inventaris'
   ].includes(currentUser.role);
 
-  // Active Tab: 'notulen' | 'absensi_kerjabakti' | 'absensi_rapat'
-  const [activeTab, setActiveTab] = useState<'notulen' | 'absensi_kerjabakti' | 'absensi_rapat'>('notulen');
+  // Active Tab: 'notulen' | 'absensi_kerjabakti' | 'absensi_rapat' | 'log_absensi'
+  const [activeTab, setActiveTab] = useState<'notulen' | 'absensi_kerjabakti' | 'absensi_rapat' | 'log_absensi'>('notulen');
+  const [isResetting, setIsResetting] = useState(false);
+
+  // State for Log Absensi Tab
+  const [logTypeFilter, setLogTypeFilter] = useState<'ALL' | 'ronda' | 'kerjabakti' | 'rapat'>('ALL');
+  const [logSearchQuery, setLogSearchQuery] = useState('');
 
   // --- NOTULEN STATE ---
   const [statusFilter, setStatusFilter] = useState<'ALL' | MeetingNoteStatus>('ALL');

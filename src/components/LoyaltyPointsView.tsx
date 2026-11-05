@@ -17,7 +17,7 @@ import {
 import confetti from 'canvas-confetti';
 
 export const LoyaltyPointsView: React.FC = () => {
-  const { currentUser: authUser, rewards, pointLogs, redeemReward, residents, deletePointLog } = useApp();
+  const { currentUser: authUser, rewards, pointLogs, redeemReward, residents, deletePointLog, resetFeatureData } = useApp();
   const currentUser = authUser || defaultGuestUser;
   const [activeTab, setActiveTab] = useState<'catalog' | 'history' | 'leaderboard'>('catalog');
 
@@ -189,6 +189,23 @@ export const LoyaltyPointsView: React.FC = () => {
           <Trophy size={16} />
           <span>Peringkat Warga Teraktif (Top 10)</span>
         </button>
+
+        {currentUser.role === 'superadmin' && (
+          <button
+            type="button"
+            onClick={async () => {
+              if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh GRISS-Poin warga dan log riwayat perolehan poin?')) {
+                await resetFeatureData('poin');
+                alert('Data Poin Warga berhasil direset oleh Superadmin.');
+              }
+            }}
+            className="ml-auto my-auto px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-xl border border-red-200 transition flex items-center gap-1.5 whitespace-nowrap"
+            title="Reset Poin Warga (Superadmin)"
+          >
+            <Trash2 size={13} className="text-red-600" />
+            <span>Reset Poin Warga</span>
+          </button>
+        )}
       </div>
 
       {/* TAB 1: REWARDS CATALOG */}

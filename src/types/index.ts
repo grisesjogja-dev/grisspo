@@ -86,6 +86,7 @@ export interface JimpitDailyReport {
 export type IncomeCategory =
   | 'Iuran Bulanan (Rp 25.000)'
   | 'Iuran Sampah (Rp 25.000)'
+  | 'Iuran Bulanan + Sampah (Rp 50.000)'
   | 'Sewa Fasum (Rp 30.000/bln)'
   | 'Sewa Fasum'
   | 'Pemasukan Jimpitan Bulanan'
@@ -183,12 +184,7 @@ export interface Announcement {
   readBy?: string[];
 }
 
-export type FasumFacilityType =
-  | 'balai_warga'
-  | 'lapangan_olahraga'
-  | 'gazebo_taman'
-  | 'tenda_kursi'
-  | 'sound_proyektor';
+export type FasumFacilityType = string;
 
 export interface FasumFacilityConfig {
   id: FasumFacilityType;
@@ -210,7 +206,38 @@ export type FasumBookingStatus = 'menunggu_konfirmasi' | 'disetujui' | 'ditolak'
 
 export type FasumPaymentStatus = 'menunggu_pembayaran' | 'menunggu_konfirmasi' | 'lunas' | 'dibatalkan';
 
-export type FasumPaymentMethod = 'qris' | 'transfer_bank' | 'tunai_bendahara';
+export type FasumPaymentMethod = 'transfer_bank' | 'tunai_bendahara';
+
+export type PaymentReceiptType =
+  | 'iuran_bulanan'
+  | 'iuran_bulanan_sampah'
+  | 'sewa_fasum'
+  | 'sumbangan_sukarela'
+  | 'pemasukan_lain';
+
+export type PaymentMethodType = 'tunai_bendahara' | 'transfer_bank_bri';
+
+export interface PaymentReceipt {
+  id: string;
+  receiptNumber: string; // e.g. KWT-GSS-202611-001
+  date: string; // YYYY-MM-DD
+  residentId: string;
+  residentName: string;
+  residentHouse: string;
+  residentPhone?: string;
+  paymentType: PaymentReceiptType;
+  paymentTypeName: string;
+  amount: number;
+  periodMonth?: string;
+  paymentMethod: PaymentMethodType;
+  notes?: string;
+  recordedBy: string;
+  recorderRole: UserRole;
+  transactionId?: string;
+  whatsappSentAt?: string;
+  emailSentAt?: string;
+  createdAt: string;
+}
 
 export interface FasumBooking {
   id: string;

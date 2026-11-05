@@ -20,7 +20,27 @@ import {
   Send,
   ExternalLink,
   MessageSquare,
-  CheckCircle2
+import {
+  Users,
+  Search,
+  Filter,
+  UserPlus,
+  Edit2,
+  Trash2,
+  Phone,
+  Home,
+  CheckCircle,
+  XCircle,
+  ShieldCheck,
+  Lock,
+  Coins,
+  AlertTriangle,
+  Send,
+  ExternalLink,
+  MessageSquare,
+  CheckCircle2,
+  RotateCcw,
+  X
 } from 'lucide-react';
 
 export const DataWargaView: React.FC = () => {
@@ -30,7 +50,8 @@ export const DataWargaView: React.FC = () => {
     deleteResident,
     addResident,
     currentUser,
-    sendWhatsAppIuranWarning
+    sendWhatsAppIuranWarning,
+    resetFeatureData
   } = useApp();
 
   // Active Tab: 'semua' | 'tunggakan'
@@ -40,6 +61,7 @@ export const DataWargaView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBlock, setSelectedBlock] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
+  const [isResetting, setIsResetting] = useState(false);
 
   // Modal states for Superadmin editing
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
@@ -63,16 +85,28 @@ export const DataWargaView: React.FC = () => {
   // Permission check: only Superadmin can edit or delete residents
   const canEditOrDelete = currentUser ? permissions.canManageResidents(currentUser.role) : false;
 
-  // Filtered residents list
+  // Filtered residents list with enhanced quick search (name, house number e.g. "B 24" or "B24", block, phone)
   const filteredResidents = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    const cleanQ = q.replace(/[\s\-_]/g, '');
+
     return residents.filter((r) => {
       const matchBlock = selectedBlock === 'ALL' || r.block === selectedBlock;
       const matchStatus = selectedStatus === 'ALL' || r.statusRumah === selectedStatus;
-      const matchSearch =
-        r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.houseNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (r.phone && r.phone.includes(searchQuery));
-      return matchBlock && matchStatus && matchSearch;
+
+      if (!q) return matchBlock && matchStatus;
+
+      const cleanHouse = r.houseNumber.toLowerCase().replace(/[\s\-_]/g, '');
+      const matchName = r.name.toLowerCase().includes(q);
+      const matchHouse = r.houseNumber.toLowerCase().includes(q) || cleanHouse.includes(cleanQ);
+      const matchBlk =
+        r.block.toLowerCase() === q ||
+        `blok ${r.block.toLowerCase()}`.includes(q) ||
+        cleanQ === r.block.toLowerCase() ||
+        cleanQ === `blok${r.block.toLowerCase()}`;
+      const matchPhone = r.phone && r.phone.replace(/[\s\-]/g, '').includes(cleanQ);
+
+      return matchBlock && matchStatus && (matchName || matchHouse || matchBlk || matchPhone);
     });
   }, [residents, selectedBlock, selectedStatus, searchQuery]);
 
@@ -200,22 +234,46 @@ export const DataWargaView: React.FC = () => {
 
           <div className="mt-5 flex flex-wrap gap-2.5 items-center">
             {canEditOrDelete ? (
-              <button
-                onClick={() => {
-                  setFormName('');
-                  setFormHouse('');
-                  setFormBlock('A');
-                  setFormStatus('DI HUNI PEMILIK');
-                  setFormPhone('');
-                  setFormRole('warga');
-                  setFormFamily(3);
-                  setShowAddModal(true);
-                }}
-                className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/30 flex items-center gap-1.5 transition"
-              >
-                <UserPlus size={15} />
-                <span>Tambah Warga Baru (Superadmin)</span>
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    setFormName('');
+                    setFormHouse('');
+                    setFormBlock('A');
+                    setFormStatus('DI HUNI PEMILIK');
+                    setFormPhone('');
+                    setFormRole('warga');
+                    setFormFamily(3);
+                    setShowAddModal(true);
+                  }}
+                  className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/30 flex items-center gap-1.5 transition"
+                >
+                  <UserPlus size={15} />
+                  <span>Tambah Warga Baru (Superadmin)</span>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    if (confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh Data Warga ke data standar awal (58 warga asli Griya Sedayu Selaras 1)? Seluruh riwayat dan perubahan akan dikembalikan.')) {
+                      setIsResetting(true);
+                      try {
+                        await resetFeatureData('warga');
+                        alert('Data 58 warga berhasil di-reset ke kondisi awal oleh Superadmin!');
+                      } catch (err: any) {
+                        alert('Gagal mereset: ' + err.message);
+                      } finally {
+                        setIsResetting(false);
+                      }
+                    }
+                  }}
+                  disabled={isResetting}
+                  className="px-3.5 py-2.5 bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-rose-600/30 flex items-center gap-1.5 transition border border-rose-500/50"
+                  title="Reset seluruh master data warga ke seed data awal 58 warga (Khusus Superadmin)"
+                >
+                  <RotateCcw size={14} className={isResetting ? 'animate-spin' : ''} />
+                  <span>{isResetting ? 'Mereset Data...' : 'Reset Data Warga (Superadmin)'}</span>
+                </button>
+              </>
             ) : (
               <div className="text-xs bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700 text-slate-400 flex items-center gap-2">
                 <Lock size={13} className="text-amber-400" />
@@ -452,15 +510,25 @@ export const DataWargaView: React.FC = () => {
                   <option value="BELUM ADA PEMILIK">BELUM ADA PEMILIK</option>
                 </select>
 
-                <div className="relative flex-1 md:w-60">
-                  <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                <div className="relative flex-1 md:w-72">
+                  <Search size={14} className="absolute left-3 top-2.5 text-blue-500" />
                   <input
                     type="text"
-                    placeholder="Cari nama / no rumah..."
+                    placeholder="Cari cepat nama, no rumah, atau blok..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
+                    className="w-full pl-8 pr-8 py-1.5 bg-white border border-blue-200 focus:border-blue-500 rounded-lg text-xs font-medium focus:ring-1 focus:ring-blue-500"
                   />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600"
+                      title="Hapus pencarian"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

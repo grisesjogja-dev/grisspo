@@ -150,6 +150,10 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
   const handleSaveRondaAttendance = async () => {
     if (!dutyGroup) return;
+    if (todayRondaSession) {
+      alert(`Pemberitahuan: Absensi ronda untuk tanggal ${selectedDate} sudah pernah dikirim sebelumnya (${todayRondaSession.recordedBy}). Sesuai ketentuan, checklist absensi ronda hanya bisa dikirim 1 hari 1 kali.`);
+      return;
+    }
     setIsSavingRondaAttendance(true);
 
     const attendees = dutyGroup.members.map((memberName) => {
@@ -363,7 +367,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [selectedResidentForPay, setSelectedResidentForPay] = useState<Resident | null>(null);
   const [payAmountInput, setPayAmountInput] = useState<number | ''>(15000);
-  const [payMethod, setPayMethod] = useState<'qris' | 'transfer' | 'cash'>('qris');
+  const [payMethod, setPayMethod] = useState<'transfer' | 'cash'>('transfer');
   const [payNotes, setPayNotes] = useState<string>('');
   const [paySuccessReceipt, setPaySuccessReceipt] = useState<{
     residentName: string;
@@ -638,6 +642,23 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
           <Calendar size={16} />
           <span>Riwayat Semua Jimpitan ({jimpitReports.length})</span>
         </button>
+
+        {isSuperadmin && (
+          <button
+            type="button"
+            onClick={async () => {
+              if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data Laporan Jimpitan Ronda? Tindakan ini akan menghapus semua catatan riwayat jimpitan.')) {
+                await resetFeatureData('jimpitan');
+                alert('Data Laporan Jimpitan berhasil direset oleh Superadmin.');
+              }
+            }}
+            className="ml-auto my-auto px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-xl border border-red-200 transition flex items-center gap-1.5 whitespace-nowrap"
+            title="Reset Data Jimpitan (Akses Khusus Superadmin)"
+          >
+            <Trash2 size={13} className="text-red-600" />
+            <span>Reset Data Jimpitan</span>
+          </button>
+        )}
       </div>
 
       {/* ========================================================================= */}
@@ -847,17 +868,30 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+                  {todayRondaSession && (
+                    <div className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                      <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                      <span>Absensi ronda tanggal ini sudah dikirim (1 Hari 1x)</span>
+                    </div>
+                  )}
+
                   <button
                     type="button"
-                    disabled={isSavingRondaAttendance}
+                    disabled={isSavingRondaAttendance || !!todayRondaSession}
                     onClick={handleSaveRondaAttendance}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white text-xs font-black rounded-xl shadow-md shadow-amber-600/20 transition"
+                    className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-black rounded-xl shadow-md transition ${
+                      todayRondaSession
+                        ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
+                        : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-amber-600/20'
+                    }`}
                   >
                     <CheckSquare size={14} />
                     <span>
                       {isSavingRondaAttendance
                         ? 'Menyimpan...'
+                        : todayRondaSession
+                        ? 'Absensi Ronda Sudah Tercatat Hari Ini'
                         : `Simpan Absensi Ronda (+25 Poin / Petugas)`}
                     </span>
                   </button>
@@ -1069,7 +1103,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                           className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none"
                         >
                           <option value="cash">Tunai (Koin)</option>
-                          <option value="transfer">QRIS/Transfer</option>
+                          <option value="transfer">Transfer Bank BRI</option>
                         </select>
                       </div>
                     </div>
@@ -2036,31 +2070,18 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     <label className="block font-bold text-slate-700 mb-1.5">
                       Metode Pembayaran:
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPayMethod('qris')}
-                        className={`p-2.5 rounded-xl border text-center font-bold transition flex flex-col items-center gap-1 ${
-                          payMethod === 'qris'
-                            ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
-                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <QrCode size={16} className="text-emerald-600" />
-                        <span className="text-[11px]">QRIS Kas GSS</span>
-                      </button>
-
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() => setPayMethod('transfer')}
                         className={`p-2.5 rounded-xl border text-center font-bold transition flex flex-col items-center gap-1 ${
                           payMethod === 'transfer'
-                            ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
+                            ? 'border-blue-600 bg-blue-50 text-blue-800'
                             : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                         }`}
                       >
                         <CreditCard size={16} className="text-blue-600" />
-                        <span className="text-[11px]">Transfer BCA</span>
+                        <span className="text-[11px]">Transfer Bank BRI</span>
                       </button>
 
                       <button
@@ -2072,10 +2093,35 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                             : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                         }`}
                       >
-                        <Coins size={16} className="text-amber-600" />
-                        <span className="text-[11px]">Tunai Ronda</span>
+                        <Coins size={16} className="text-emerald-600" />
+                        <span className="text-[11px]">Tunai Bendahara 1/2</span>
                       </button>
                     </div>
+
+                    {payMethod === 'transfer' && (
+                      <div className="mt-2.5 p-3 bg-blue-50/80 border border-blue-200 rounded-xl text-xs space-y-1">
+                        <span className="font-extrabold text-blue-900 block text-[10px] uppercase">
+                          Rekening Transfer Bank BRI:
+                        </span>
+                        <p className="font-mono font-black text-slate-900 text-sm tracking-wider">
+                          155801007310503
+                        </p>
+                        <p className="text-slate-600 text-[11px]">
+                          a/n <strong>Benisius Rahmat Basuki</strong>
+                        </p>
+                      </div>
+                    )}
+
+                    {payMethod === 'cash' && (
+                      <div className="mt-2.5 p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs text-emerald-950 space-y-1">
+                        <span className="font-extrabold text-emerald-900 block text-[10px] uppercase">
+                          Tunai Langsung:
+                        </span>
+                        <p className="text-slate-700 text-[11px]">
+                          Diserahkan kepada Petugas Ronda keliling atau Bendahara 1 (Bpk. Ahmad B 02) / Bendahara 2 (Bpk. Robi C 15).
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Notes */}

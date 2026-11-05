@@ -9,6 +9,7 @@ import {
   FasumPaymentMethod
 } from '../types';
 import {
+import {
   Building2,
   Calendar,
   Clock,
@@ -31,7 +32,13 @@ import {
   Filter,
   Trash2,
   FileText,
-  BadgePercent
+  BadgePercent,
+  RotateCcw,
+  Edit2,
+  Plus,
+  Copy,
+  Check,
+  Settings
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -42,11 +49,21 @@ export const FasumBookingView: React.FC = () => {
     confirmFasumPayment,
     updateFasumBookingStatus,
     deleteFasumBooking,
+    fasumFacilitiesList,
+    addFasumFacility,
+    updateFasumFacility,
+    deleteFasumFacility,
+    resetFeatureData,
     currentUser: authUser,
     residents,
     totalIncome
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
+
+  // Active facility list (from Firestore or seed fallback)
+  const activeFacilities = useMemo(() => {
+    return fasumFacilitiesList && fasumFacilitiesList.length > 0 ? fasumFacilitiesList : fasumFacilities;
+  }, [fasumFacilitiesList]);
 
   // Tab state: 'katalog' | 'jadwal' | 'pemesanan_saya' | 'semua_pemesanan'
   const [activeTab, setActiveTab] = useState<'katalog' | 'jadwal' | 'pemesanan_saya' | 'semua_pemesanan'>('katalog');
@@ -57,8 +74,22 @@ export const FasumBookingView: React.FC = () => {
   const [paymentModalBooking, setPaymentModalBooking] = useState<FasumBooking | null>(null);
   const [receiptModalBooking, setReceiptModalBooking] = useState<FasumBooking | null>(null);
 
-  // Form states
-  const [formFacilityId, setFormFacilityId] = useState<FasumFacilityType>('balai_warga');
+  // Superadmin Facility Management Modal & Form
+  const [showFacilityModal, setShowFacilityModal] = useState(false);
+  const [editingFacility, setEditingFacility] = useState<FasumFacilityConfig | null>(null);
+  const [facName, setFacName] = useState('');
+  const [facCategory, setFacCategory] = useState<'Olahraga' | 'Sosial' | 'Serbaguna' | 'Perlengkapan'>('Sosial');
+  const [facFee, setFacFee] = useState<number>(50000);
+  const [facUnit, setFacUnit] = useState('sesi (4 jam)');
+  const [facCapacity, setFacCapacity] = useState('50 Orang');
+  const [facDescription, setFacDescription] = useState('');
+  const [facIncluded, setFacIncluded] = useState('');
+  const [facRules, setFacRules] = useState('');
+  const [isResettingFasum, setIsResettingFasum] = useState(false);
+  const [copiedBri, setCopiedBri] = useState(false);
+
+  // Form states for booking
+  const [formFacilityId, setFormFacilityId] = useState<string>('balai_warga');
   const [formDate, setFormDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 2);
@@ -68,7 +99,7 @@ export const FasumBookingView: React.FC = () => {
   const [formStartTime, setFormStartTime] = useState('08:00');
   const [formEndTime, setFormEndTime] = useState('12:00');
   const [formPurpose, setFormPurpose] = useState('');
-  const [formPaymentMethod, setFormPaymentMethod] = useState<FasumPaymentMethod>('qris');
+  const [formPaymentMethod, setFormPaymentMethod] = useState<FasumPaymentMethod>('transfer_bank');
   const [formNotes, setFormNotes] = useState('');
   const [targetResidentHouse, setTargetResidentHouse] = useState(currentUser.houseNumber);
 
@@ -83,9 +114,9 @@ export const FasumBookingView: React.FC = () => {
   // Compute facility configuration map
   const facilityConfigMap = useMemo(() => {
     const map = new Map<string, FasumFacilityConfig>();
-    fasumFacilities.forEach((f) => map.set(f.id, f));
+    activeFacilities.forEach((f) => map.set(f.id, f));
     return map;
-  }, []);
+  }, [activeFacilities]);
 
   // Calculate quick stats
   const stats = useMemo(() => {
@@ -119,8 +150,8 @@ export const FasumBookingView: React.FC = () => {
   }, [fasumBookings, formDate, formFacilityId, formTimeSlot]);
 
   // Get active facility fee
-  const currentSelectedFacilityConfig = facilityConfigMap.get(formFacilityId) || fasumFacilities[0];
-  const calculatedRentalFee = currentSelectedFacilityConfig.defaultFee;
+  const currentSelectedFacilityConfig = facilityConfigMap.get(formFacilityId) || activeFacilities[0] || fasumFacilities[0];
+  const calculatedRentalFee = currentSelectedFacilityConfig ? currentSelectedFacilityConfig.defaultFee : 0;
 
   // Handle open booking modal with specific facility
   const handleOpenBooking = (facility?: FasumFacilityConfig) => {
@@ -128,12 +159,97 @@ export const FasumBookingView: React.FC = () => {
       setFormFacilityId(facility.id);
       setSelectedFacility(facility);
     } else {
-      setSelectedFacility(fasumFacilities[0]);
+      const defaultFac = activeFacilities[0] || fasumFacilities[0];
+      setFormFacilityId(defaultFac.id);
+      setSelectedFacility(defaultFac);
     }
     setFormPurpose('');
     setFormNotes('');
-    setFormPaymentMethod('qris');
+    setFormPaymentMethod('transfer_bank');
     setShowBookingModal(true);
+  };
+
+  // Superadmin: Open Modal to Add Facility
+  const handleOpenAddFacility = () => {
+    setEditingFacility(null);
+    setFacName('');
+    setFacCategory('Sosial');
+    setFacFee(50000);
+    setFacUnit('sesi (4 jam)');
+    setFacCapacity('50 Orang');
+    setFacDescription('');
+    setFacIncluded('Listrik & Air, Meja & Kursi Standar');
+    setFacRules('Menjaga kebersihan dan ketertiban bersama warga.');
+    setShowFacilityModal(true);
+  };
+
+  // Superadmin: Open Modal to Edit Facility
+  const handleOpenEditFacility = (facility: FasumFacilityConfig) => {
+    setEditingFacility(facility);
+    setFacName(facility.name);
+    setFacCategory(facility.category);
+    setFacFee(facility.defaultFee);
+    setFacUnit(facility.unit);
+    setFacCapacity(facility.capacity);
+    setFacDescription(facility.description);
+    setFacIncluded((facility.facilitiesIncluded || []).join(', '));
+    setFacRules((facility.rules || []).join('\n'));
+    setShowFacilityModal(true);
+  };
+
+  // Superadmin: Save Facility (Add or Update)
+  const handleSaveFacility = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!facName.trim()) {
+      alert('Nama fasilitas wajib diisi!');
+      return;
+    }
+    const includedArr = facIncluded
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const rulesArr = facRules
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (editingFacility) {
+      await updateFasumFacility({
+        ...editingFacility,
+        name: facName,
+        category: facCategory,
+        defaultFee: Number(facFee),
+        unit: facUnit,
+        capacity: facCapacity,
+        description: facDescription,
+        facilitiesIncluded: includedArr,
+        rules: rulesArr
+      });
+      alert(`Fasilitas "${facName}" berhasil diperbarui!`);
+    } else {
+      await addFasumFacility({
+        name: facName,
+        category: facCategory,
+        defaultFee: Number(facFee),
+        unit: facUnit,
+        capacity: facCapacity,
+        description: facDescription,
+        facilitiesIncluded: includedArr,
+        rules: rulesArr,
+        iconName: 'Building2',
+        badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+      });
+      alert(`Fasilitas "${facName}" berhasil ditambahkan!`);
+    }
+    setShowFacilityModal(false);
+  };
+
+  // Superadmin: Delete Facility
+  const handleDeleteFacility = async (facility: FasumFacilityConfig) => {
+    if (confirm(`Apakah Anda yakin ingin menghapus jenis fasilitas "${facility.name}"?`)) {
+      await deleteFasumFacility(facility.id);
+      alert(`Fasilitas "${facility.name}" berhasil dihapus.`);
+    }
   };
 
   // Submit new booking
@@ -235,7 +351,7 @@ export const FasumBookingView: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
             <button
               onClick={() => handleOpenBooking()}
               className="flex items-center justify-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-2xl shadow-lg shadow-amber-500/30 hover:shadow-amber-500/40 transition active:scale-95 text-sm"
@@ -243,6 +359,41 @@ export const FasumBookingView: React.FC = () => {
               <PlusCircle size={18} />
               <span>Pesan Fasum Sekarang</span>
             </button>
+
+            {isSuperadmin && (
+              <>
+                <button
+                  onClick={handleOpenAddFacility}
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-3 bg-blue-500/30 hover:bg-blue-500/40 text-blue-200 border border-blue-400/30 font-bold rounded-2xl transition text-xs"
+                  title="Tambah jenis fasum baru (Superadmin)"
+                >
+                  <Plus size={15} />
+                  <span>Tambah Jenis Fasum</span>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    if (confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data fasilitas & reservasi fasum ke data default awal? Seluruh perubahan tarif dan riwayat akan dikembalikan.')) {
+                      setIsResettingFasum(true);
+                      try {
+                        await resetFeatureData('fasum');
+                        alert('Data Fasum berhasil direset ke standar awal oleh Superadmin!');
+                      } catch (err: any) {
+                        alert('Gagal mereset: ' + err.message);
+                      } finally {
+                        setIsResettingFasum(false);
+                      }
+                    }
+                  }}
+                  disabled={isResettingFasum}
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-3 bg-rose-600/80 hover:bg-rose-600 text-white border border-rose-500/40 font-bold rounded-2xl transition text-xs shadow-md shadow-rose-900/40"
+                  title="Reset seluruh data fasilitas dan reservasi ke awal (Superadmin)"
+                >
+                  <RotateCcw size={14} className={isResettingFasum ? 'animate-spin' : ''} />
+                  <span>{isResettingFasum ? 'Mereset...' : 'Reset Data Fasum (Superadmin)'}</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -345,16 +496,27 @@ export const FasumBookingView: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
             <div>
               <h2 className="text-base font-bold text-slate-800">Katalog Fasilitas Paguyuban GSS</h2>
-              <p className="text-xs text-slate-500">Tarif sewa resmi yang disepakati musyawarah warga Griya Sedayu Selaras 2026.</p>
+              <p className="text-xs text-slate-500">Tarif sewa resmi yang disepakati musyawarah warga Griya Sedayu Selaras 2026. Superadmin dapat menambah, mengubah, dan menghapus fasilitas & tarif.</p>
             </div>
-            <div className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 flex items-center gap-1.5">
-              <BadgePercent size={15} />
-              <span>Pendapatan sewa fasum 100% dialokasikan ke Kas Perawatan Fasum</span>
+            <div className="flex items-center gap-2">
+              {isSuperadmin && (
+                <button
+                  onClick={handleOpenAddFacility}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs"
+                >
+                  <Plus size={14} />
+                  <span>Tambah Jenis Fasum</span>
+                </button>
+              )}
+              <div className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 flex items-center gap-1.5">
+                <BadgePercent size={15} />
+                <span>Masuk Kas Perawatan Fasum</span>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {fasumFacilities.map((facility) => (
+            {activeFacilities.map((facility) => (
               <div
                 key={facility.id}
                 className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
@@ -425,7 +587,7 @@ export const FasumBookingView: React.FC = () => {
                 </div>
 
                 {/* Card Action */}
-                <div className="p-6 pt-0">
+                <div className="p-6 pt-0 space-y-2">
                   <button
                     onClick={() => handleOpenBooking(facility)}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-sm shadow-blue-500/20 transition active:scale-95 text-xs sm:text-sm"
@@ -433,6 +595,25 @@ export const FasumBookingView: React.FC = () => {
                     <CalendarCheck size={16} />
                     <span>Pilih Tanggal & Pesan Sekarang</span>
                   </button>
+
+                  {isSuperadmin && (
+                    <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                      <button
+                        onClick={() => handleOpenEditFacility(facility)}
+                        className="flex-1 py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5"
+                      >
+                        <Edit2 size={13} className="text-blue-600" />
+                        <span>Edit Tarif & Fasilitas</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteFacility(facility)}
+                        className="p-1.5 px-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition"
+                        title="Hapus Jenis Fasilitas Ini (Superadmin)"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -866,16 +1047,17 @@ export const FasumBookingView: React.FC = () => {
               )}
 
               {/* 1. Pilih Fasilitas */}
+              {/* 1. Pilih Fasilitas */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   1. Jenis Fasilitas Umum yang Disewa
                 </label>
                 <select
                   value={formFacilityId}
-                  onChange={(e) => setFormFacilityId(e.target.value as FasumFacilityType)}
+                  onChange={(e) => setFormFacilityId(e.target.value)}
                   className="w-full text-sm font-semibold bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                 >
-                  {fasumFacilities.map((f) => (
+                  {activeFacilities.map((f) => (
                     <option key={f.id} value={f.id}>
                       {f.name} &bull; Rp {f.defaultFee.toLocaleString('id-ID')} ({f.unit})
                     </option>
@@ -1000,9 +1182,8 @@ export const FasumBookingView: React.FC = () => {
                     onChange={(e) => setFormPaymentMethod(e.target.value as FasumPaymentMethod)}
                     className="w-full text-sm font-semibold bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="qris">QRIS Paguyuban GSS (Instan)</option>
-                    <option value="transfer_bank">Transfer Bank BPD DIY Paguyuban</option>
-                    <option value="tunai_bendahara">Tunai ke Bendahara 2 (Bpk. Robi C15)</option>
+                    <option value="transfer_bank">Transfer BANK BRI (155801007310503 a/n Benisius Rahmat Basuki)</option>
+                    <option value="tunai_bendahara">Tunai ke Bendahara 1 (Bpk. Ahmad B02) / Bendahara 2 (Bpk. Robi C15)</option>
                   </select>
                 </div>
               </div>
@@ -1067,10 +1248,10 @@ export const FasumBookingView: React.FC = () => {
                 <XCircle size={20} />
               </button>
               <div className="flex items-center gap-2.5">
-                <QrCode size={22} className="text-amber-400" />
+                <CreditCard size={22} className="text-amber-400" />
                 <div>
                   <h3 className="text-base font-bold">Pembayaran Sewa Fasum GSS</h3>
-                  <p className="text-xs text-blue-200">Integrasi otomatis dengan Kas Paguyuban</p>
+                  <p className="text-xs text-blue-200">Transfer Bank BRI atau Tunai ke Bendahara</p>
                 </div>
               </div>
             </div>
@@ -1102,49 +1283,55 @@ export const FasumBookingView: React.FC = () => {
                 </div>
               </div>
 
-              {/* QRIS / Transfer Card */}
-              <div className="text-center p-4 bg-gradient-to-br from-blue-50/70 to-indigo-50/70 rounded-2xl border border-blue-200 space-y-3">
-                <div className="inline-block bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-                  {/* Visual QR Code Representation */}
-                  <div className="w-40 h-40 mx-auto bg-slate-900 rounded-xl p-2 flex flex-col items-center justify-center relative overflow-hidden">
-                    <div className="w-full h-full bg-white rounded-lg p-2 flex flex-col justify-between">
-                      <div className="flex justify-between">
-                        <div className="w-8 h-8 bg-black rounded-xs flex items-center justify-center">
-                          <div className="w-4 h-4 bg-white flex items-center justify-center">
-                            <div className="w-2 h-2 bg-black" />
-                          </div>
-                        </div>
-                        <div className="w-8 h-8 bg-black rounded-xs flex items-center justify-center">
-                          <div className="w-4 h-4 bg-white flex items-center justify-center">
-                            <div className="w-2 h-2 bg-black" />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-center my-1">
-                        <span className="text-[9px] font-black tracking-widest text-slate-900 block">QRIS</span>
-                        <span className="text-[7px] text-blue-700 font-bold block">PAGUYUBAN GSS</span>
-                      </div>
-                      <div className="flex justify-between items-end">
-                        <div className="w-8 h-8 bg-black rounded-xs flex items-center justify-center">
-                          <div className="w-4 h-4 bg-white flex items-center justify-center">
-                            <div className="w-2 h-2 bg-black" />
-                          </div>
-                        </div>
-                        <div className="w-8 h-8 grid grid-cols-2 gap-0.5 p-1 bg-slate-100">
-                          <div className="bg-black" />
-                          <div className="bg-white" />
-                          <div className="bg-black" />
-                          <div className="bg-black" />
-                        </div>
-                      </div>
+              {/* Bank BRI / Tunai Card */}
+              <div className="p-4 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 rounded-2xl text-white space-y-3 shadow-md border border-blue-700/50">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                  <div className="flex items-center gap-2">
+                    <CreditCard size={17} className="text-amber-400" />
+                    <span className="font-bold text-xs uppercase tracking-wider text-blue-200">
+                      Transfer BANK BRI
+                    </span>
+                  </div>
+                  <span className="text-[10px] bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-400/30 text-blue-300 font-semibold">
+                    Rekening Kas Resmi
+                  </span>
+                </div>
+
+                <div className="bg-white/10 p-3 rounded-xl border border-white/15 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="text-[10px] text-slate-300 block">Nomor Rekening BRI</span>
+                      <span className="font-mono font-black text-lg text-amber-300 tracking-wider">
+                        155801007310503
+                      </span>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText('155801007310503');
+                        setCopiedBri(true);
+                        setTimeout(() => setCopiedBri(false), 2000);
+                      }}
+                      className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs"
+                      title="Salin Nomor Rekening BRI"
+                    >
+                      {copiedBri ? <Check size={13} className="text-emerald-300" /> : <Copy size={13} />}
+                      <span>{copiedBri ? 'Tersalin!' : 'Salin'}</span>
+                    </button>
+                  </div>
+                  <div className="text-xs pt-1 border-t border-white/10 flex justify-between">
+                    <span className="text-slate-300">Atas Nama:</span>
+                    <span className="font-bold text-white">Benisius Rahmat Basuki</span>
                   </div>
                 </div>
 
-                <div className="space-y-1 text-xs">
-                  <p className="font-bold text-slate-900">QRIS Kas Paguyuban Griya Sedayu Selaras</p>
-                  <p className="text-[11px] text-slate-500">
-                    NMID: ID102435678891 &bull; Bank BPD DIY No. Rek: <strong>006-211-098877</strong>
+                <div className="text-[11px] text-slate-300 bg-white/5 p-2.5 rounded-xl border border-white/10 space-y-1">
+                  <div className="font-semibold text-amber-300 flex items-center gap-1">
+                    <Home size={12} />
+                    <span>Opsi Bayar Tunai Langsung:</span>
+                  </div>
+                  <p className="text-[10px] text-slate-300 leading-relaxed">
+                    Setorkan ke <strong>Bendahara 1 (Bpk. Ahmad B 02)</strong> atau <strong>Bendahara 2 (Bpk. Robi C 15)</strong>.
                   </p>
                 </div>
               </div>
@@ -1156,11 +1343,11 @@ export const FasumBookingView: React.FC = () => {
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2"
                 >
                   <Sparkles size={16} className="text-amber-300" />
-                  <span>Simulasi Bayar Sekarang (Auto-Masuk Kas)</span>
+                  <span>Konfirmasi Pelunasan & Masuk Kas</span>
                 </button>
 
                 <p className="text-[10px] text-slate-400 text-center">
-                  Mengklik tombol di atas akan mensimulasikan pelunasan sewa, otomatis mencatat pemasukan kas Rp {paymentModalBooking.rentalFee.toLocaleString('id-ID')} dan menerbitkan kuitansi.
+                  Mengklik tombol di atas akan menyelesaikan pelunasan sewa, otomatis mencatat pemasukan kas Rp {paymentModalBooking.rentalFee.toLocaleString('id-ID')} dan menerbitkan kuitansi.
                 </p>
               </div>
             </div>
@@ -1277,6 +1464,153 @@ export const FasumBookingView: React.FC = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: KELOLA JENIS & TARIF FASUM (SUPERADMIN ONLY) */}
+      {showFacilityModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden my-8">
+            <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck size={20} className="text-amber-400" />
+                <div>
+                  <h3 className="text-base font-bold">
+                    {editingFacility ? 'Edit Jenis & Tarif Fasilitas' : 'Tambah Jenis Fasilitas Baru'}
+                  </h3>
+                  <p className="text-xs text-blue-200">Hak Akses Khusus Superadmin</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFacilityModal(false)}
+                className="text-white/70 hover:text-white"
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveFacility} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Nama Fasilitas</label>
+                <input
+                  type="text"
+                  required
+                  value={facName}
+                  onChange={(e) => setFacName(e.target.value)}
+                  placeholder="Contoh: Balai Warga Pertemuan, Lapangan Badminton..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Kategori</label>
+                  <select
+                    value={facCategory}
+                    onChange={(e) => setFacCategory(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-800"
+                  >
+                    <option value="Sosial">Sosial</option>
+                    <option value="Olahraga">Olahraga</option>
+                    <option value="Serbaguna">Serbaguna</option>
+                    <option value="Perlengkapan">Perlengkapan</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Tarif Sewa (Rp)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5000"
+                    required
+                    value={facFee}
+                    onChange={(e) => setFacFee(Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-blue-700"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Satuan / Durasi Sewa</label>
+                  <input
+                    type="text"
+                    required
+                    value={facUnit}
+                    onChange={(e) => setFacUnit(e.target.value)}
+                    placeholder="Contoh: sesi (4 jam), hari, acara"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Kapasitas</label>
+                  <input
+                    type="text"
+                    required
+                    value={facCapacity}
+                    onChange={(e) => setFacCapacity(e.target.value)}
+                    placeholder="Contoh: 60 Orang, 4 Pemain"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Deskripsi Fasilitas</label>
+                <textarea
+                  rows={2}
+                  value={facDescription}
+                  onChange={(e) => setFacDescription(e.target.value)}
+                  placeholder="Keterangan fasilitas dan lokasinya..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Fasilitas Termasuk (Pisahkan dengan koma)
+                </label>
+                <input
+                  type="text"
+                  value={facIncluded}
+                  onChange={(e) => setFacIncluded(e.target.value)}
+                  placeholder="Contoh: Sound System, 50 Kursi, Listrik & Air"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Aturan Pemakaian (Satu aturan per baris)
+                </label>
+                <textarea
+                  rows={3}
+                  value={facRules}
+                  onChange={(e) => setFacRules(e.target.value)}
+                  placeholder="Wajib membersihkan sampah setelah pemakaian&#10;Dilarang merokok di area tertutup..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowFacilityModal(false)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
+                >
+                  {editingFacility ? 'Simpan Perubahan Fasilitas' : 'Tambahkan Fasilitas Baru'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

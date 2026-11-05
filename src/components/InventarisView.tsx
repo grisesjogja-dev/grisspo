@@ -27,7 +27,8 @@ export const InventarisView: React.FC = () => {
     addInventoryItem,
     borrowInventoryItem,
     returnInventoryItem,
-    currentUser: authUser
+    currentUser: authUser,
+    resetFeatureData
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
 
@@ -176,11 +177,22 @@ export const InventarisView: React.FC = () => {
                 <PlusCircle size={15} />
                 <span>Tambah Barang Inventaris (Admin Inventaris)</span>
               </button>
-            ) : (
-              <div className="text-xs bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700 text-slate-400 flex items-center gap-2">
-                <Lock size={13} className="text-amber-400" />
-                <span>Akses Khusus Admin Inventaris (Bpk. Sony) & Superadmin</span>
-              </div>
+            )}
+
+            {currentUser?.role === 'superadmin' && (
+              <button
+                onClick={async () => {
+                  if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data inventaris barang?')) {
+                    await resetFeatureData('inventaris');
+                    alert('Data Inventaris berhasil direset oleh Superadmin.');
+                  }
+                }}
+                className="px-3.5 py-2.5 bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold rounded-xl border border-red-500 shadow-md flex items-center gap-1.5 transition"
+                title="Reset Data Inventaris (Superadmin)"
+              >
+                <Trash2 size={14} />
+                <span>Reset Inventaris</span>
+              </button>
             )}
           </div>
         </div>

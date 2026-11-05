@@ -26,7 +26,8 @@ export const ForumView: React.FC = () => {
     togglePostLike,
     deleteForumPost,
     togglePinPost,
-    currentUser: authUser
+    currentUser: authUser,
+    resetFeatureData
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
 
@@ -115,6 +116,22 @@ export const ForumView: React.FC = () => {
               <PlusCircle size={15} />
               <span>Buat Topik Diskusi Baru (+5 Poin)</span>
             </button>
+
+            {currentUser?.role === 'superadmin' && (
+              <button
+                onClick={async () => {
+                  if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh postingan dan komentar di Forum Diskusi?')) {
+                    await resetFeatureData('forum');
+                    alert('Data Forum Diskusi berhasil direset oleh Superadmin.');
+                  }
+                }}
+                className="px-3.5 py-2.5 bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold rounded-xl border border-red-500 shadow-md flex items-center gap-1.5 transition"
+                title="Reset Diskusi Forum (Superadmin)"
+              >
+                <Trash2 size={14} />
+                <span>Reset Forum</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

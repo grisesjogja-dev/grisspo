@@ -42,16 +42,10 @@ export const Header: React.FC<HeaderProps> = ({
     announcements,
     activeSessions,
     logout,
-    switchRoleWithPassword,
     setIsPengurusOpen
   } = useApp();
 
   const [showRoleMenu, setShowRoleMenu] = useState(false);
-
-  // Role password authorization modal state
-  const [authTarget, setAuthTarget] = useState<{ roleName: string; residentName: string; houseNumber: string } | null>(null);
-  const [authPassword, setAuthPassword] = useState('');
-  const [authError, setAuthError] = useState('');
 
   const getRoleBadge = (role: string) => {
     switch (role) {
@@ -70,27 +64,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   const badge = currentUser ? getRoleBadge(currentUser.role) : null;
   const unreadCount = announcements.length;
-
-  const handlePromptRolePassword = (roleName: string, residentName: string, houseNumber: string) => {
-    setShowRoleMenu(false);
-    setAuthTarget({ roleName, residentName, houseNumber });
-    setAuthPassword('Griss123'); // Preset default for user testing convenience
-    setAuthError('');
-  };
-
-  const handleConfirmRoleAuth = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!authTarget) return;
-
-    const res = switchRoleWithPassword(authTarget.houseNumber, authPassword);
-    if (res.success) {
-      setAuthTarget(null);
-      setAuthPassword('');
-      alert(res.message);
-    } else {
-      setAuthError(res.message);
-    }
-  };
 
   return (
     <>
@@ -280,58 +253,6 @@ export const Header: React.FC<HeaderProps> = ({
                         )}
                       </div>
 
-                      <div className="space-y-1">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase px-2 py-1 flex items-center gap-1">
-                          <Lock size={11} className="text-amber-400" />
-                          <span>Ganti Role (Wajib Password):</span>
-                        </div>
-
-                        {/* 1. Superadmin (Beni B24) */}
-                        <button
-                          onClick={() => handlePromptRolePassword('Superadmin', 'BENI', 'B 24')}
-                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-red-300 font-semibold flex items-center justify-between"
-                        >
-                          <span>Superadmin (BENI - B 24)</span>
-                          <span className="text-[9px] bg-red-950 border border-red-700 px-1 rounded">Pass</span>
-                        </button>
-
-                        {/* 2. Bendahara 1 (Ahmad B02) */}
-                        <button
-                          onClick={() => handlePromptRolePassword('Bendahara 1', 'AHMAD', 'B 02')}
-                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-emerald-300 font-semibold flex items-center justify-between"
-                        >
-                          <span>Bendahara 1 (AHMAD - B 02)</span>
-                          <span className="text-[9px] bg-emerald-950 border border-emerald-700 px-1 rounded">Pass</span>
-                        </button>
-
-                        {/* 3. Bendahara 2 (Robi C15) */}
-                        <button
-                          onClick={() => handlePromptRolePassword('Bendahara 2', 'ROBI', 'C 15')}
-                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-teal-300 font-semibold flex items-center justify-between"
-                        >
-                          <span>Bendahara 2 (ROBI - C 15)</span>
-                          <span className="text-[9px] bg-teal-950 border border-teal-700 px-1 rounded">Pass</span>
-                        </button>
-
-                        {/* 4. Admin Inventaris (Sony B23) */}
-                        <button
-                          onClick={() => handlePromptRolePassword('Admin Inventaris', 'SONY', 'B 23')}
-                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-amber-300 font-semibold flex items-center justify-between"
-                        >
-                          <span>Admin Inventaris (SONY - B 23)</span>
-                          <span className="text-[9px] bg-amber-950 border border-amber-700 px-1 rounded">Pass</span>
-                        </button>
-
-                        {/* 5. Warga Biasa (Danang A03) */}
-                        <button
-                          onClick={() => handlePromptRolePassword('Warga', 'DANANG', 'A 03')}
-                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-slate-300 font-semibold flex items-center justify-between"
-                        >
-                          <span>Warga (DANANG - A 03)</span>
-                          <span className="text-[9px] bg-slate-800 border border-slate-700 px-1 rounded">Pass</span>
-                        </button>
-                      </div>
-
                       <div className="pt-2 mt-2 border-t border-slate-800 flex items-center gap-1">
                         <button
                           onClick={() => {
@@ -341,7 +262,7 @@ export const Header: React.FC<HeaderProps> = ({
                           className="flex-1 px-3 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-1.5"
                         >
                           <LogIn size={13} />
-                          <span>Form Login Warga</span>
+                          <span>Ganti Akun / Login Warga</span>
                         </button>
                         <button
                           onClick={() => {
@@ -349,7 +270,7 @@ export const Header: React.FC<HeaderProps> = ({
                             logout();
                           }}
                           className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
-                          title="Keluar / Reset"
+                          title="Keluar / Logout"
                         >
                           <LogOut size={15} />
                         </button>
@@ -362,86 +283,6 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       </header>
-
-      {/* MANDATORY PASSWORD AUTHORIZATION MODAL FOR ROLE SWITCH */}
-      {authTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-sm w-full overflow-hidden border border-slate-200 shadow-2xl">
-            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Lock size={18} className="text-amber-400" />
-                <h3 className="text-sm font-bold">Otorisasi Kata Sandi Role</h3>
-              </div>
-              <button
-                onClick={() => setAuthTarget(null)}
-                className="text-slate-400 hover:text-white"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleConfirmRoleAuth} className="p-6 space-y-4 text-xs">
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900">
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-amber-700">
-                  Target Akses Role:
-                </span>
-                <span className="text-sm font-black text-slate-900 block mt-0.5">
-                  {authTarget.roleName} - Bpk. {authTarget.residentName}
-                </span>
-                <span className="text-[11px] font-mono text-slate-600">
-                  Nomor Rumah: {authTarget.houseNumber}
-                </span>
-              </div>
-
-              {authError && (
-                <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-[11px] flex items-center gap-1.5">
-                  <AlertTriangle size={14} className="shrink-0 text-red-500" />
-                  <span>{authError}</span>
-                </div>
-              )}
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Masukkan Password Akun Bpk. {authTarget.residentName}:
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                    <Lock size={14} />
-                  </span>
-                  <input
-                    type="password"
-                    autoFocus
-                    placeholder="Masukkan password..."
-                    value={authPassword}
-                    onChange={(e) => setAuthPassword(e.target.value)}
-                    required
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Default password: <span className="font-mono text-blue-600 font-bold">Griss123</span> atau password pribadi.
-                </p>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setAuthTarget(null)}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
-                >
-                  Verifikasi & Aktifkan
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </>
   );
 };

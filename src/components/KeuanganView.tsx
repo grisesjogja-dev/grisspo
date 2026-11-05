@@ -250,6 +250,22 @@ export const KeuanganView: React.FC = () => {
               <FileSpreadsheet size={15} />
               <span>Ekspor Excel</span>
             </button>
+
+            {currentUser?.role === 'superadmin' && (
+              <button
+                onClick={async () => {
+                  if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh Transaksi Keuangan Kas? Tindakan ini akan menghapus semua catatan transaksi kas.')) {
+                    await resetFeatureData('keuangan');
+                    alert('Data Keuangan Kas berhasil direset oleh Superadmin.');
+                  }
+                }}
+                className="px-4 py-2.5 bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold rounded-xl border border-red-500 shadow-md flex items-center gap-1.5 transition"
+                title="Reset Transaksi Kas (Akses Khusus Superadmin)"
+              >
+                <Trash2 size={15} />
+                <span>Reset Kas</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
