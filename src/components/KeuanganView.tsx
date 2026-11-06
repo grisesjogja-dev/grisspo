@@ -66,8 +66,8 @@ export const KeuanganView: React.FC = () => {
   const [editHouse, setEditHouse] = useState<string>('');
 
   const handleOpenEdit = (trx: Transaction) => {
-    if (currentUser?.role !== 'superadmin') {
-      alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak akses master edit transaksi kas!');
+    if (!['superadmin', 'bendahara1', 'bendahara2'].includes(currentUser?.role || '')) {
+      alert('Akses Ditolak: Hanya Bendahara dan Superadmin yang memiliki hak akses edit transaksi kas!');
       return;
     }
     setEditingTrx(trx);
@@ -98,7 +98,7 @@ export const KeuanganView: React.FC = () => {
         sourceHouse: editHouse || undefined
       });
       setEditingTrx(null);
-      alert('Transaksi kas berhasil diperbarui oleh Superadmin & hash SHA-256 telah disinkronkan!');
+      alert('Transaksi kas berhasil diperbarui & hash SHA-256 telah disinkronkan!');
     } catch (err: any) {
       alert('Gagal menyimpan perubahan transaksi: ' + err.message);
     }
@@ -112,14 +112,16 @@ export const KeuanganView: React.FC = () => {
   // Anomaly alert banner toggle
   const [showAnomalyDetail, setShowAnomalyDetail] = useState(false);
 
-  // Available categories strictly matching user prompt & Tatib 2026:
+  // Available categories strictly matching Dashboard Loket Pembayaran & Tatib 2026:
   const incomeCategories: IncomeCategory[] = [
     'Iuran Bulanan (Rp 25.000)',
+    'Iuran Bulanan + Sampah (Rp 50.000)',
+    'Sewa Fasum',
+    'Sumbangan Sukarela',
+    'Lain-lain Pemasukan',
     'Iuran Sampah (Rp 25.000)',
     'Sewa Fasum (Rp 30.000/bln)',
-    'Pemasukan Jimpitan Bulanan',
-    'Sumbangan Sukarela',
-    'Lain-lain Pemasukan'
+    'Pemasukan Jimpitan Bulanan'
   ];
 
   const expenseCategories: ExpenseCategory[] = [
@@ -487,7 +489,7 @@ export const KeuanganView: React.FC = () => {
                 <th className="py-3 px-4">Dicatat Oleh</th>
                 <th className="py-3 px-4 text-right">Nominal</th>
                 <th className="py-3 px-4 text-center">Audit SHA-256</th>
-                {canDelete && <th className="py-3 px-4 text-center">Aksi Superadmin</th>}
+                {canDelete && <th className="py-3 px-4 text-center">Aksi Bendahara & Admin</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -540,14 +542,13 @@ export const KeuanganView: React.FC = () => {
                     </button>
                   </td>
 
-                  {/* Restricted to Superadmin only per prompt: "selain superadmin, bendahara 1, bendahara 2 dan admin inventaris tidak dapat akses untuk menhapus dan mengedit data yang ada. Berikan hak akses hanya kepada superadmin untuk melakukan perubahan data tersebut." */}
                   {canDelete && (
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => handleOpenEdit(trx)}
                           className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                          title="Edit Master Transaksi (Hak Akses Khusus Superadmin)"
+                          title="Edit Transaksi Kas (Akses: Bendahara & Superadmin)"
                         >
                           <Edit2 size={14} />
                         </button>
@@ -558,7 +559,7 @@ export const KeuanganView: React.FC = () => {
                             }
                           }}
                           className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                          title="Hapus Transaksi (Hak Akses Superadmin)"
+                          title="Hapus Transaksi (Akses: Bendahara & Superadmin)"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -637,8 +638,12 @@ export const KeuanganView: React.FC = () => {
                     const cat = e.target.value as any;
                     setTrxCategory(cat);
                     if (cat === 'Iuran Bulanan (Rp 25.000)') setTrxAmount(25000);
-                    if (cat === 'Iuran Sampah (Rp 25.000)') setTrxAmount(25000);
-                    if (cat === 'Sewa Fasum (Rp 30.000/bln)') setTrxAmount(30000);
+                    else if (cat === 'Iuran Bulanan + Sampah (Rp 50.000)') setTrxAmount(50000);
+                    else if (cat === 'Iuran Sampah (Rp 25.000)') setTrxAmount(25000);
+                    else if (cat === 'Sewa Fasum' || cat === 'Sewa Fasum (Rp 30.000/bln)') setTrxAmount(30000);
+                    else if (cat === 'Sumbangan Sukarela') setTrxAmount(50000);
+                    else if (cat === 'Lain-lain Pemasukan') setTrxAmount(50000);
+                    else if (cat === 'Pemasukan Jimpitan Bulanan') setTrxAmount(15000);
                   }}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
@@ -800,7 +805,7 @@ export const KeuanganView: React.FC = () => {
                   <Edit2 size={18} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold">Edit Master Transaksi (Superadmin)</h3>
+                  <h3 className="text-sm font-bold">Edit Transaksi Kas (Bendahara & Admin)</h3>
                   <p className="text-[11px] text-slate-300">Hash SHA-256 akan otomatis dihitung ulang & disinkronkan ke Cloud</p>
                 </div>
               </div>

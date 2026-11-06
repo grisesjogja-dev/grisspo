@@ -1,4 +1,4 @@
-import { Resident, InventoryItem, RondaGroup, Transaction, ForumPost, LoyaltyReward, Announcement, FasumBooking, FasumFacilityConfig, MeetingNote, AttendanceSession } from '../types';
+import { Resident, InventoryItem, RondaGroup, Transaction, ForumPost, LoyaltyReward, Announcement, FasumBooking, FasumFacilityConfig, MeetingNote, AttendanceSession, UserRole } from '../types';
 
 /**
  * 58 Data Warga Perum Griya Sedayu Selaras 1
@@ -31,7 +31,7 @@ export const initialResidents: Resident[] = [
   { id: 'w-b05', no: 21, name: 'BAPAK ANDRE', houseNumber: 'B 05', block: 'B', statusRumah: 'KOSONG (MEMBAYAR IURAN)', role: 'warga', phone: '0812-3456-7821', familyMembers: 1, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
   { id: 'w-b06', no: 22, name: 'IBU RATNA/FITRAH', houseNumber: 'B 06', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7822', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
   { id: 'w-b07', no: 23, name: 'BAPAK ANANG', houseNumber: 'B 07', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7823', familyMembers: 4, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
-  { id: 'w-b08', no: 24, name: 'BAPAK ASROFI', houseNumber: 'B 08', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7824', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0 },
+  { id: 'w-b08', no: 24, name: 'BAPAK ASROFI', houseNumber: 'B 08', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'sekretaris', phone: '0812-3456-7824', familyMembers: 3, monthlyIuranPaid: true, iuranUnpaidMonths: 0, unpaidMonthNames: [], jimpitanPaidMonth: 15000, previousMonthsJimpitanDeficit: 0, points: 0, berkasKependudukan: true },
   { id: 'w-b09', no: 25, name: 'BAPAK D. SUNYOTO', houseNumber: 'B 09', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7825', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 2, unpaidMonthNames: ['September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 30000, points: 0 },
   { id: 'w-b10', no: 26, name: 'IBU ELVIRA', houseNumber: 'B 10', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7826', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 3, unpaidMonthNames: ['Agustus 2026', 'September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 45000, points: 0 },
   { id: 'w-b11', no: 27, name: 'BAPAK RIMBA', houseNumber: 'B 11', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7827', familyMembers: 0, monthlyIuranPaid: false, iuranUnpaidMonths: 2, unpaidMonthNames: ['September 2026', 'Oktober 2026'], jimpitanPaidMonth: 0, previousMonthsJimpitanDeficit: 20000, points: 0 },
@@ -78,7 +78,7 @@ export interface PengurusInfo {
   name: string;
   houseNumber: string;
   phone: string;
-  role: 'superadmin' | 'bendahara1' | 'bendahara2' | 'admin_inventaris' | 'warga';
+  role: UserRole;
   tasks: string[];
 }
 
@@ -120,7 +120,7 @@ export const dataPengurusGSS: PengurusInfo[] = [
     name: 'ASROFI',
     houseNumber: 'B 08',
     phone: '0812-3456-7824',
-    role: 'warga',
+    role: 'sekretaris',
     tasks: ['Administrasi data kependudukan 58 warga', 'Pencatatan notulensi rapat bulanan', 'Penyusunan surat pengantar & arsip paguyuban']
   },
   {

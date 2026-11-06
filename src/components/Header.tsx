@@ -51,6 +51,8 @@ export const Header: React.FC<HeaderProps> = ({
     switch (role) {
       case 'superadmin':
         return { label: 'SUPERADMIN', bg: 'bg-red-100 text-red-800 border-red-300' };
+      case 'sekretaris':
+        return { label: 'SEKRETARIS', bg: 'bg-purple-100 text-purple-800 border-purple-300' };
       case 'bendahara1':
         return { label: 'BENDAHARA 1', bg: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
       case 'bendahara2':

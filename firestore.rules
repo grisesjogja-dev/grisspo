@@ -98,5 +98,24 @@ service cloud.firestore {
       allow read: if true;
       allow create, update, delete: if isValidId(notulenId);
     }
+
+    // Payment receipts (Loket Kwitansi Kas)
+    match /payment_receipts/{receiptId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(receiptId);
+    }
+
+    // Fasum facilities (Pengelolaan Fasilitas Umum)
+    match /fasum_facilities/{facId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(facId);
+    }
+
+    // Active login sessions
+    match /active_sessions/{sessId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(sessId);
+    }
   }
 }
+

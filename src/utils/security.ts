@@ -134,8 +134,12 @@ export const permissions = {
   canManageFinance: (role: UserRole) =>
     role === 'superadmin' || role === 'bendahara1' || role === 'bendahara2',
 
-  // Only Superadmin can delete transactions
-  canDeleteFinance: (role: UserRole) => role === 'superadmin',
+  // Finance & Payments: Superadmin, Bendahara 1, and Bendahara 2 can edit and delete processed payments
+  canDeleteFinance: (role: UserRole) =>
+    role === 'superadmin' || role === 'bendahara1' || role === 'bendahara2',
+
+  canManagePayments: (role: UserRole) =>
+    role === 'superadmin' || role === 'bendahara1' || role === 'bendahara2',
 
   // Inventory: Superadmin and Admin Inventaris can edit
   canManageInventory: (role: UserRole) =>

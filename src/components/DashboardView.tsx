@@ -37,7 +37,10 @@ import {
   Home,
   AlertTriangle,
   Lock,
-  ExternalLink
+  ExternalLink,
+  FileWarning,
+  FileCheck,
+  Phone
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -95,6 +98,17 @@ export const DashboardView: React.FC = () => {
   const selectedResident = useMemo(() => {
     return residents.find((r) => r.id === selectedResidentId) || residents[0];
   }, [residents, selectedResidentId]);
+
+  // Current logged in resident record and berkas kependudukan status
+  const currentResidentRecord = useMemo(() => {
+    return residents.find(
+      (r) =>
+        r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentUser.houseNumber.replace(/\s+/g, '').toUpperCase() ||
+        r.id === currentUser.id
+    );
+  }, [residents, currentUser]);
+
+  const hasPendingBerkas = currentResidentRecord ? !currentResidentRecord.berkasKependudukan : false;
 
   // Days for ronda
   const days: DayOfWeek[] = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -259,10 +273,23 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
             Sugeng Rawuh, Bpk/Ibu {currentUser.name}
           </h2>
-          <p className="mt-1 text-slate-300 text-xs sm:text-sm">
-            Rumah {currentUser.houseNumber} &bull; Role Akses:{' '}
-            <span className="font-extrabold uppercase text-amber-300">{currentUser.role}</span> &bull;{' '}
+          <p className="mt-1 text-slate-300 text-xs sm:text-sm flex flex-wrap items-center gap-1.5">
+            <span>Rumah {currentUser.houseNumber} &bull; Role Akses:</span>
+            <span className="font-extrabold uppercase text-amber-300">{currentUser.role}</span>
+            <span>&bull;</span>
             <span className="text-emerald-400 font-bold">{currentUser.points || 0} GRISS-Poin</span>
+            <span>&bull;</span>
+            {currentResidentRecord?.berkasKependudukan ? (
+              <span className="text-emerald-300 font-bold inline-flex items-center gap-1 bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-400/30">
+                <CheckCircle2 size={12} className="text-emerald-400" />
+                <span>Berkas Kependudukan: Lengkap (Sudah Serah)</span>
+              </span>
+            ) : (
+              <span className="text-amber-300 font-bold inline-flex items-center gap-1 bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-400/30">
+                <FileWarning size={12} className="text-amber-400" />
+                <span>Berkas Kependudukan: Belum Diserahkan</span>
+              </span>
+            )}
           </p>
 
           <p className="mt-3 text-slate-300 text-xs sm:text-sm leading-relaxed max-w-2xl">
@@ -321,6 +348,52 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
           </div>
         </div>
       </div>
+
+      {/* NOTIFIKASI PERINGATAN: BERKAS KEPENDUDUKAN BELUM DISERAHKAN (Muncul di akun warga yang belum menyerahkan berkas) */}
+      {hasPendingBerkas && currentResidentRecord && (
+        <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border-2 border-amber-400 rounded-3xl p-5 sm:p-6 shadow-lg shadow-amber-500/5 relative overflow-hidden animate-in fade-in slide-in-from-top-2">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="p-3.5 bg-amber-500 text-slate-950 rounded-2xl shadow-md shrink-0">
+                <FileWarning size={28} />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] uppercase tracking-wider">
+                    Pemberitahuan Wajib Administrasi Kependudukan
+                  </span>
+                  <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300">
+                    Rumah {currentResidentRecord.houseNumber} &bull; {currentResidentRecord.name}
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-slate-900 mt-1.5">
+                  Anda Belum Menyerahkan Berkas Kependudukan (Fotokopi KTP / Kartu Keluarga)
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-700 mt-1 max-w-3xl leading-relaxed">
+                  Berdasarkan catatan administrasi paguyuban, rumah Anda tercatat <strong>belum menyerahkan fotokopi berkas kependudukan (KTP &amp; KK)</strong>. Mohon segera menyerahkan berkas fisik atau file digital kepada <strong>Sekretaris Paguyuban (Bpk. Asrofi - Rumah B 08)</strong> atau Superadmin (Bpk. Beni - Rumah B 24) untuk melengkapi verifikasi data warga resmi.
+                </p>
+              </div>
+            </div>
+
+            <div className="shrink-0 flex flex-col sm:flex-row md:flex-col gap-2 w-full md:w-auto">
+              <a
+                href={`https://wa.me/6281234567824?text=${encodeURIComponent(
+                  `Halo Bpk. Asrofi (Sekretaris Paguyuban GSS 1 - Rumah B 08), saya ${currentResidentRecord.name} dari Rumah ${currentResidentRecord.houseNumber} ingin mengonfirmasi dan menyerahkan berkas kependudukan (KTP/KK) keluarga kami.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md transition"
+              >
+                <Phone size={14} />
+                <span>Hubungi Sekretaris (B 08)</span>
+              </a>
+              <span className="text-[10px] text-center text-slate-500">
+                Verifikasi hanya oleh Superadmin &amp; Sekretaris
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ============================================================== */}
       {/* TAB 2: LOKET PEMBAYARAN KAS & IURAN (SUPERADMIN & BENDAHARA 1/2) */}
@@ -1481,7 +1554,10 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
             <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Edit2 size={18} className="text-amber-400" />
-                <h3 className="text-sm font-bold">Edit Kwitansi #{editingReceipt.receiptNumber}</h3>
+                <div>
+                  <h3 className="text-sm font-bold">Edit Pembayaran #{editingReceipt.receiptNumber}</h3>
+                  <p className="text-[11px] text-slate-400">Hak Akses: Bendahara 1, Bendahara 2, & Superadmin</p>
+                </div>
               </div>
               <button
                 type="button"
@@ -1497,7 +1573,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 e.preventDefault();
                 await updatePaymentReceipt(editingReceipt);
                 setEditingReceipt(null);
-                alert('Data kwitansi berhasil diperbarui!');
+                alert('Data kwitansi & transaksi kas berhasil diperbarui!');
               }}
               className="p-6 space-y-4 text-xs"
             >
@@ -1510,9 +1586,48 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Pos Transaksi</label>
-                <div className="p-2.5 bg-slate-100 rounded-xl font-semibold text-slate-800">
-                  {editingReceipt.paymentTypeName}
-                </div>
+                <select
+                  value={editingReceipt.paymentType}
+                  onChange={(e) => {
+                    const newType = e.target.value as PaymentReceiptType;
+                    const typeLabels: Record<PaymentReceiptType, string> = {
+                      iuran_bulanan: 'Iuran Bulanan Rutin (Rp 25.000)',
+                      iuran_bulanan_sampah: 'Iuran Bulanan + Sampah (Rp 50.000)',
+                      sewa_fasum: 'Sewa Fasum Paguyuban GSS',
+                      sumbangan_sukarela: 'Sumbangan Sukarela Warga',
+                      pemasukan_lain: 'Pemasukan Kas Lain-lain'
+                    };
+                    let newAmount = editingReceipt.amount;
+                    if (newType === 'iuran_bulanan') newAmount = 25000;
+                    else if (newType === 'iuran_bulanan_sampah') newAmount = 50000;
+                    else if (newType === 'sewa_fasum' && newAmount === 25000) newAmount = 30000;
+                    setEditingReceipt({
+                      ...editingReceipt,
+                      paymentType: newType,
+                      paymentTypeName: typeLabels[newType],
+                      amount: newAmount
+                    });
+                  }}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="iuran_bulanan">Iuran Bulanan Rutin (Rp 25.000)</option>
+                  <option value="iuran_bulanan_sampah">Iuran Bulanan + Sampah (Rp 50.000)</option>
+                  <option value="sewa_fasum">Sewa Fasum Paguyuban GSS</option>
+                  <option value="sumbangan_sukarela">Sumbangan Sukarela Warga</option>
+                  <option value="pemasukan_lain">Pemasukan Kas Lain-lain</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Metode Pembayaran</label>
+                <select
+                  value={editingReceipt.paymentMethod}
+                  onChange={(e) => setEditingReceipt({ ...editingReceipt, paymentMethod: e.target.value as any })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="transfer_bank">Transfer Bank BRI (Rek. 155801007310503 a/n Benisius Rahmat Basuki)</option>
+                  <option value="tunai">Tunai ke Bendahara Paguyuban</option>
+                </select>
               </div>
 
               <div>
@@ -1520,11 +1635,11 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 <input
                   type="number"
                   min="1000"
-                  step="1000"
+                  step="500"
                   required
                   value={editingReceipt.amount}
                   onChange={(e) => setEditingReceipt({ ...editingReceipt, amount: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-slate-900 text-base"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-slate-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -1534,6 +1649,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   type="text"
                   value={editingReceipt.periodMonth || ''}
                   onChange={(e) => setEditingReceipt({ ...editingReceipt, periodMonth: e.target.value })}
+                  placeholder="Contoh: November 2026"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold"
                 />
               </div>
@@ -1544,24 +1660,42 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   type="text"
                   value={editingReceipt.notes || ''}
                   onChange={(e) => setEditingReceipt({ ...editingReceipt, notes: e.target.value })}
+                  placeholder="Keterangan tambahan..."
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium"
                 />
               </div>
 
-              <div className="flex gap-2 pt-3 border-t border-slate-200">
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setEditingReceipt(null)}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                  onClick={async () => {
+                    if (confirm(`Hapus permanen kwitansi #${editingReceipt.receiptNumber} (${editingReceipt.residentName})? Saldo kas paguyuban otomatis akan disesuaikan.`)) {
+                      await deletePaymentReceipt(editingReceipt.id);
+                      setEditingReceipt(null);
+                      alert('Kwitansi dan transaksi kas terkait berhasil dihapus!');
+                    }
+                  }}
+                  className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl flex items-center gap-1.5 transition text-xs"
+                  title="Hapus Pembayaran Ini"
                 >
-                  Batal
+                  <Trash2 size={14} />
+                  <span>Hapus</span>
                 </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
-                >
-                  Simpan Perubahan Kwitansi
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingReceipt(null)}
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md text-xs"
+                  >
+                    Simpan Perubahan
+                  </button>
+                </div>
               </div>
             </form>
           </div>

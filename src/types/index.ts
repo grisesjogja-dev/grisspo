@@ -2,7 +2,7 @@
  * Type definitions for GRISSPO (Griya Sedayu Selaras Portal Online)
  */
 
-export type UserRole = 'superadmin' | 'bendahara1' | 'bendahara2' | 'admin_inventaris' | 'warga';
+export type UserRole = 'superadmin' | 'sekretaris' | 'bendahara1' | 'bendahara2' | 'admin_inventaris' | 'warga';
 
 export type StatusRumah =
   | 'DI HUNI PEMILIK'
@@ -18,6 +18,7 @@ export interface Resident {
   houseNumber: string; // e.g. "A 01", "B 05"
   block: 'A' | 'B' | 'C';
   statusRumah: StatusRumah;
+  berkasKependudukan?: boolean; // Tanda centang bahwa warga sudah menyerahkan berkas kependudukan (KTP/KK)
   phone?: string;
   role: UserRole;
   familyMembers?: number;

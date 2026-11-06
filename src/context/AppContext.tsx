@@ -68,6 +68,7 @@ interface AppContextType {
   // Residents
   residents: Resident[];
   updateResident: (resident: Resident) => Promise<void>;
+  toggleBerkasKependudukan: (residentId: string, status: boolean) => Promise<{ success: boolean; message: string }>;
   deleteResident: (id: string) => Promise<void>;
   addResident: (resident: Omit<Resident, 'id' | 'no'>) => Promise<void>;
 
@@ -1025,6 +1026,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const rawNum = cleanUser.replace('GRISS', '');
       if (rawNum === 'SUPERADMIN') {
         extractedHouse = 'B 24';
+      } else if (rawNum === 'SEKRETARIS') {
+        extractedHouse = 'B 08';
       } else if (rawNum.length >= 2) {
         const letter = rawNum[0];
         const num = rawNum.slice(1).padStart(2, '0');
@@ -1404,6 +1407,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err) {
       console.warn('Firestore update warga sync notice:', err);
     }
+  };
+
+  const toggleBerkasKependudukan = async (
+    residentId: string,
+    status: boolean
+  ): Promise<{ success: boolean; message: string }> => {
+    if (currentUser?.role !== 'superadmin' && currentUser?.role !== 'sekretaris') {
+      return {
+        success: false,
+        message: 'Akses Ditolak: Hanya Superadmin dan Sekretaris yang memiliki hak akses mengubah checklist berkas kependudukan!'
+      };
+    }
+    const target = residents.find((r) => r.id === residentId);
+    if (!target) {
+      return { success: false, message: 'Data warga tidak ditemukan!' };
+    }
+    const updated: Resident = { ...target, berkasKependudukan: status };
+    const nextResidents = residents.map((r) => (r.id === residentId ? updated : r));
+    setResidents(nextResidents);
+    localStorage.setItem('grisspo_residents', JSON.stringify(nextResidents));
+    try {
+      await setDoc(doc(db, 'warga', residentId), updated);
+    } catch (err) {
+      console.warn('Firestore toggleBerkasKependudukan error:', err);
+    }
+    return {
+      success: true,
+      message: `Status berkas kependudukan ${target.name} (${target.houseNumber}) berhasil diubah: ${
+        status ? 'Lengkap (Sudah Menyerahkan)' : 'Belum Menyerahkan'
+      }.`
+    };
   };
 
   const deleteResident = async (id: string) => {
@@ -1899,8 +1933,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTransaction = async (id: string) => {
-    if (currentUser?.role !== 'superadmin') {
-      alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak akses menghapus transaksi keuangan!');
+    if (!['superadmin', 'bendahara1', 'bendahara2'].includes(currentUser?.role || '')) {
+      alert('Akses Ditolak: Hanya Bendahara dan Admin yang memiliki hak akses menghapus transaksi keuangan!');
       return;
     }
     await markAsDeleted(id, 'keuangan_transaksi');
@@ -2503,9 +2537,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updatePaymentReceipt = async (receipt: PaymentReceipt) => {
+    if (!['superadmin', 'bendahara1', 'bendahara2'].includes(currentUser?.role || '')) {
+      alert('Akses Ditolak: Hanya Bendahara dan Admin yang memiliki hak akses mengedit data pembayaran!');
+      return;
+    }
     const next = paymentReceipts.map((p) => (p.id === receipt.id ? receipt : p));
     setPaymentReceipts(next);
     localStorage.setItem('grisspo_payment_receipts', JSON.stringify(next));
+
+    // Sinkronkan transaksi kas terkait di pembukuan keuangan paguyuban
+    if (receipt.transactionId) {
+      const relatedTrx = transactions.find((t) => t.id === receipt.transactionId);
+      if (relatedTrx) {
+        let cat: Transaction['category'] = 'Iuran Bulanan (Rp 25.000)';
+        if (receipt.paymentType === 'iuran_bulanan') cat = 'Iuran Bulanan (Rp 25.000)';
+        else if (receipt.paymentType === 'iuran_bulanan_sampah') cat = 'Iuran Bulanan + Sampah (Rp 50.000)';
+        else if (receipt.paymentType === 'sewa_fasum') cat = 'Sewa Fasum';
+        else if (receipt.paymentType === 'sumbangan_sukarela') cat = 'Sumbangan Sukarela';
+        else cat = 'Lain-lain Pemasukan';
+
+        const methodLabel =
+          receipt.paymentMethod === 'transfer_bank_bri' || receipt.paymentMethod === 'transfer_bank'
+            ? 'Transfer Bank BRI (155801007310503 a/n Benisius Rahmat Basuki)'
+            : 'Tunai ke Bendahara';
+
+        const desc = `${receipt.paymentTypeName} - ${receipt.residentName} (${receipt.residentHouse}) [No. Kwitansi: ${receipt.receiptNumber}] via ${methodLabel}${
+          receipt.periodMonth ? ` - Periode: ${receipt.periodMonth}` : ''
+        }${receipt.notes ? ` (${receipt.notes})` : ''}`;
+
+        await updateTransaction({
+          ...relatedTrx,
+          amount: receipt.amount,
+          category: cat,
+          description: desc
+        });
+      }
+    }
+
     try {
       await setDoc(doc(db, 'pembayaran_kwitansi', receipt.id), receipt);
     } catch (err) {
@@ -2514,13 +2582,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deletePaymentReceipt = async (id: string) => {
+    if (!['superadmin', 'bendahara1', 'bendahara2'].includes(currentUser?.role || '')) {
+      alert('Akses Ditolak: Hanya Bendahara dan Admin yang memiliki hak akses menghapus data pembayaran!');
+      return;
+    }
     const toDelete = paymentReceipts.find((p) => p.id === id);
     const next = paymentReceipts.filter((p) => p.id !== id);
     setPaymentReceipts(next);
     localStorage.setItem('grisspo_payment_receipts', JSON.stringify(next));
 
+    // Hapus transaksi kas terkait di pembukuan keuangan paguyuban
     if (toDelete?.transactionId) {
-      await deleteTransaction(toDelete.transactionId).catch(() => {});
+      await markAsDeleted(toDelete.transactionId, 'keuangan_transaksi');
+      const updatedTrx = transactions.filter((t) => t.id !== toDelete.transactionId);
+      setTransactions(updatedTrx);
+      localStorage.setItem('grisspo_transactions', JSON.stringify(updatedTrx));
+      try {
+        await deleteDoc(doc(db, 'keuangan_transaksi', toDelete.transactionId));
+      } catch (err) {
+        console.warn('Delete linked transaction error:', err);
+      }
     }
 
     try {
@@ -2753,6 +2834,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         residents,
         updateResident,
+        toggleBerkasKependudukan,
         deleteResident,
         addResident,
 

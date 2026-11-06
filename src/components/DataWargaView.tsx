@@ -22,13 +22,19 @@ import {
   MessageSquare,
   CheckCircle2,
   RotateCcw,
-  X
+  X,
+  FileCheck,
+  FileWarning,
+  CheckSquare,
+  Square,
+  FileText
 } from 'lucide-react';
 
 export const DataWargaView: React.FC = () => {
   const {
     residents,
     updateResident,
+    toggleBerkasKependudukan,
     deleteResident,
     addResident,
     currentUser,
@@ -43,7 +49,9 @@ export const DataWargaView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBlock, setSelectedBlock] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
+  const [filterBerkas, setFilterBerkas] = useState<'ALL' | 'LENGKAP' | 'BELUM'>('ALL');
   const [isResetting, setIsResetting] = useState(false);
+  const [isTogglingBerkas, setIsTogglingBerkas] = useState<string | null>(null);
 
   // Modal states for Superadmin editing
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
@@ -54,6 +62,7 @@ export const DataWargaView: React.FC = () => {
   const [formHouse, setFormHouse] = useState('');
   const [formBlock, setFormBlock] = useState<'A' | 'B' | 'C'>('A');
   const [formStatus, setFormStatus] = useState<StatusRumah>('DI HUNI PEMILIK');
+  const [formBerkasKependudukan, setFormBerkasKependudukan] = useState<boolean>(false);
   const [formPhone, setFormPhone] = useState('');
   const [formRole, setFormRole] = useState<UserRole>('warga');
   const [formFamily, setFormFamily] = useState<number>(3);
@@ -64,10 +73,12 @@ export const DataWargaView: React.FC = () => {
   const [formPoints, setFormPoints] = useState<number>(50);
   const [formPassword, setFormPassword] = useState<string>('Griss123');
 
-  // Permission check: only Superadmin can edit or delete residents
+  // Permission checks
   const canEditOrDelete = currentUser ? permissions.canManageResidents(currentUser.role) : false;
+  // Hak akses checklist berkas kependudukan hanya dimiliki oleh superadmin dan sekretaris
+  const canManageBerkas = currentUser ? (currentUser.role === 'superadmin' || currentUser.role === 'sekretaris') : false;
 
-  // Filtered residents list with enhanced quick search (name, house number e.g. "B 24" or "B24", block, phone)
+  // Filtered residents list with enhanced quick search (name, house number e.g. "B 24" or "B24", block, phone, berkas)
   const filteredResidents = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     const cleanQ = q.replace(/[\s\-_]/g, '');
@@ -75,8 +86,11 @@ export const DataWargaView: React.FC = () => {
     return residents.filter((r) => {
       const matchBlock = selectedBlock === 'ALL' || r.block === selectedBlock;
       const matchStatus = selectedStatus === 'ALL' || r.statusRumah === selectedStatus;
+      const matchBerkas =
+        filterBerkas === 'ALL' ||
+        (filterBerkas === 'LENGKAP' ? !!r.berkasKependudukan : !r.berkasKependudukan);
 
-      if (!q) return matchBlock && matchStatus;
+      if (!q) return matchBlock && matchStatus && matchBerkas;
 
       const cleanHouse = r.houseNumber.toLowerCase().replace(/[\s\-_]/g, '');
       const matchName = r.name.toLowerCase().includes(q);
@@ -88,9 +102,9 @@ export const DataWargaView: React.FC = () => {
         cleanQ === `blok${r.block.toLowerCase()}`;
       const matchPhone = r.phone && r.phone.replace(/[\s\-]/g, '').includes(cleanQ);
 
-      return matchBlock && matchStatus && (matchName || matchHouse || matchBlk || matchPhone);
+      return matchBlock && matchStatus && matchBerkas && (matchName || matchHouse || matchBlk || matchPhone);
     });
-  }, [residents, selectedBlock, selectedStatus, searchQuery]);
+  }, [residents, selectedBlock, selectedStatus, filterBerkas, searchQuery]);
 
   // Statistics
   const totalCount = residents.length;
@@ -99,6 +113,8 @@ export const DataWargaView: React.FC = () => {
   const kosongBayar = residents.filter((r) => r.statusRumah === 'KOSONG (MEMBAYAR IURAN)').length;
   const kosongAdaPemilik = residents.filter((r) => r.statusRumah === 'KOSONG (ADA PEMILIK)').length;
   const belumAdaPemilik = residents.filter((r) => r.statusRumah === 'BELUM ADA PEMILIK').length;
+  const berkasLengkapCount = residents.filter((r) => !!r.berkasKependudukan).length;
+  const berkasBelumCount = residents.filter((r) => !r.berkasKependudukan).length;
 
   const getStatusBadge = (status: StatusRumah) => {
     switch (status) {
@@ -132,6 +148,21 @@ export const DataWargaView: React.FC = () => {
     }
   };
 
+  // Quick toggle checklist berkas kependudukan (Khusus Superadmin & Sekretaris)
+  const handleToggleBerkas = async (r: Resident) => {
+    if (!canManageBerkas) {
+      alert('Akses Ditolak: Hak akses checklist berkas kependudukan hanya dimiliki oleh Superadmin dan Sekretaris.');
+      return;
+    }
+    setIsTogglingBerkas(r.id);
+    const newStatus = !r.berkasKependudukan;
+    const res = await toggleBerkasKependudukan(r.id, newStatus);
+    setIsTogglingBerkas(null);
+    if (!res.success) {
+      alert(res.message);
+    }
+  };
+
   const handleOpenEdit = (r: Resident) => {
     if (!canEditOrDelete) {
       alert('Akses Ditolak: Hak akses edit data warga hanya dimiliki oleh Superadmin.');
@@ -142,6 +173,7 @@ export const DataWargaView: React.FC = () => {
     setFormHouse(r.houseNumber);
     setFormBlock(r.block);
     setFormStatus(r.statusRumah);
+    setFormBerkasKependudukan(!!r.berkasKependudukan);
     setFormPhone(r.phone || '');
     setFormRole(r.role);
     setFormFamily(r.familyMembers || 3);
@@ -162,6 +194,7 @@ export const DataWargaView: React.FC = () => {
       houseNumber: formHouse.toUpperCase(),
       block: formBlock,
       statusRumah: formStatus,
+      berkasKependudukan: formBerkasKependudukan,
       phone: formPhone,
       role: formRole,
       familyMembers: Number(formFamily),
@@ -187,6 +220,7 @@ export const DataWargaView: React.FC = () => {
       houseNumber: formHouse.toUpperCase(),
       block: formBlock,
       statusRumah: formStatus,
+      berkasKependudukan: formBerkasKependudukan,
       phone: formPhone,
       role: formRole,
       familyMembers: formFamily,
@@ -299,6 +333,37 @@ export const DataWargaView: React.FC = () => {
         </div>
       </div>
 
+      {/* Berkas Kependudukan Status Banner */}
+      <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-emerald-50 p-4 rounded-2xl border border-blue-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-xs">
+            <FileCheck size={20} />
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <span>Status Penyerahan Berkas Kependudukan (KTP & KK)</span>
+              <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold">
+                Khusus Superadmin &amp; Sekretaris
+              </span>
+            </h4>
+            <p className="text-[11px] text-slate-600 mt-0.5">
+              Checklist berkas kependudukan menandakan warga telah melengkapi fotokopi KTP &amp; Kartu Keluarga ke pengurus paguyuban.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <div className="flex-1 sm:flex-initial px-3.5 py-1.5 bg-emerald-100/90 border border-emerald-300 rounded-xl text-center">
+            <span className="text-[10px] font-bold text-emerald-800 uppercase block">Berkas Lengkap</span>
+            <span className="text-base font-black text-emerald-900">{berkasLengkapCount} Rumah</span>
+          </div>
+          <div className="flex-1 sm:flex-initial px-3.5 py-1.5 bg-amber-100/90 border border-amber-300 rounded-xl text-center">
+            <span className="text-[10px] font-bold text-amber-800 uppercase block">Belum Menyerahkan</span>
+            <span className="text-base font-black text-amber-900">{berkasBelumCount} Rumah</span>
+          </div>
+        </div>
+      </div>
+
       {/* Tab Switcher: Semua Warga vs Tunggakan Iuran (>= 2 Bulan) */}
       <div className="flex border-b border-slate-200 gap-2">
         <button
@@ -380,6 +445,7 @@ export const DataWargaView: React.FC = () => {
                     <th className="py-3 px-3">Rumah</th>
                     <th className="py-3 px-3">Nama Warga</th>
                     <th className="py-3 px-3">Status Hunian</th>
+                    <th className="py-3 px-3 text-center">Berkas Kependudukan</th>
                     <th className="py-3 px-3">No. WhatsApp</th>
                     <th className="py-3 px-3 text-center">Lama Tunggakan</th>
                     <th className="py-3 px-3">Bulan Menunggak</th>
@@ -390,7 +456,7 @@ export const DataWargaView: React.FC = () => {
                 <tbody className="divide-y divide-slate-100">
                   {delinquentResidents.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-slate-500 font-medium">
+                      <td colSpan={10} className="py-8 text-center text-slate-500 font-medium">
                         Tidak ada warga dengan tunggakan iuran &ge; 2 bulan. Semua warga tertib!
                       </td>
                     </tr>
@@ -408,6 +474,17 @@ export const DataWargaView: React.FC = () => {
                           <td className="py-3 px-3 font-mono font-bold text-blue-700">{r.houseNumber}</td>
                           <td className="py-3 px-3 font-bold text-slate-900">{r.name}</td>
                           <td className="py-3 px-3 text-slate-600 text-[11px]">{r.statusRumah}</td>
+                          <td className="py-3 px-3 text-center">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                r.berkasKependudukan
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}
+                            >
+                              {r.berkasKependudukan ? 'Lengkap' : 'Belum Serah'}
+                            </span>
+                          </td>
                           <td className="py-3 px-3 font-mono text-slate-700">{r.phone || '-'}</td>
                           <td className="py-3 px-3 text-center">
                             <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-black text-[10px]">
@@ -478,7 +555,7 @@ export const DataWargaView: React.FC = () => {
                 ))}
               </div>
 
-              <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
@@ -492,11 +569,21 @@ export const DataWargaView: React.FC = () => {
                   <option value="BELUM ADA PEMILIK">BELUM ADA PEMILIK</option>
                 </select>
 
-                <div className="relative flex-1 md:w-72">
+                <select
+                  value={filterBerkas}
+                  onChange={(e) => setFilterBerkas(e.target.value as any)}
+                  className="text-xs py-1.5 px-2.5 bg-white border border-blue-200 rounded-lg text-slate-700 font-semibold"
+                >
+                  <option value="ALL">Semua Berkas (58)</option>
+                  <option value="LENGKAP">✅ Sudah Serah Berkas ({berkasLengkapCount})</option>
+                  <option value="BELUM">⚠️ Belum Serah Berkas ({berkasBelumCount})</option>
+                </select>
+
+                <div className="relative flex-1 md:w-64">
                   <Search size={14} className="absolute left-3 top-2.5 text-blue-500" />
                   <input
                     type="text"
-                    placeholder="Cari cepat nama, no rumah, atau blok..."
+                    placeholder="Cari nama, no rumah, blok..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-8 pr-8 py-1.5 bg-white border border-blue-200 focus:border-blue-500 rounded-lg text-xs font-medium focus:ring-1 focus:ring-blue-500"
@@ -524,6 +611,7 @@ export const DataWargaView: React.FC = () => {
                 <th className="py-3 px-4">No. Rumah</th>
                 <th className="py-3 px-4">Nama Kepala Keluarga / Warga</th>
                 <th className="py-3 px-4">Status Rumah</th>
+                <th className="py-3 px-4 text-center">Berkas Kependudukan</th>
                 <th className="py-3 px-4">Role Akses</th>
                 <th className="py-3 px-4 text-center">GRISS-Poin</th>
                 <th className="py-3 px-4">Kontak WhatsApp</th>
@@ -553,6 +641,49 @@ export const DataWargaView: React.FC = () => {
                     >
                       {r.statusRumah}
                     </span>
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    {canManageBerkas ? (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleBerkas(r)}
+                        disabled={isTogglingBerkas === r.id}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black transition border cursor-pointer hover:shadow-xs ${
+                          r.berkasKependudukan
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                            : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                        } ${isTogglingBerkas === r.id ? 'opacity-50 cursor-wait' : ''}`}
+                        title={
+                          r.berkasKependudukan
+                            ? 'Berkas sudah lengkap. Klik untuk batalkan checklist (Superadmin & Sekretaris)'
+                            : 'Belum menyerahkan berkas. Klik untuk centang sudah serahkan (Superadmin & Sekretaris)'
+                        }
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!r.berkasKependudukan}
+                          readOnly
+                          className="w-3.5 h-3.5 text-emerald-600 rounded border-slate-300 pointer-events-none accent-emerald-600"
+                        />
+                        <span>{r.berkasKependudukan ? 'Sudah Serah' : 'Belum Serah'}</span>
+                      </button>
+                    ) : (
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                          r.berkasKependudukan
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!r.berkasKependudukan}
+                          disabled
+                          className="w-3.5 h-3.5 text-emerald-600 rounded border-slate-300 opacity-70 accent-emerald-600"
+                        />
+                        <span>{r.berkasKependudukan ? 'Sudah Serah' : 'Belum Serah'}</span>
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <span className="capitalize font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
@@ -695,6 +826,52 @@ export const DataWargaView: React.FC = () => {
                 </select>
               </div>
 
+              {/* Checklist Berkas Kependudukan (Di sebelah / bawah Status Rumah) */}
+              <div className={`p-3.5 rounded-2xl border transition ${
+                formBerkasKependudukan
+                  ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
+                  : 'bg-amber-50/80 border-amber-300 text-amber-950'
+              }`}>
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={formBerkasKependudukan}
+                    onChange={(e) => {
+                      if (!canManageBerkas) {
+                        alert('Akses Ditolak: Hak akses checklist berkas kependudukan hanya dimiliki oleh Superadmin dan Sekretaris.');
+                        return;
+                      }
+                      setFormBerkasKependudukan(e.target.checked);
+                    }}
+                    disabled={!canManageBerkas}
+                    className="mt-0.5 w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 accent-emerald-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <div>
+                    <div className="font-bold text-xs flex items-center gap-1.5">
+                      {formBerkasKependudukan ? (
+                        <>
+                          <CheckCircle2 size={14} className="text-emerald-600" />
+                          <span className="text-emerald-800">Berkas Kependudukan: SUDAH DISERAHKAN (Lengkap)</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle size={14} className="text-amber-600" />
+                          <span className="text-amber-800">Berkas Kependudukan: BELUM DISERAHKAN</span>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-600 mt-0.5">
+                      Tanda check berarti warga sudah menyerahkan berkas kependudukan (fotokopi KTP &amp; KK). Apabila belum di-check berarti belum menyerahkan (notif pengingat otomatis muncul di akun warga).
+                    </p>
+                    {!canManageBerkas && (
+                      <p className="text-[10px] text-rose-600 font-bold mt-1">
+                        * Hak akses mengubah checklist ini hanya dimiliki oleh Superadmin dan Sekretaris.
+                      </p>
+                    )}
+                  </div>
+                </label>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">No. WhatsApp</label>
@@ -715,10 +892,11 @@ export const DataWargaView: React.FC = () => {
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold"
                   >
                     <option value="warga">Warga</option>
-                    <option value="bendahara1">Bendahara 1</option>
-                    <option value="bendahara2">Bendahara 2</option>
-                    <option value="admin_inventaris">Admin Inventaris</option>
-                    <option value="superadmin">Superadmin</option>
+                    <option value="sekretaris">Sekretaris (Bpk. Asrofi - B 08)</option>
+                    <option value="bendahara1">Bendahara 1 (Bpk. Ahmad - B 02)</option>
+                    <option value="bendahara2">Bendahara 2 (Bpk. Robi - C 15)</option>
+                    <option value="admin_inventaris">Admin Inventaris (Bpk. Sony - B 23)</option>
+                    <option value="superadmin">Superadmin (Bpk. Beni - B 24)</option>
                   </select>
                 </div>
               </div>
