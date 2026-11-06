@@ -99,10 +99,21 @@ service cloud.firestore {
       allow create, update, delete: if isValidId(notulenId);
     }
 
-    // Payment receipts (Loket Kwitansi Kas)
+    // Payment receipts & Loket Kwitansi Kas
+    match /pembayaran_kwitansi/{receiptId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(receiptId);
+    }
+
     match /payment_receipts/{receiptId} {
       allow read: if true;
       allow create, update, delete: if isValidId(receiptId);
+    }
+
+    // Point logs
+    match /point_logs/{logId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(logId);
     }
 
     // Fasum facilities (Pengelolaan Fasilitas Umum)

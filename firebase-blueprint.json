@@ -211,6 +211,24 @@
     "/fasum_bookings/{bookingId}": {
       "schema": { "$ref": "#/entities/FasumBooking" },
       "description": "Reservasi fasilitas umum dan pencatatan pembayaran sewa fasum"
+    },
+    "/pembayaran_kwitansi/{receiptId}": {
+      "description": "Loket kwitansi pembayaran kas dan iuran warga"
+    },
+    "/point_logs/{logId}": {
+      "description": "Log histori penambahan poin loyalitas warga"
+    },
+    "/absensi_records/{absensiId}": {
+      "description": "Catatan absensi ronda, rapat, dan kerja bakti warga"
+    },
+    "/notulen_rapat/{notulenId}": {
+      "description": "Notulen rapat warga paguyuban"
+    },
+    "/fasum_facilities/{facId}": {
+      "description": "Daftar konfigurasi fasilitas umum paguyuban"
+    },
+    "/active_sessions/{sessId}": {
+      "description": "Sesi login aktif pengguna real-time"
     }
   }
 }
