@@ -161,7 +161,7 @@ export const InventarisView: React.FC = () => {
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2.5 items-center">
-            {canEdit ? (
+            {canEdit && (
               <button
                 onClick={() => {
                   setFormName('');

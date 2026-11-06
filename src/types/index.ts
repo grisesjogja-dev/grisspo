@@ -215,7 +215,7 @@ export type PaymentReceiptType =
   | 'sumbangan_sukarela'
   | 'pemasukan_lain';
 
-export type PaymentMethodType = 'tunai_bendahara' | 'transfer_bank_bri';
+export type PaymentMethodType = 'tunai_bendahara' | 'transfer_bank_bri' | 'transfer_bank' | 'tunai';
 
 export interface PaymentReceipt {
   id: string;

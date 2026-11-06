@@ -286,6 +286,32 @@ export const NotulenDanAbsensiView: React.FC = () => {
                 <span>Akses Warga (Lihat Notulen & Riwayat)</span>
               </span>
             )}
+
+            {isSuperadmin && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh notulen rapat dan riwayat sesi absensi?')) {
+                    setIsResetting(true);
+                    try {
+                      await resetFeatureData('notulen');
+                      await resetFeatureData('absensi');
+                      alert('Data notulen dan absensi berhasil direset oleh Superadmin.');
+                    } catch (err: any) {
+                      alert('Gagal mereset: ' + err.message);
+                    } finally {
+                      setIsResetting(false);
+                    }
+                  }
+                }}
+                disabled={isResetting}
+                className="px-3.5 py-1.5 rounded-xl bg-red-600/80 hover:bg-red-600 text-white font-bold flex items-center gap-1.5 transition border border-red-500 shadow-md"
+                title="Reset Data Notulen & Absensi (Superadmin)"
+              >
+                <RotateCcw size={13} className={isResetting ? 'animate-spin' : ''} />
+                <span>{isResetting ? 'Mereset...' : 'Reset Notulen & Absensi'}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -331,6 +357,21 @@ export const NotulenDanAbsensiView: React.FC = () => {
           <span>Absensi Rapat Bulanan (+25 Poin)</span>
           <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-extrabold">
             Pengurus
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('log_absensi')}
+          className={`flex items-center gap-2 py-3 px-5 text-xs sm:text-sm font-bold border-b-2 whitespace-nowrap transition ${
+            activeTab === 'log_absensi'
+              ? 'border-amber-600 text-amber-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <ShieldCheck size={16} />
+          <span>Log & Riwayat Semua Absensi ({attendanceSessions.length})</span>
+          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold">
+            {isSuperadmin ? 'Superadmin' : 'Pengurus'}
           </span>
         </button>
       </div>
@@ -858,6 +899,215 @@ export const NotulenDanAbsensiView: React.FC = () => {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: LOG / RIWAYAT SEMUA ABSENSI (RONDA, KERJA BAKTI, RAPAT)            */}
+      {/* ========================================================================= */}
+      {activeTab === 'log_absensi' && (
+        <div className="space-y-6">
+          {/* Header & Stats */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200 mb-1.5">
+                  <ShieldCheck size={14} className="text-amber-600" />
+                  <span>Log Riwayat Kehadiran Terintegrasi (Akses Superadmin & Pengurus)</span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900">
+                  Riwayat Absensi Lengkap: Ronda Malam, Kerja Bakti & Rapat Bulanan
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Arsip otomatis kehadiran warga dari fitur Checklist Ronda harian (maksimal 1x/hari), Kerja Bakti (+40 Poin), dan Rapat Bulanan (+25 Poin).
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl">
+                  Total: {attendanceSessions.length} Sesi Tercatat
+                </span>
+              </div>
+            </div>
+
+            {/* Quick KPI count by type */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block">Ronda Malam</span>
+                <span className="text-xl font-black text-amber-600 mt-1 block">
+                  {attendanceSessions.filter((s) => s.type === 'ronda').length} <span className="text-xs font-normal text-slate-500">Sesi</span>
+                </span>
+                <span className="text-[10px] text-slate-400">Reward +25 Poin / hadir</span>
+              </div>
+
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block">Kerja Bakti</span>
+                <span className="text-xl font-black text-emerald-600 mt-1 block">
+                  {attendanceSessions.filter((s) => s.type === 'kerjabakti').length} <span className="text-xs font-normal text-slate-500">Sesi</span>
+                </span>
+                <span className="text-[10px] text-slate-400">Reward +40 Poin / hadir</span>
+              </div>
+
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block">Rapat Bulanan</span>
+                <span className="text-xl font-black text-indigo-600 mt-1 block">
+                  {attendanceSessions.filter((s) => s.type === 'rapat').length} <span className="text-xs font-normal text-slate-500">Sesi</span>
+                </span>
+                <span className="text-[10px] text-slate-400">Reward +25 Poin / hadir</span>
+              </div>
+            </div>
+
+            {/* Filter and Search */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
+                  <Filter size={13} /> Jenis:
+                </span>
+                {(['ALL', 'ronda', 'kerjabakti', 'rapat'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setLogTypeFilter(t)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                      logTypeFilter === t
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {t === 'ALL' && 'Semua Kegiatan'}
+                    {t === 'ronda' && 'Ronda Malam'}
+                    {t === 'kerjabakti' && 'Kerja Bakti'}
+                    {t === 'rapat' && 'Rapat Bulanan'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative w-full sm:w-64">
+                <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Cari sesi, warga, atau rumah..."
+                  value={logSearchQuery}
+                  onChange={(e) => setLogSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Session Cards */}
+          <div className="space-y-3">
+            {attendanceSessions
+              .filter((s) => {
+                const matchType = logTypeFilter === 'ALL' || s.type === logTypeFilter;
+                const q = logSearchQuery.toLowerCase().trim();
+                const matchSearch =
+                  !q ||
+                  s.title.toLowerCase().includes(q) ||
+                  s.date.includes(q) ||
+                  s.recordedBy.toLowerCase().includes(q) ||
+                  s.attendees.some((a) => a.isPresent && (a.residentName.toLowerCase().includes(q) || a.residentHouse.toLowerCase().includes(q)));
+                return matchType && matchSearch;
+              })
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .map((session) => {
+                const presentList = session.attendees.filter((a) => a.isPresent);
+                const pts = session.type === 'kerjabakti' ? 40 : 25;
+
+                return (
+                  <div
+                    key={session.id}
+                    className="p-5 bg-white rounded-3xl border border-slate-200 shadow-xs hover:border-slate-300 transition flex flex-col md:flex-row md:items-start justify-between gap-4"
+                  >
+                    <div className="space-y-2 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                            session.type === 'ronda'
+                              ? 'bg-amber-100 text-amber-800 border-amber-300'
+                              : session.type === 'kerjabakti'
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                              : 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                          }`}
+                        >
+                          {session.type === 'ronda' && 'Ronda Malam'}
+                          {session.type === 'kerjabakti' && 'Kerja Bakti'}
+                          {session.type === 'rapat' && 'Rapat Bulanan'}
+                        </span>
+
+                        <span className="font-extrabold text-slate-900 text-sm">{session.title}</span>
+
+                        <span className="text-[10px] bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-md">
+                          +{pts} Poin / Warga
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                        <span className="flex items-center gap-1 text-slate-700 font-semibold">
+                          <Calendar size={13} className="text-blue-600" />
+                          <span>Tanggal: {session.date}</span>
+                        </span>
+                        <span>&bull;</span>
+                        <span>Dicatat oleh: <strong className="text-slate-800">{session.recordedBy}</strong></span>
+                        <span>&bull;</span>
+                        <span className="text-emerald-700 font-bold">Total Hadir: {presentList.length} Warga</span>
+                      </div>
+
+                      {/* Attendee Badges */}
+                      <div className="pt-2">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                          Daftar Warga yang Hadir:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {presentList.length === 0 ? (
+                            <span className="text-xs text-slate-400 italic">Tidak ada warga hadir</span>
+                          ) : (
+                            presentList.map((a) => (
+                              <span
+                                key={a.residentId}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800"
+                              >
+                                <span className="font-mono font-bold text-blue-700">{a.residentHouse}</span>
+                                <span>{a.residentName}</span>
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions: Superadmin can delete log */}
+                    {isSuperadmin && (
+                      <div className="shrink-0 self-end md:self-start">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Hapus sesi absensi "${session.title}" (${session.date})? Tindakan ini permanen.`)) {
+                              deleteAttendanceSession(session.id);
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-rose-200"
+                          title="Hapus Sesi Absensi (Superadmin)"
+                        >
+                          <Trash2 size={13} />
+                          <span>Hapus Log</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+            {attendanceSessions.length === 0 && (
+              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 text-slate-400">
+                <Clock size={40} className="mx-auto mb-2 text-slate-300" />
+                <p className="font-bold text-sm text-slate-700">Belum ada sesi absensi yang tercatat</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Absensi ronda diinput melalui tab Jimpitan, sedangkan kerja bakti dan rapat bulanan diinput melalui tab di atas.
+                </p>
               </div>
             )}
           </div>

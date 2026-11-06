@@ -9,7 +9,6 @@ import {
   FasumPaymentMethod
 } from '../types';
 import {
-import {
   Building2,
   Calendar,
   Clock,
@@ -78,7 +77,7 @@ export const FasumBookingView: React.FC = () => {
   const [showFacilityModal, setShowFacilityModal] = useState(false);
   const [editingFacility, setEditingFacility] = useState<FasumFacilityConfig | null>(null);
   const [facName, setFacName] = useState('');
-  const [facCategory, setFacCategory] = useState<'Olahraga' | 'Sosial' | 'Serbaguna' | 'Perlengkapan'>('Sosial');
+  const [facCategory, setFacCategory] = useState<string>('Sosial');
   const [facFee, setFacFee] = useState<number>(50000);
   const [facUnit, setFacUnit] = useState('sesi (4 jam)');
   const [facCapacity, setFacCapacity] = useState('50 Orang');
@@ -227,7 +226,9 @@ export const FasumBookingView: React.FC = () => {
       });
       alert(`Fasilitas "${facName}" berhasil diperbarui!`);
     } else {
+      const newId = 'fasum_' + Date.now();
       await addFasumFacility({
+        id: newId,
         name: facName,
         category: facCategory,
         defaultFee: Number(facFee),
@@ -236,7 +237,7 @@ export const FasumBookingView: React.FC = () => {
         description: facDescription,
         facilitiesIncluded: includedArr,
         rules: rulesArr,
-        iconName: 'Building2',
+        icon: 'Building2',
         badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
       });
       alert(`Fasilitas "${facName}" berhasil ditambahkan!`);
