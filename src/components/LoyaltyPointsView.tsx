@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp, defaultGuestUser } from '../context/AppContext';
+import { LoyaltyReward } from '../types';
 import {
   Award,
   Coins,
@@ -12,14 +13,38 @@ import {
   Trash2,
   Car,
   Shirt,
-  ShoppingBag
+  ShoppingBag,
+  Edit2,
+  Plus,
+  X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const LoyaltyPointsView: React.FC = () => {
-  const { currentUser: authUser, rewards, pointLogs, redeemReward, residents, deletePointLog, resetFeatureData } = useApp();
+  const {
+    currentUser: authUser,
+    rewards,
+    pointLogs,
+    redeemReward,
+    addReward,
+    updateReward,
+    deleteReward,
+    residents,
+    deletePointLog,
+    resetFeatureData
+  } = useApp();
   const currentUser = authUser || defaultGuestUser;
+  const isSuperadmin = currentUser.role === 'superadmin';
   const [activeTab, setActiveTab] = useState<'catalog' | 'history' | 'leaderboard'>('catalog');
+  const [editingReward, setEditingReward] = useState<LoyaltyReward | null>(null);
+  const [isAddingReward, setIsAddingReward] = useState(false);
+  const [rewardForm, setRewardForm] = useState<Omit<LoyaltyReward, 'id'>>({
+    title: '',
+    description: '',
+    pointsCost: 50,
+    stock: 10,
+    icon: 'Gift'
+  });
 
   const getRank = (pts: number) => {
     if (pts >= 350) return { title: 'Warga Teladan Utama', color: 'from-amber-400 to-yellow-600', badge: 'bg-amber-100 text-amber-900 border-amber-300' };
@@ -210,52 +235,115 @@ export const LoyaltyPointsView: React.FC = () => {
 
       {/* TAB 1: REWARDS CATALOG */}
       {activeTab === 'catalog' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {rewards.map((reward) => {
-            const Icon = getRewardIcon(reward.icon);
-            const canAfford = currentUser.points >= reward.pointsCost;
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Gift size={16} className="text-amber-600" />
+                <span>Katalog Benefit Penukaran Poin ({rewards.length} Pilihan Benefit)</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Poin yang sudah terkumpul dapat ditukarkan dengan potongan iuran paguyuban atau merchandise resmi.
+              </p>
+            </div>
 
-            return (
-              <div
-                key={reward.id}
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between hover:border-amber-300 transition"
+            {isSuperadmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  setRewardForm({
+                    title: '',
+                    description: '',
+                    pointsCost: 50,
+                    stock: 10,
+                    icon: 'Gift'
+                  });
+                  setIsAddingReward(true);
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-amber-600/20 whitespace-nowrap self-start sm:self-auto"
               >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4">
-                    <Icon size={24} />
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-900">{reward.title}</h4>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                    {reward.description}
-                  </p>
-                </div>
+                <Plus size={14} />
+                <span>Tambah Benefit Baru (Superadmin)</span>
+              </button>
+            )}
+          </div>
 
-                <div className="pt-4 mt-4 border-t border-slate-100">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-black text-amber-600 flex items-center gap-1">
-                      <Coins size={14} /> {reward.pointsCost} Poin
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      Sisa Stok: {reward.stock}
-                    </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {rewards.map((reward) => {
+              const Icon = getRewardIcon(reward.icon);
+              const canAfford = currentUser.points >= reward.pointsCost;
+
+              return (
+                <div
+                  key={reward.id}
+                  className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between hover:border-amber-300 transition"
+                >
+                  <div>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <Icon size={24} />
+                      </div>
+
+                      {/* Superadmin Edit & Delete buttons */}
+                      {isSuperadmin && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditingReward(reward)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            title="Edit Benefit Ini (Superadmin)"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (confirm(`Hapus benefit "${reward.title}" dari katalog?`)) {
+                                await deleteReward(reward.id);
+                              }
+                            }}
+                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                            title="Hapus Benefit Ini (Superadmin)"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <h4 className="text-sm font-bold text-slate-900">{reward.title}</h4>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                      {reward.description}
+                    </p>
                   </div>
 
-                  <button
-                    onClick={() => handleRedeem(reward.id)}
-                    disabled={!canAfford || reward.stock <= 0}
-                    className={`w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                      canAfford && reward.stock > 0
-                        ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20'
-                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                    }`}
-                  >
-                    <Gift size={13} />
-                    <span>{canAfford ? 'Tukarkan Poin' : 'Poin Belum Cukup'}</span>
-                  </button>
+                  <div className="pt-4 mt-4 border-t border-slate-100">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-black text-amber-600 flex items-center gap-1">
+                        <Coins size={14} /> {reward.pointsCost} Poin
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        Sisa Stok: {reward.stock}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => handleRedeem(reward.id)}
+                      disabled={!canAfford || reward.stock <= 0}
+                      className={`w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                        canAfford && reward.stock > 0
+                          ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20'
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <Gift size={13} />
+                      <span>{canAfford ? 'Tukarkan Poin' : 'Poin Belum Cukup'}</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -362,6 +450,175 @@ export const LoyaltyPointsView: React.FC = () => {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: EDIT / TAMBAH BENEFIT REWARD (SUPERADMIN ONLY)                     */}
+      {/* ========================================================================= */}
+      {(editingReward || isAddingReward) && isSuperadmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Gift size={18} className="text-amber-400" />
+                <div>
+                  <h3 className="text-sm font-bold">
+                    {editingReward ? 'Edit Benefit Reward' : 'Tambah Benefit Reward Baru'}
+                  </h3>
+                  <p className="text-[11px] text-amber-300">Hak Akses: Superadmin (Bpk. Beni B 24)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingReward(null);
+                  setIsAddingReward(false);
+                }}
+                className="text-slate-400 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (editingReward) {
+                  await updateReward(editingReward);
+                  setEditingReward(null);
+                  alert('Katalog benefit berhasil diperbarui dan disinkronkan ke Firebase!');
+                } else if (isAddingReward) {
+                  await addReward({
+                    title: rewardForm.title || 'Benefit Baru',
+                    description: rewardForm.description || '',
+                    pointsCost: Number(rewardForm.pointsCost || 50),
+                    stock: Number(rewardForm.stock || 10),
+                    icon: rewardForm.icon || 'Gift'
+                  });
+                  setIsAddingReward(false);
+                  alert('Benefit baru berhasil ditambahkan ke katalog!');
+                }
+              }}
+              className="p-6 space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Judul Benefit</label>
+                <input
+                  type="text"
+                  required
+                  value={editingReward ? editingReward.title : rewardForm.title}
+                  onChange={(e) => {
+                    if (editingReward) {
+                      setEditingReward({ ...editingReward, title: e.target.value });
+                    } else {
+                      setRewardForm({ ...rewardForm, title: e.target.value });
+                    }
+                  }}
+                  placeholder="Contoh: Bebas Iuran Kebersihan 1 Bulan"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Deskripsi Benefit</label>
+                <textarea
+                  rows={2}
+                  required
+                  value={editingReward ? editingReward.description : rewardForm.description}
+                  onChange={(e) => {
+                    if (editingReward) {
+                      setEditingReward({ ...editingReward, description: e.target.value });
+                    } else {
+                      setRewardForm({ ...rewardForm, description: e.target.value });
+                    }
+                  }}
+                  placeholder="Jelaskan ketentuan dan nilai benefit..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Biaya Poin</label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    value={editingReward ? editingReward.pointsCost : rewardForm.pointsCost}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      if (editingReward) {
+                        setEditingReward({ ...editingReward, pointsCost: val });
+                      } else {
+                        setRewardForm({ ...rewardForm, pointsCost: val });
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Stok Kuota</label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={editingReward ? editingReward.stock : rewardForm.stock}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      if (editingReward) {
+                        setEditingReward({ ...editingReward, stock: val });
+                      } else {
+                        setRewardForm({ ...rewardForm, stock: val });
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Ikon Tampilan</label>
+                <select
+                  value={editingReward ? editingReward.icon : rewardForm.icon}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (editingReward) {
+                      setEditingReward({ ...editingReward, icon: val });
+                    } else {
+                      setRewardForm({ ...rewardForm, icon: val });
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="Gift">Gift (Hadiah Umum)</option>
+                  <option value="Trash2">Trash2 (Sampah / Kebersihan)</option>
+                  <option value="Car">Car (Parkir / Fasum Mobil)</option>
+                  <option value="Shirt">Shirt (Kaos Paguyuban)</option>
+                  <option value="ShoppingBag">ShoppingBag (Souvenir)</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingReward(null);
+                    setIsAddingReward(false);
+                  }}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-black rounded-xl transition shadow-md shadow-amber-600/20"
+                >
+                  {editingReward ? 'Simpan Perubahan Benefit' : 'Tambahkan ke Katalog'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

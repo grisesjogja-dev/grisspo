@@ -4,7 +4,8 @@ import {
   MeetingNote,
   MeetingNoteStatus,
   AttendanceType,
-  AttendanceItem
+  AttendanceItem,
+  AttendanceSession
 } from '../types';
 import confetti from 'canvas-confetti';
 import {
@@ -29,7 +30,8 @@ import {
   Lock,
   Send,
   Building,
-  RotateCcw
+  RotateCcw,
+  X
 } from 'lucide-react';
 
 export const NotulenDanAbsensiView: React.FC = () => {
@@ -42,9 +44,11 @@ export const NotulenDanAbsensiView: React.FC = () => {
     deleteMeetingNote,
     attendanceSessions,
     submitAttendanceSession,
+    updateAttendanceSession,
     deleteAttendanceSession,
     residents,
-    resetFeatureData
+    resetFeatureData,
+    getResidentNameByHouse
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
 
@@ -63,6 +67,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
   // State for Log Absensi Tab
   const [logTypeFilter, setLogTypeFilter] = useState<'ALL' | 'ronda' | 'kerjabakti' | 'rapat'>('ALL');
   const [logSearchQuery, setLogSearchQuery] = useState('');
+  const [editingAttendanceSession, setEditingAttendanceSession] = useState<AttendanceSession | null>(null);
 
   // --- NOTULEN STATE ---
   const [statusFilter, setStatusFilter] = useState<'ALL' | MeetingNoteStatus>('ALL');
@@ -877,24 +882,35 @@ export const NotulenDanAbsensiView: React.FC = () => {
                         <div className="text-[11px] text-slate-600 pt-1">
                           Hadir ({presentList.length} warga):{' '}
                           <span className="font-semibold text-slate-800">
-                            {presentList.map((a) => `${a.residentName} (${a.residentHouse})`).join(', ')}
+                            {presentList.map((a) => `${getResidentNameByHouse(a.residentHouse, a.residentName)} (${a.residentHouse})`).join(', ')}
                           </span>
                         </div>
                       </div>
 
                       {isSuperadmin && (
-                        <button
-                          onClick={() => {
-                            if (window.confirm(`Hapus sesi absensi "${session.title}"?`)) {
-                              deleteAttendanceSession(session.id);
-                            }
-                          }}
-                          className="text-red-500 hover:text-red-700 text-xs font-bold p-2 hover:bg-red-50 rounded-xl transition flex items-center gap-1 shrink-0"
-                          title="Hapus Sesi Absensi (Superadmin)"
-                        >
-                          <Trash2 size={14} />
-                          <span>Hapus</span>
-                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setEditingAttendanceSession(session)}
+                            className="text-blue-600 hover:text-blue-800 text-xs font-bold p-2 hover:bg-blue-50 rounded-xl transition flex items-center gap-1"
+                            title="Edit Sesi Absensi (Superadmin)"
+                          >
+                            <Edit size={14} />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Hapus sesi absensi "${session.title}"?`)) {
+                                deleteAttendanceSession(session.id);
+                              }
+                            }}
+                            className="text-red-500 hover:text-red-700 text-xs font-bold p-2 hover:bg-red-50 rounded-xl transition flex items-center gap-1"
+                            title="Hapus Sesi Absensi (Superadmin)"
+                          >
+                            <Trash2 size={14} />
+                            <span>Hapus</span>
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
@@ -1071,7 +1087,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                                 className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800"
                               >
                                 <span className="font-mono font-bold text-blue-700">{a.residentHouse}</span>
-                                <span>{a.residentName}</span>
+                                <span>{getResidentNameByHouse(a.residentHouse, a.residentName)}</span>
                               </span>
                             ))
                           )}
@@ -1079,9 +1095,18 @@ export const NotulenDanAbsensiView: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Actions: Superadmin can delete log */}
+                    {/* Actions: Superadmin can edit & delete log */}
                     {isSuperadmin && (
-                      <div className="shrink-0 self-end md:self-start">
+                      <div className="shrink-0 self-end md:self-start flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditingAttendanceSession(session)}
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-blue-200"
+                          title="Edit Sesi Absensi (Superadmin)"
+                        >
+                          <Edit size={13} />
+                          <span>Edit</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => {
@@ -1093,7 +1118,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                           title="Hapus Sesi Absensi (Superadmin)"
                         >
                           <Trash2 size={13} />
-                          <span>Hapus Log</span>
+                          <span>Hapus</span>
                         </button>
                       </div>
                     )}
@@ -1110,6 +1135,129 @@ export const NotulenDanAbsensiView: React.FC = () => {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* ========================================================================= */}
+      {/* MODAL: EDIT SESI ABSENSI (SUPERADMIN ONLY)                                */}
+      {/* ========================================================================= */}
+      {editingAttendanceSession && isSuperadmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Edit size={18} className="text-amber-400" />
+                <div>
+                  <h3 className="text-sm font-bold">Edit Sesi Absensi</h3>
+                  <p className="text-[11px] text-amber-300">Hak Akses: Superadmin (Bpk. Beni B 24)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingAttendanceSession(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await updateAttendanceSession(editingAttendanceSession);
+                setEditingAttendanceSession(null);
+                alert('Data sesi absensi berhasil diperbarui!');
+              }}
+              className="p-6 space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Judul Sesi Absensi</label>
+                <input
+                  type="text"
+                  required
+                  value={editingAttendanceSession.title}
+                  onChange={(e) =>
+                    setEditingAttendanceSession({
+                      ...editingAttendanceSession,
+                      title: e.target.value
+                    })
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Tanggal</label>
+                  <input
+                    type="date"
+                    required
+                    value={editingAttendanceSession.date}
+                    onChange={(e) =>
+                      setEditingAttendanceSession({
+                        ...editingAttendanceSession,
+                        date: e.target.value
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Petugas Pencatat</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingAttendanceSession.recordedBy}
+                    onChange={(e) =>
+                      setEditingAttendanceSession({
+                        ...editingAttendanceSession,
+                        recordedBy: e.target.value
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Warga Tercatat Hadir ({editingAttendanceSession.attendees.filter((a) => a.isPresent).length} Warga)
+                </label>
+                <div className="max-h-40 overflow-y-auto space-y-1 p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                  {editingAttendanceSession.attendees.map((att, idx) => (
+                    <div
+                      key={att.residentId || idx}
+                      className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-100 text-[11px]"
+                    >
+                      <span className="font-semibold text-slate-800">
+                        {att.residentHouse} - {getResidentNameByHouse(att.residentHouse, att.residentName)}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        att.isPresent ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {att.isPresent ? 'HADIR' : 'ABSEN'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingAttendanceSession(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-md"
+                >
+                  Simpan Perubahan Sesi
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

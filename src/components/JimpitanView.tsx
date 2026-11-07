@@ -40,7 +40,8 @@ import {
   Lock,
   LogIn,
   AlertTriangle,
-  Key
+  Key,
+  Edit2
 } from 'lucide-react';
 
 interface JimpitanViewProps {
@@ -53,6 +54,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     rondaSchedule,
     jimpitReports,
     submitDailyJimpit,
+    updateJimpitReport,
     deleteJimpitReport,
     payJimpitanDeficit,
     currentUser,
@@ -60,7 +62,8 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     submitAttendanceSession,
     deleteAttendanceSession,
     resetFeatureData,
-    loginWithHouseNumber
+    loginWithHouseNumber,
+    getResidentNameByHouse
   } = useApp();
 
   const isSuperadmin = currentUser?.role === 'superadmin';
@@ -119,6 +122,8 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
   // Modal for submitted report
   const [submittedReport, setSubmittedReport] = useState<JimpitDailyReport | null>(null);
+  // Modal for Superadmin edit daily report
+  const [editingDailyReport, setEditingDailyReport] = useState<JimpitDailyReport | null>(null);
 
   // Synchronize selected day when date changes
   const handleDateChange = (newDate: string) => {
@@ -731,14 +736,33 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 <Users size={14} className="text-amber-600" />
                 <span>Petugas Ronda Hari Ini</span>
               </label>
-              <input
-                type="text"
+              <select
                 value={collectorName}
                 onChange={(e) => setCollectorName(e.target.value)}
-                placeholder="Nama Petugas Pengambil Jimpitan"
                 required
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
+              >
+                <option value="">-- Pilih Petugas Ronda Hari Ini --</option>
+                {dutyGroup && dutyGroup.members.length > 0 && (
+                  <optgroup label={`Jadwal Resmi Ronda Hari ${selectedDay}`}>
+                    {dutyGroup.members.map((m) => (
+                      <option key={m} value={m}>
+                        {m} (Jadwal {selectedDay})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label="Seluruh Warga (Pengganti / Anggota Ronda)">
+                  {residents.map((r) => {
+                    const residentLabel = `${getResidentNameByHouse(r.houseNumber, r.name)} (${r.houseNumber})`;
+                    return (
+                      <option key={r.id} value={residentLabel}>
+                        {residentLabel}
+                      </option>
+                    );
+                  })}
+                </optgroup>
+              </select>
             </div>
           </div>
 
@@ -1030,7 +1054,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       />
                       <div>
                         <div className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2">
-                          <span>{resident.name}</span>
+                          <span>{getResidentNameByHouse(resident.houseNumber, resident.name)}</span>
                           {dutyGroup?.members.some((m) => resident.name.toUpperCase().includes(m)) && (
                             <span className="text-[10px] bg-amber-200 text-amber-900 font-extrabold px-1.5 py-0.2 rounded">
                               Ronda Hari Ini
@@ -1257,22 +1281,33 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                   </div>
 
                   {isSuperadmin && (
-                    <button
-                      onClick={() => {
-                        if (
-                          confirm(
-                            `HAPUS LAPORAN JIMPITAN TANGGAL ${activeDailyReport.date} (${activeDailyReport.day})?\n\nTindakan ini permanen. Total uang jimpitan (Rp ${activeDailyReport.totalNominal.toLocaleString('id-ID')}) akan disesuaikan kembali dari akumulasi warga.`
-                          )
-                        ) {
-                          deleteJimpitReport(activeDailyReport.id);
-                        }
-                      }}
-                      className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 border border-red-500"
-                      title="Hapus Laporan Jimpitan (Hak Akses Khusus Superadmin)"
-                    >
-                      <Trash2 size={14} />
-                      <span>Hapus Laporan Harian Ini (Superadmin)</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingDailyReport(activeDailyReport)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm"
+                        title="Edit Laporan Jimpitan (Hak Akses Khusus Superadmin)"
+                      >
+                        <Edit2 size={14} />
+                        <span>Edit Laporan Jimpitan (Superadmin)</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `HAPUS LAPORAN JIMPITAN TANGGAL ${activeDailyReport.date} (${activeDailyReport.day})?\n\nTindakan ini permanen. Total uang jimpitan (Rp ${activeDailyReport.totalNominal.toLocaleString('id-ID')}) akan disesuaikan kembali dari akumulasi warga.`
+                            )
+                          ) {
+                            deleteJimpitReport(activeDailyReport.id);
+                          }
+                        }}
+                        className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 border border-red-500"
+                        title="Hapus Laporan Jimpitan (Hak Akses Khusus Superadmin)"
+                      >
+                        <Trash2 size={14} />
+                        <span>Hapus Laporan</span>
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1307,7 +1342,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                         <tr key={idx} className="hover:bg-slate-50 transition">
                           <td className="py-3 px-4 text-center font-bold text-slate-400">{idx + 1}</td>
                           <td className="py-3 px-4 font-mono font-bold text-blue-700">{entry.houseNumber}</td>
-                          <td className="py-3 px-4 font-semibold text-slate-800">{entry.residentName}</td>
+                          <td className="py-3 px-4 font-semibold text-slate-800">{getResidentNameByHouse(entry.houseNumber, entry.residentName)}</td>
                           <td className="py-3 px-4 text-center">
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
                               {entry.paymentMethod}
@@ -1552,7 +1587,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       <tr key={r.id} className="hover:bg-slate-50/80 transition">
                         <td className="py-3 px-3 text-center font-bold text-slate-400">{idx + 1}</td>
                         <td className="py-3 px-3 font-mono font-bold text-blue-700">{r.houseNumber}</td>
-                        <td className="py-3 px-3 font-semibold text-slate-800">{r.name}</td>
+                        <td className="py-3 px-3 font-semibold text-slate-800">{getResidentNameByHouse(r.houseNumber, r.name)}</td>
                         <td className="py-3 px-3 font-bold text-slate-600">Blok {r.block}</td>
                         <td className="py-3 px-3 text-right font-medium text-slate-600">
                           Rp {targetMonthly.toLocaleString('id-ID')}
@@ -1743,21 +1778,31 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                   </div>
 
                   {isSuperadmin && (
-                    <button
-                      onClick={() => {
-                        if (
-                          confirm(
-                            `HAPUS LAPORAN JIMPITAN TANGGAL ${report.date} (${report.day})?\n\nTindakan permanen ini hanya diizinkan untuk Superadmin (Bpk. Beni B24). Saldo kas dan catatan warga akan disesuaikan kembali.`
-                          )
-                        ) {
-                          deleteJimpitReport(report.id);
-                        }
-                      }}
-                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                      title="Hapus Laporan Jimpitan (Hak Akses Superadmin)"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditingDailyReport(report)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                        title="Edit Laporan Jimpitan (Hak Akses Superadmin)"
+                      >
+                        <Edit2 size={15} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `HAPUS LAPORAN JIMPITAN TANGGAL ${report.date} (${report.day})?\n\nTindakan permanen ini hanya diizinkan untuk Superadmin (Bpk. Beni B24). Saldo kas dan catatan warga akan disesuaikan kembali.`
+                            )
+                          ) {
+                            deleteJimpitReport(report.id);
+                          }
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                        title="Hapus Laporan Jimpitan (Hak Akses Superadmin)"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1826,7 +1871,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs"
                     >
                       <span className="font-bold text-slate-800">
-                        {entry.houseNumber} - {entry.residentName}
+                        {entry.houseNumber} - {getResidentNameByHouse(entry.houseNumber, entry.residentName)}
                       </span>
                       <span className="font-extrabold text-emerald-600">
                         Rp {entry.nominal.toLocaleString('id-ID')} ({entry.paymentMethod})
@@ -1912,7 +1957,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     </div>
                     <div className="flex justify-between items-center pb-1">
                       <span className="text-slate-500">Warga / Rumah:</span>
-                      <strong className="text-slate-900">{paySuccessReceipt.residentName} ({paySuccessReceipt.residentHouse})</strong>
+                      <strong className="text-slate-900">{getResidentNameByHouse(paySuccessReceipt.residentHouse, paySuccessReceipt.residentName)} ({paySuccessReceipt.residentHouse})</strong>
                     </div>
                     <div className="flex justify-between items-center pb-1">
                       <span className="text-slate-500">Metode:</span>
@@ -2159,6 +2204,138 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 </form>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: EDIT LAPORAN JIMPITAN (HAK AKSES HANYA SUPERADMIN)                */}
+      {/* ========================================================================= */}
+      {editingDailyReport && isSuperadmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                  <Edit2 size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold">Edit Laporan Jimpitan</h3>
+                  <p className="text-[11px] text-amber-300">Hak Akses: Superadmin (Bpk. Beni B 24)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingDailyReport(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await updateJimpitReport(editingDailyReport);
+                setEditingDailyReport(null);
+                alert('Laporan jimpitan harian berhasil diperbarui dan disinkronkan ke Firebase!');
+              }}
+              className="p-6 space-y-4 text-xs overflow-y-auto flex-1"
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Hari & Tanggal</label>
+                  <div className="p-2.5 bg-slate-100 rounded-xl font-bold text-slate-800">
+                    {editingDailyReport.day}, {editingDailyReport.date}
+                  </div>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Total Nominal</label>
+                  <input
+                    type="number"
+                    value={editingDailyReport.totalNominal}
+                    onChange={(e) =>
+                      setEditingDailyReport({
+                        ...editingDailyReport,
+                        totalNominal: Number(e.target.value)
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-emerald-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Petugas Ronda / Pengambil</label>
+                <select
+                  value={editingDailyReport.collectedBy}
+                  onChange={(e) =>
+                    setEditingDailyReport({
+                      ...editingDailyReport,
+                      collectedBy: e.target.value
+                    })
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value={editingDailyReport.collectedBy}>{editingDailyReport.collectedBy} (Saat Ini)</option>
+                  {residents.map((r) => {
+                    const label = `${getResidentNameByHouse(r.houseNumber, r.name)} (${r.houseNumber})`;
+                    return (
+                      <option key={r.id} value={label}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Catatan Ronda / Kondisi Lingkungan</label>
+                <textarea
+                  value={editingDailyReport.notes || ''}
+                  onChange={(e) =>
+                    setEditingDailyReport({
+                      ...editingDailyReport,
+                      notes: e.target.value
+                    })
+                  }
+                  rows={3}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Warga Terdata Menjimpit ({editingDailyReport.entries.length} Rumah)
+                </label>
+                <div className="max-h-36 overflow-y-auto space-y-1.5 p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                  {editingDailyReport.entries.map((entry, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-[11px] p-1.5 bg-white rounded border border-slate-100">
+                      <span className="font-bold text-slate-800">
+                        {entry.houseNumber} - {getResidentNameByHouse(entry.houseNumber, entry.residentName)}
+                      </span>
+                      <span className="font-semibold text-emerald-600">Rp {entry.nominal.toLocaleString('id-ID')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingDailyReport(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl transition shadow-md"
+                >
+                  Simpan Perubahan Laporan (Superadmin)
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

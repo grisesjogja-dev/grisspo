@@ -14,25 +14,31 @@ import {
   Shield,
   XCircle,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Edit2,
+  X
 } from 'lucide-react';
 
 export const ForumView: React.FC = () => {
   const {
     forumPosts,
     createForumPost,
+    updateForumPost,
     addForumComment,
     deleteForumComment,
     togglePostLike,
     deleteForumPost,
     togglePinPost,
     currentUser: authUser,
-    resetFeatureData
+    resetFeatureData,
+    getResidentNameByHouse
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
+  const isSuperadmin = currentUser.role === 'superadmin';
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [showNewPostModal, setShowNewPostModal] = useState(false);
+  const [editingPost, setEditingPost] = useState<ForumPost | null>(null);
 
   // New Post Form
   const [newTitle, setNewTitle] = useState('');
@@ -177,7 +183,7 @@ export const ForumView: React.FC = () => {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs sm:text-sm font-bold text-slate-900">{post.authorName}</span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-900">{getResidentNameByHouse(post.authorHouse, post.authorName)}</span>
                       <span className="text-[11px] font-mono text-slate-500">Rumah {post.authorHouse}</span>
                       <span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded font-semibold uppercase">
                         {post.authorRole}
@@ -222,6 +228,17 @@ export const ForumView: React.FC = () => {
                       >
                         <Pin size={13} />
                       </button>
+
+                      {isSuperadmin && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingPost(post)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          title="Edit Topik Diskusi (Superadmin)"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                      )}
 
                       <button
                         onClick={() => {
@@ -283,7 +300,7 @@ export const ForumView: React.FC = () => {
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-bold text-slate-800">
-                          {comm.authorName} <span className="font-mono text-slate-500 font-normal">({comm.authorHouse})</span>
+                          {getResidentNameByHouse(comm.authorHouse, comm.authorName)} <span className="font-mono text-slate-500 font-normal">({comm.authorHouse})</span>
                         </span>
                         <div className="flex items-center gap-1.5">
                           <span className="text-[10px] text-slate-400">
@@ -414,6 +431,114 @@ export const ForumView: React.FC = () => {
                   className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
                 >
                   Terbitkan Topik Diskusi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDIT TOPIK DISKUSI (SUPERADMIN ONLY) */}
+      {editingPost && isSuperadmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden border border-slate-200 shadow-2xl">
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Edit2 size={18} className="text-amber-400" />
+                <div>
+                  <h3 className="text-sm font-bold">Edit Topik Diskusi Warga</h3>
+                  <p className="text-[11px] text-amber-300">Hak Akses: Superadmin (Bpk. Beni B 24)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingPost(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await updateForumPost(editingPost);
+                setEditingPost(null);
+                alert('Topik diskusi berhasil diperbarui!');
+              }}
+              className="p-6 space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Penulis</label>
+                <div className="p-2.5 bg-slate-100 rounded-xl font-bold text-slate-800">
+                  {getResidentNameByHouse(editingPost.authorHouse, editingPost.authorName)} (Rumah {editingPost.authorHouse})
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Kategori Diskusi</label>
+                <select
+                  value={editingPost.category}
+                  onChange={(e) =>
+                    setEditingPost({
+                      ...editingPost,
+                      category: e.target.value as any
+                    })
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Keamanan">Keamanan</option>
+                  <option value="Kebersihan">Kebersihan</option>
+                  <option value="Acara Komunitas">Acara Komunitas</option>
+                  <option value="Saran Umum">Saran Umum</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Judul Diskusi</label>
+                <input
+                  type="text"
+                  required
+                  value={editingPost.title}
+                  onChange={(e) =>
+                    setEditingPost({
+                      ...editingPost,
+                      title: e.target.value
+                    })
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Isi Pesan / Diskusi</label>
+                <textarea
+                  rows={4}
+                  required
+                  value={editingPost.content}
+                  onChange={(e) =>
+                    setEditingPost({
+                      ...editingPost,
+                      content: e.target.value
+                    })
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingPost(null)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
+                >
+                  Simpan Perubahan Topik
                 </button>
               </div>
             </form>

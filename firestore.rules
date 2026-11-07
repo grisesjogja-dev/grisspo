@@ -127,6 +127,12 @@ service cloud.firestore {
       allow read: if true;
       allow create, update, delete: if isValidId(sessId);
     }
+
+    // Katalog Benefit / Rewards Warga
+    match /katalog_benefit/{rewardId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(rewardId);
+    }
   }
 }
 

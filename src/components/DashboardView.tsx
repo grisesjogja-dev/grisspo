@@ -59,7 +59,8 @@ export const DashboardView: React.FC = () => {
     updatePaymentReceipt,
     deletePaymentReceipt,
     sendReceiptNotificationEmail,
-    resetFeatureData
+    resetFeatureData,
+    getResidentNameByHouse
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
 
@@ -115,10 +116,32 @@ export const DashboardView: React.FC = () => {
   const todayDay: DayOfWeek = days[new Date().getDay()] || 'Sabtu';
   const dutyGroup = rondaSchedule.find((g) => g.day === todayDay);
 
-  // Resident's own jimpitan status
-  const currentResident = residents.find((r) => r.houseNumber === currentUser.houseNumber);
-  const userJimpitanPaid = currentResident?.jimpitanPaidMonth || 0;
-  const userJimpitanDeficit = Math.max(0, 15000 - userJimpitanPaid);
+  // Resident's own personal arrears calculations
+  const userJimpitanPaid = currentResidentRecord?.jimpitanPaidMonth || 0;
+  const userCurrentMonthJimpitanDeficit = Math.max(0, 15000 - userJimpitanPaid);
+  const userPrevMonthJimpitanDeficit = currentResidentRecord?.previousMonthsJimpitanDeficit || 0;
+  const userTotalJimpitanDeficit = userCurrentMonthJimpitanDeficit + userPrevMonthJimpitanDeficit;
+
+  // Total kekurangan iuran bulanan + sampah: Rp 50.000 / month (Iuran Bulanan 25.000 + Sampah 25.000)
+  const userUnpaidMonthsCount = currentResidentRecord?.iuranUnpaidMonths ?? (currentResidentRecord?.monthlyIuranPaid ? 0 : 1);
+  const userTotalIuranSampahDeficit = userUnpaidMonthsCount * 50000;
+  const userUnpaidMonthNames = currentResidentRecord?.unpaidMonthNames || [];
+
+  // Paguyuban overall totals (for Bendahara & Superadmin view)
+  const totalPaguyubanJimpitanDeficit = useMemo(() => {
+    return residents.reduce((acc, r) => {
+      const cur = Math.max(0, 15000 - (r.jimpitanPaidMonth || 0));
+      const prev = r.previousMonthsJimpitanDeficit || 0;
+      return acc + cur + prev;
+    }, 0);
+  }, [residents]);
+
+  const totalPaguyubanIuranSampahDeficit = useMemo(() => {
+    return residents.reduce((acc, r) => {
+      const count = r.iuranUnpaidMonths ?? (r.monthlyIuranPaid ? 0 : 1);
+      return acc + (count * 50000);
+    }, 0);
+  }, [residents]);
 
   // Handle type change in Loket: auto update default amount
   const handlePaymentTypeChange = (type: PaymentReceiptType) => {
@@ -853,7 +876,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                         </td>
                         <td className="py-3 px-3">
                           <span className="font-mono font-bold text-slate-900 block">{rc.residentHouse}</span>
-                          <span className="text-slate-600 text-[11px] block">{rc.residentName}</span>
+                          <span className="text-slate-600 text-[11px] block">{getResidentNameByHouse(rc.residentHouse, rc.residentName)}</span>
                         </td>
                         <td className="py-3 px-3">
                           <span className="font-bold text-slate-800 block">{rc.paymentTypeName}</span>
@@ -990,6 +1013,185 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
             </div>
           )}
 
+          {/* ============================================================== */}
+          {/* INFORMASI TOTAL KEKURANGAN JIMPITAN & IURAN + SAMPAH WARGA */}
+          {/* ============================================================== */}
+          <div className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-md border border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
+                    Kewajiban Pembayaran Warga
+                  </span>
+                  <h3 className="text-base font-black text-white">
+                    Status Tagihan Rumah {currentUser.houseNumber} ({getResidentNameByHouse(currentUser.houseNumber, currentUser.name)})
+                  </h3>
+                </div>
+              </div>
+
+              {/* Badges for Pengurus */}
+              {isBendaharaOrAdmin && (
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <span className="text-[10px] font-bold bg-slate-800 text-slate-300 px-3 py-1.5 rounded-xl border border-slate-700">
+                    Akses Pengurus: Rekap Paguyuban Tersedia
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Card 1: Total Kekurangan Jimpitan */}
+              <div className="bg-slate-800/90 rounded-2xl p-4.5 border border-slate-700/80 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                      <Coins size={14} className="text-amber-400" />
+                      <span>Total Kekurangan Jimpitan</span>
+                    </span>
+                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                      userTotalJimpitanDeficit === 0
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    }`}>
+                      {userTotalJimpitanDeficit === 0 ? 'LUNAS (RP 0)' : 'KURANG RP ' + userTotalJimpitanDeficit.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex items-baseline gap-2">
+                    <span className={`text-2xl sm:text-3xl font-black ${
+                      userTotalJimpitanDeficit === 0 ? 'text-emerald-400' : 'text-amber-400'
+                    }`}>
+                      Rp {userTotalJimpitanDeficit.toLocaleString('id-ID')}
+                    </span>
+                    <span className="text-xs text-slate-400 font-medium">total kekurangan</span>
+                  </div>
+
+                  <div className="mt-3 space-y-1.5 text-[11px] text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-700/50">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Target Jimpitan Bulan Ini:</span>
+                      <span className="font-semibold text-white">Rp 15.000 (Rp 500/hari)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Tercatat Terbayar Bulan Ini:</span>
+                      <span className="font-semibold text-emerald-400">Rp {userJimpitanPaid.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Kekurangan Bulan Berjalan:</span>
+                      <span className="font-semibold text-amber-300">Rp {userCurrentMonthJimpitanDeficit.toLocaleString('id-ID')}</span>
+                    </div>
+                    {userPrevMonthJimpitanDeficit > 0 && (
+                      <div className="flex justify-between text-rose-300 pt-1 border-t border-slate-800">
+                        <span>Tunggakan Bulan Lalu:</span>
+                        <span className="font-bold">Rp {userPrevMonthJimpitanDeficit.toLocaleString('id-ID')}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-700/50 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400">Kelipatan Rp 500 / Rumah</span>
+                  <button
+                    onClick={() => setActiveView('jimpitan')}
+                    className="text-xs font-bold px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg transition flex items-center gap-1"
+                  >
+                    <span>Cek Rincian Jimpitan</span>
+                    <ChevronRight size={12} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 2: Total Kekurangan Iuran Bulanan + Sampah */}
+              <div className="bg-slate-800/90 rounded-2xl p-4.5 border border-slate-700/80 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                      <Wallet size={14} className="text-blue-400" />
+                      <span>Total Kekurangan Iuran + Sampah</span>
+                    </span>
+                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                      userTotalIuranSampahDeficit === 0
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    }`}>
+                      {userTotalIuranSampahDeficit === 0 ? 'LUNAS BULAN INI' : `${userUnpaidMonthsCount} BULAN TERTUNGGAK`}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex items-baseline gap-2">
+                    <span className={`text-2xl sm:text-3xl font-black ${
+                      userTotalIuranSampahDeficit === 0 ? 'text-emerald-400' : 'text-rose-400'
+                    }`}>
+                      Rp {userTotalIuranSampahDeficit.toLocaleString('id-ID')}
+                    </span>
+                    <span className="text-xs text-slate-400 font-medium">total kewajiban</span>
+                  </div>
+
+                  <div className="mt-3 space-y-1.5 text-[11px] text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-700/50">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Paket Iuran Bulanan:</span>
+                      <span className="font-semibold text-white">Rp 50.000 / Bulan</span>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 pl-2">
+                      <span>• Iuran Rutin Paguyuban:</span>
+                      <span className="text-slate-300">Rp 25.000</span>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 pl-2">
+                      <span>• Retribusi Kebersihan Sampah:</span>
+                      <span className="text-slate-300">Rp 25.000</span>
+                    </div>
+                    <div className="flex justify-between pt-1 border-t border-slate-800">
+                      <span className="text-slate-400">Status Periode:</span>
+                      <span className="font-bold text-amber-300">
+                        {userUnpaidMonthsCount === 0
+                          ? 'Semua Lunas'
+                          : userUnpaidMonthNames.length > 0
+                          ? userUnpaidMonthNames.join(', ')
+                          : `${userUnpaidMonthsCount} Bulan Belum Lunas`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-700/50 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-[10px] text-slate-400">
+                    Rek. BRI <span className="font-mono text-white font-bold">1558-01-007310-50-3</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setDashboardTab('loket');
+                      setSelectedResidentId(currentUser.id);
+                    }}
+                    className="text-xs font-bold px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition flex items-center gap-1"
+                  >
+                    <span>Bayar di Loket</span>
+                    <ChevronRight size={12} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Paguyuban Summary for Pengurus */}
+            {isBendaharaOrAdmin && (
+              <div className="mt-4 p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <Shield size={14} className="text-amber-400" />
+                  <span className="font-bold text-slate-300">Rekap Kekurangan Seluruh Paguyuban (Semua Rumah):</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-4 text-xs font-bold">
+                  <span className="text-amber-400">
+                    Tunggakan Jimpitan: <span className="text-white">Rp {totalPaguyubanJimpitanDeficit.toLocaleString('id-ID')}</span>
+                  </span>
+                  <span className="text-rose-400">
+                    Tunggakan Iuran + Sampah: <span className="text-white">Rp {totalPaguyubanIuranSampahDeficit.toLocaleString('id-ID')}</span>
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Key Metrics Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Saldo Kas */}
@@ -1047,12 +1249,12 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 <span className="text-xs font-normal text-slate-400">/ 15rb</span>
               </div>
               <div className="text-[11px] mt-1 font-bold">
-                {userJimpitanDeficit === 0 ? (
+                {userCurrentMonthJimpitanDeficit === 0 ? (
                   <span className="text-emerald-600 flex items-center gap-1">
                     <CheckCircle2 size={12} /> LUNAS BULAN INI
                   </span>
                 ) : (
-                  <span className="text-amber-600">Kurang Rp {userJimpitanDeficit.toLocaleString('id-ID')}</span>
+                  <span className="text-amber-600">Kurang Rp {userCurrentMonthJimpitanDeficit.toLocaleString('id-ID')}</span>
                 )}
               </div>
             </div>
@@ -1164,7 +1366,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     Ketua Paguyuban
                   </span>
                   <span className="text-sm font-black text-slate-900 block mt-0.5">
-                    Bpk. BENI
+                    {getResidentNameByHouse('B 24', 'Bpk. BENI')}
                   </span>
                   <span className="text-[11px] text-slate-500 font-mono">Rumah B 24</span>
                 </div>
@@ -1180,7 +1382,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     Wakil Ketua
                   </span>
                   <span className="text-sm font-black text-slate-900 block mt-0.5">
-                    Bpk. WALUYO
+                    {getResidentNameByHouse('A 13', 'Bpk. WALUYO')}
                   </span>
                   <span className="text-[11px] text-slate-500 font-mono">Rumah A 13</span>
                 </div>
@@ -1196,7 +1398,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     Bendahara 1
                   </span>
                   <span className="text-sm font-black text-slate-900 block mt-0.5">
-                    Bpk. AHMAD
+                    {getResidentNameByHouse('B 02', 'Bpk. AHMAD')}
                   </span>
                   <span className="text-[11px] text-slate-500 font-mono">Rumah B 02</span>
                 </div>
@@ -1212,7 +1414,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     Bendahara 2
                   </span>
                   <span className="text-sm font-black text-slate-900 block mt-0.5">
-                    Bpk. ROBI
+                    {getResidentNameByHouse('C 15', 'Bpk. ROBI')}
                   </span>
                   <span className="text-[11px] text-slate-500 font-mono">Rumah C 15</span>
                 </div>
@@ -1228,7 +1430,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     Sekretaris
                   </span>
                   <span className="text-sm font-black text-slate-900 block mt-0.5">
-                    Bpk. ASROFI
+                    {getResidentNameByHouse('B 08', 'Bpk. ASROFI')}
                   </span>
                   <span className="text-[11px] text-slate-500 font-mono">Rumah B 08</span>
                 </div>
@@ -1244,7 +1446,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     Koord. Kamtibmas
                   </span>
                   <span className="text-sm font-black text-slate-900 block mt-0.5">
-                    Bpk. JOKO TRI
+                    {getResidentNameByHouse('C 12', 'Bpk. JOKO TRI')}
                   </span>
                   <span className="text-[11px] text-slate-500 font-mono">Rumah C 12</span>
                 </div>
@@ -1431,7 +1633,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   <div className="flex justify-between">
                     <span className="text-slate-500">Telah Diterima Dari:</span>
                     <span className="font-bold text-slate-900">
-                      {activeReceiptModal.residentName} (Rumah {activeReceiptModal.residentHouse})
+                      {getResidentNameByHouse(activeReceiptModal.residentHouse, activeReceiptModal.residentName)} (Rumah {activeReceiptModal.residentHouse})
                     </span>
                   </div>
 

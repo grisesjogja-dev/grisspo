@@ -48,6 +48,7 @@ export const FasumBookingView: React.FC = () => {
     confirmFasumPayment,
     updateFasumBookingStatus,
     deleteFasumBooking,
+    updateFasumBooking,
     fasumFacilitiesList,
     addFasumFacility,
     updateFasumFacility,
@@ -55,9 +56,11 @@ export const FasumBookingView: React.FC = () => {
     resetFeatureData,
     currentUser: authUser,
     residents,
-    totalIncome
+    totalIncome,
+    getResidentNameByHouse
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
+  const [editingBooking, setEditingBooking] = useState<FasumBooking | null>(null);
 
   // Active facility list (from Firestore or seed fallback)
   const activeFacilities = useMemo(() => {
@@ -936,7 +939,7 @@ export const FasumBookingView: React.FC = () => {
                       </div>
 
                       <p className="text-xs text-slate-700">
-                        Warga: <strong className="text-slate-900">{booking.residentName}</strong> (Rumah {booking.residentHouse}) &bull; Acara: <em>{booking.purpose}</em>
+                        Warga: <strong className="text-slate-900">{getResidentNameByHouse(booking.residentHouse, booking.residentName)}</strong> (Rumah {booking.residentHouse}) &bull; Acara: <em>{booking.purpose}</em>
                       </p>
 
                       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
@@ -986,17 +989,27 @@ export const FasumBookingView: React.FC = () => {
                         )}
 
                         {isSuperadmin && (
-                          <button
-                            onClick={() => {
-                              if (confirm('Apakah Anda yakin ingin menghapus reservasi fasum ini?')) {
-                                deleteFasumBooking(booking.id);
-                              }
-                            }}
-                            className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition"
-                            title="Hapus Pemesanan (Superadmin)"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setEditingBooking(booking)}
+                              className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition"
+                              title="Edit Pemesanan (Superadmin)"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm('Apakah Anda yakin ingin menghapus reservasi fasum ini?')) {
+                                  deleteFasumBooking(booking.id);
+                                }
+                              }}
+                              className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition"
+                              title="Hapus Pemesanan (Superadmin)"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -1609,6 +1622,153 @@ export const FasumBookingView: React.FC = () => {
                   className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
                 >
                   {editingFacility ? 'Simpan Perubahan Fasilitas' : 'Tambahkan Fasilitas Baru'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDIT RESERVASI FASUM (SUPERADMIN ONLY) */}
+      {editingBooking && isSuperadmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Edit2 size={18} className="text-amber-400" />
+                <div>
+                  <h3 className="text-sm font-bold">Edit Reservasi Fasum</h3>
+                  <p className="text-[11px] text-amber-300">Hak Akses: Superadmin (Bpk. Beni B 24)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingBooking(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                <XCircle size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await updateFasumBooking(editingBooking);
+                setEditingBooking(null);
+                alert('Data reservasi fasum berhasil diperbarui!');
+              }}
+              className="p-6 space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Pemesan & Rumah</label>
+                <div className="p-2.5 bg-slate-100 rounded-xl font-bold text-slate-800">
+                  {getResidentNameByHouse(editingBooking.residentHouse, editingBooking.residentName)} (Rumah {editingBooking.residentHouse})
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Keperluan / Acara</label>
+                <input
+                  type="text"
+                  required
+                  value={editingBooking.purpose}
+                  onChange={(e) =>
+                    setEditingBooking({
+                      ...editingBooking,
+                      purpose: e.target.value
+                    })
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Tanggal Sewa</label>
+                  <input
+                    type="date"
+                    required
+                    value={editingBooking.date}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        date: e.target.value
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Biaya Sewa (Rp)</label>
+                  <input
+                    type="number"
+                    required
+                    value={editingBooking.rentalFee}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        rentalFee: Number(e.target.value)
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-blue-700 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Status Reservasi</label>
+                  <select
+                    value={editingBooking.status}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        status: e.target.value as any
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="disetujui">DISETUJUI</option>
+                    <option value="menunggu_konfirmasi">MENUNGGU KONFIRMASI</option>
+                    <option value="selesai">SELESAI</option>
+                    <option value="ditolak">DITOLAK</option>
+                    <option value="dibatalkan">DIBATALKAN</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Status Pembayaran</label>
+                  <select
+                    value={editingBooking.paymentStatus}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        paymentStatus: e.target.value as any
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="lunas">LUNAS</option>
+                    <option value="menunggu_pembayaran">MENUNGGU PEMBAYARAN</option>
+                    <option value="menunggu_konfirmasi">MENUNGGU KONFIRMASI</option>
+                    <option value="dibatalkan">DIBATALKAN</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingBooking(null)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
+                >
+                  Simpan Perubahan Reservasi
                 </button>
               </div>
             </form>

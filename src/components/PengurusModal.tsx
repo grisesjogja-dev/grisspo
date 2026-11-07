@@ -1,4 +1,5 @@
 import React from 'react';
+import { useApp } from '../context/AppContext';
 import { dataPengurusGSS } from '../data/seedData';
 import { Users, Phone, X, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
@@ -8,6 +9,7 @@ interface PengurusModalProps {
 }
 
 export const PengurusModal: React.FC<PengurusModalProps> = ({ isOpen, onClose }) => {
+  const { getResidentNameByHouse } = useApp();
   if (!isOpen) return null;
 
   const getPositionBadge = (pos: string) => {
@@ -81,7 +83,7 @@ export const PengurusModal: React.FC<PengurusModalProps> = ({ isOpen, onClose })
                   </div>
 
                   <h3 className="text-base font-black text-slate-900">
-                    Bpk. {p.name}
+                    Bpk. {getResidentNameByHouse(p.houseNumber, p.name)}
                   </h3>
 
                   <div className="mt-2 space-y-1">
