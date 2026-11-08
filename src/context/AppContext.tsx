@@ -23,7 +23,8 @@ import {
   FasumFacilityConfig,
   PaymentReceipt,
   PaymentReceiptType,
-  PaymentMethodType
+  PaymentMethodType,
+  ImportantContact
 } from '../types';
 import {
   initialResidents,
@@ -36,7 +37,8 @@ import {
   initialFasumBookings,
   initialMeetingNotes,
   initialAttendanceSessions,
-  fasumFacilities
+  fasumFacilities,
+  initialImportantContacts
 } from '../data/seedData';
 import {
   computeTransactionHash,
@@ -191,6 +193,12 @@ interface AppContextType {
   kickSession: (userId: string) => Promise<void>;
   inactivityNotice: string | null;
   clearInactivityNotice: () => void;
+
+  // Nomor Telepon Penting Sedayu & Emergency Directory
+  importantContacts: ImportantContact[];
+  addImportantContact: (contact: Omit<ImportantContact, 'id'>) => Promise<ImportantContact>;
+  updateImportantContact: (contact: ImportantContact) => Promise<void>;
+  deleteImportantContact: (id: string) => Promise<void>;
 
   // Sync state
   isCloudSynced: boolean;
@@ -453,7 +461,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const saved = localStorage.getItem('grisspo_transactions');
     const base: Transaction[] = saved ? JSON.parse(saved) : initialTransactions;
-    return base.filter((t) => !initialDeletedIds.includes(t.id));
+    return base
+      .filter((t) => !initialDeletedIds.includes(t.id))
+      .map((t) => ({
+        ...t,
+        amount: Number(t.amount) || 0,
+        type: (String(t.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran'
+      }));
   });
 
   // Forum Posts
@@ -515,6 +529,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return base.filter((m) => !initialDeletedIds.includes(m.id));
   });
 
+  // Nomor Telepon Penting Sedayu & Emergency Directory
+  const [importantContacts, setImportantContacts] = useState<ImportantContact[]>(() => {
+    const saved = localStorage.getItem('grisspo_important_contacts');
+    const base: ImportantContact[] = saved ? JSON.parse(saved) : initialImportantContacts;
+    return base.filter((c) => !initialDeletedIds.includes(c.id));
+  });
+
   const [emailAlerts, setEmailAlerts] = useState<EmailAlertLog[]>([]);
 
   // Function to mark an item as deleted permanently and sync to Firestore
@@ -537,6 +558,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setWhatsAppLogs((prev) => prev.filter((w) => w.id !== id));
     setAttendanceSessions((prev) => prev.filter((s) => s.id !== id));
     setMeetingNotes((prev) => prev.filter((m) => m.id !== id));
+    setImportantContacts((prev) => prev.filter((c) => c.id !== id));
 
     // Save to Firestore system_deleted_ids so ALL devices receive this deletion in real-time
     try {
@@ -596,6 +618,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let unsubReceipts: (() => void) | undefined;
     let unsubRonda: (() => void) | undefined;
     let unsubRewards: (() => void) | undefined;
+    let unsubImportantContacts: (() => void) | undefined;
 
     // Check Cloud Seed Status so other devices NEVER resurrect deleted documents
     const checkCloudSeedStatus = async () => {
@@ -654,6 +677,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
           await setDoc(seedRef, { isSeeded: true, seededAt: new Date().toISOString() });
           localStorage.setItem('grisspo_seeded_v1', 'true');
+        }
+
+        // Check if kontak_penting is brand new, seed if empty without overwriting existing data
+        try {
+          const kontakSnap = await getDocs(collection(db, 'kontak_penting'));
+          if (kontakSnap.empty) {
+            initialImportantContacts.forEach((ct) => {
+              if (!deletedIdsRef.current.includes(ct.id)) {
+                setDoc(doc(db, 'kontak_penting', ct.id), ct).catch(() => {});
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('Sync initial important contacts notice:', e);
         }
 
         // Realtime sync: Push any local payment receipts to Firestore so all other devices see them
@@ -724,7 +761,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (deletedIdsRef.current.includes(d.id)) {
               deleteDoc(doc(db, 'keuangan_transaksi', d.id)).catch(() => {});
             } else {
-              cloudTrx.push(d.data() as Transaction);
+              const rawData = d.data() as any;
+              cloudTrx.push({
+                ...rawData,
+                amount: Number(rawData.amount) || 0,
+                type: (String(rawData.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran'
+              });
             }
           });
           cloudTrx.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
@@ -970,6 +1012,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }, (err) => {
         console.warn('Firestore katalog_benefit listener notice:', err.message);
       });
+
+      // 15. Nomor Telepon Penting Sedayu Real-Time Listener
+      unsubImportantContacts = onSnapshot(collection(db, 'kontak_penting'), (snapshot) => {
+        if (!snapshot.empty) {
+          const cloudContacts: ImportantContact[] = [];
+          snapshot.forEach((d) => {
+            if (!deletedIdsRef.current.includes(d.id)) {
+              cloudContacts.push(d.data() as ImportantContact);
+            }
+          });
+          if (cloudContacts.length > 0) {
+            cloudContacts.sort((a, b) => (a.order || 99) - (b.order || 99));
+            setImportantContacts(cloudContacts);
+            localStorage.setItem('grisspo_important_contacts', JSON.stringify(cloudContacts));
+          }
+        }
+      }, (err) => {
+        console.warn('Firestore kontak_penting listener notice:', err.message);
+      });
     } catch (e) {
       console.warn('Firebase Firestore initialization notice:', e);
     }
@@ -990,6 +1051,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubReceipts?.();
       unsubRonda?.();
       unsubRewards?.();
+      unsubImportantContacts?.();
     };
   }, []);
 
@@ -1046,14 +1108,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('grisspo_announcements', JSON.stringify(announcements));
   }, [announcements]);
 
-  // Calculations for Financial summary
+  useEffect(() => {
+    localStorage.setItem('grisspo_important_contacts', JSON.stringify(importantContacts));
+  }, [importantContacts]);
+
+  // Calculations for Financial summary with bulletproof type safety and number conversion
   const totalIncome = transactions
-    .filter((t) => t.type === 'pemasukan')
-    .reduce((acc, t) => acc + t.amount, 0);
+    .filter((t) => {
+      const typeStr = String(t.type || '').trim().toLowerCase();
+      return typeStr === 'pemasukan' || typeStr === 'income';
+    })
+    .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
   const totalExpense = transactions
-    .filter((t) => t.type === 'pengeluaran')
-    .reduce((acc, t) => acc + t.amount, 0);
+    .filter((t) => {
+      const typeStr = String(t.type || '').trim().toLowerCase();
+      return typeStr === 'pengeluaran' || typeStr === 'expense';
+    })
+    .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
   const currentBalance = totalIncome - totalExpense;
 
@@ -1977,8 +2049,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setEmailAlerts((prev) => [emailLog, ...prev]);
     }
 
+    const numericAmount = Number(trxData.amount) || 0;
+    const cleanType = (String(trxData.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran';
+
     const newTrx: Transaction = {
       ...trxData,
+      type: cleanType,
+      amount: numericAmount,
       id: `trx-${now}`,
       encryptedHash: hash,
       isAnomaly,
@@ -1994,7 +2071,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (trxData.sourceHouse) {
-      if (trxData.category.toLowerCase().includes('sumbangan') && trxData.amount >= 100000) {
+      if (trxData.category.toLowerCase().includes('sumbangan') && numericAmount >= 100000) {
         awardPointsToResident(trxData.sourceHouse, 50, `Partisipasi Sumbangan Warga Minimal Rp 100.000 (${trxData.sourceHouse})`);
       }
     }
@@ -2019,15 +2096,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateTransaction = async (trx: Transaction) => {
+    const numericAmount = Number(trx.amount) || 0;
+    const cleanType = (String(trx.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran';
+
     const updatedHash = await computeTransactionHash(
-      trx.type,
+      cleanType,
       trx.category,
-      trx.amount,
+      numericAmount,
       trx.date,
       trx.recordedBy,
       trx.timestamp
     );
-    const updated = { ...trx, encryptedHash: updatedHash };
+    const updated: Transaction = {
+      ...trx,
+      type: cleanType,
+      amount: numericAmount,
+      encryptedHash: updatedHash
+    };
     setTransactions((prev) => prev.map((t) => (t.id === trx.id ? updated : t)));
     try {
       await setDoc(doc(db, 'keuangan_transaksi', trx.id), updated);
@@ -3016,6 +3101,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Nomor Telepon Penting Sedayu CRUD (Superadmin only)
+  const addImportantContact = async (
+    contactData: Omit<ImportantContact, 'id'>
+  ): Promise<ImportantContact> => {
+    if (currentUser?.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak menambah nomor telepon penting!');
+      throw new Error('Akses Ditolak');
+    }
+    const newContact: ImportantContact = {
+      ...contactData,
+      id: `kontak-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      updatedAt: new Date().toISOString(),
+      updatedBy: currentUser ? `${currentUser.name} (${currentUser.houseNumber})` : 'Superadmin'
+    };
+    const next = [...importantContacts, newContact].sort((a, b) => (a.order || 99) - (b.order || 99));
+    setImportantContacts(next);
+    localStorage.setItem('grisspo_important_contacts', JSON.stringify(next));
+    try {
+      await setDoc(doc(db, 'kontak_penting', newContact.id), newContact);
+    } catch (err) {
+      console.warn('Firestore addImportantContact notice:', err);
+    }
+    return newContact;
+  };
+
+  const updateImportantContact = async (contact: ImportantContact) => {
+    if (currentUser?.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin yang memiliki hak mengubah data nomor kontak penting!');
+      return;
+    }
+    const updated: ImportantContact = {
+      ...contact,
+      updatedAt: new Date().toISOString(),
+      updatedBy: currentUser ? `${currentUser.name} (${currentUser.houseNumber})` : 'Superadmin'
+    };
+    const next = importantContacts
+      .map((c) => (c.id === contact.id ? updated : c))
+      .sort((a, b) => (a.order || 99) - (b.order || 99));
+    setImportantContacts(next);
+    localStorage.setItem('grisspo_important_contacts', JSON.stringify(next));
+    try {
+      await setDoc(doc(db, 'kontak_penting', contact.id), updated);
+    } catch (err) {
+      console.warn('Firestore updateImportantContact notice:', err);
+    }
+  };
+
+  const deleteImportantContact = async (id: string) => {
+    if (currentUser?.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin yang memiliki hak menghapus kontak penting!');
+      return;
+    }
+    await markAsDeleted(id, 'kontak_penting');
+    const next = importantContacts.filter((c) => c.id !== id);
+    setImportantContacts(next);
+    localStorage.setItem('grisspo_important_contacts', JSON.stringify(next));
+    try {
+      await deleteDoc(doc(db, 'kontak_penting', id));
+    } catch (err) {
+      console.warn('Firestore deleteImportantContact notice:', err);
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -3117,6 +3265,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateMeetingNote,
         deleteMeetingNote,
         awardPointsToResident,
+
+        importantContacts,
+        addImportantContact,
+        updateImportantContact,
+        deleteImportantContact,
 
         isPengurusOpen,
         setIsPengurusOpen,

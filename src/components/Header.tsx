@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   X,
   Edit3,
-  ShieldAlert
+  ShieldAlert,
+  PhoneCall
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -42,7 +43,8 @@ export const Header: React.FC<HeaderProps> = ({
     announcements,
     activeSessions,
     logout,
-    setIsPengurusOpen
+    setIsPengurusOpen,
+    setActiveView
   } = useApp();
 
   const [showRoleMenu, setShowRoleMenu] = useState(false);
@@ -72,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
       <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Brand */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => currentUser && setActiveView('dashboard')}>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-amber-400 p-0.5 flex items-center justify-center shadow-lg shadow-blue-500/20">
               <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
                 <span className="font-black text-transparent bg-clip-text bg-gradient-to-tr from-blue-400 to-amber-300 text-lg">
@@ -96,6 +98,17 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right controls */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Nomor Telepon Penting Sedayu (Mencolok - Emergency Red) */}
+            <button
+              onClick={() => setActiveView('kontak_penting')}
+              className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black transition flex items-center gap-1.5 text-xs shadow-md shadow-red-600/30 border border-red-400/40 animate-pulse shrink-0"
+              title="Nomor Telepon Penting & Darurat Sedayu (Polsek, Koramil, Puskesmas, Damkar)"
+            >
+              <PhoneCall size={14} className="text-amber-200" />
+              <span className="hidden sm:inline">Kontak Darurat Sedayu</span>
+              <span className="sm:hidden font-bold">Darurat</span>
+            </button>
+
             {/* Struktur Pengurus Paguyuban Button (Always visible) */}
             <button
               onClick={() => setIsPengurusOpen(true)}

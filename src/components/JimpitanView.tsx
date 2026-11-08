@@ -267,6 +267,11 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   const handleSubmitJimpit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!currentUser) {
+      alert('Akses Ditolak: Input jimpitan hanya bisa dilakukan ketika warga sudah login!');
+      return;
+    }
+
     if (isAlreadySubmittedToday) {
       alert('jimpitan hari ini sudah di input');
       return;
@@ -669,7 +674,93 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
       {/* ========================================================================= */}
       {/* TAB 1: INPUT JIMPITAN ONLINE                                              */}
       {/* ========================================================================= */}
-      {tab === 'input' && (
+      {tab === 'input' && !currentUser && (
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white rounded-3xl p-6 sm:p-10 border border-slate-700 shadow-2xl text-center max-w-2xl mx-auto my-6 animate-in fade-in duration-200">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-4 border border-amber-500/30">
+            <Lock size={32} />
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold mb-3 border border-amber-400/30">
+            <AlertTriangle size={13} />
+            <span>Hak Akses Terkunci</span>
+          </div>
+          <h3 className="text-xl sm:text-2xl font-black text-white">
+            Input Jimpitan Hanya Bisa Dilakukan Setelah Login
+          </h3>
+          <p className="mt-2 text-slate-300 text-xs sm:text-sm leading-relaxed max-w-lg mx-auto">
+            Sesuai ketentuan Paguyuban Griya Sedayu Selaras 1, penginputan uang jimpitan ronda malam wajib dilakukan oleh warga atau petugas ronda resmi yang sudah terautentikasi (login dengan nomor rumah & password).
+          </p>
+
+          {/* Inline Login Form */}
+          <form onSubmit={handleInlineLogin} className="mt-6 bg-slate-800/80 p-5 rounded-2xl border border-slate-700 text-left max-w-md mx-auto space-y-4">
+            <div className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Key size={13} />
+              <span>Login Langsung untuk Input Jimpitan</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Pilih Nomor Rumah Warga
+              </label>
+              <select
+                value={inlineHouse}
+                onChange={(e) => setInlineHouse(e.target.value)}
+                required
+                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-white text-xs font-bold focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="">-- Pilih No. Rumah (Contoh: B 24) --</option>
+                {residents.map((r) => (
+                  <option key={r.id} value={r.houseNumber}>
+                    {r.houseNumber} - {r.name} ({r.role.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Password Warga
+              </label>
+              <input
+                type="password"
+                required
+                value={inlinePass}
+                onChange={(e) => setInlinePass(e.target.value)}
+                placeholder="Masukkan Password (default: Griss123)"
+                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-white text-xs font-mono focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            {inlineLoginError && (
+              <div className="p-2.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-300 text-xs font-medium flex items-center gap-1.5">
+                <AlertCircle size={14} className="shrink-0 text-red-400" />
+                <span>{inlineLoginError}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+            >
+              <LogIn size={15} />
+              <span>Masuk & Buka Form Input Jimpitan</span>
+            </button>
+          </form>
+
+          {onOpenLogin && (
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={onOpenLogin}
+                className="text-xs text-amber-400 hover:text-amber-300 font-bold underline transition"
+              >
+                Buka Modal Login Lengkap
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'input' && currentUser && (
         <form onSubmit={handleSubmitJimpit} className="space-y-6">
           {/* Notification if today is already submitted */}
           {isAlreadySubmittedToday && (

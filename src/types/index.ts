@@ -315,4 +315,25 @@ export interface ActiveSession {
   deviceInfo?: string;
 }
 
+export type ContactCategory =
+  | 'Polisi & Keamanan'
+  | 'Medis & Kesehatan'
+  | 'Pemadam & Darurat'
+  | 'Layanan Publik & RT';
+
+export interface ImportantContact {
+  id: string;
+  name: string;
+  category: ContactCategory;
+  phoneNumber: string;
+  whatsappNumber?: string;
+  address?: string;
+  description?: string;
+  isEmergency?: boolean;
+  order?: number;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+
 

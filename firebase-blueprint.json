@@ -173,6 +173,25 @@
         "e2eHash": { "type": "string", "description": "Hash integritas SHA-256" }
       },
       "required": ["id", "facilityType", "facilityName", "date", "purpose", "residentName", "residentHouse", "rentalFee", "paymentStatus", "status"]
+    },
+    "KontakPenting": {
+      "title": "KontakPenting",
+      "description": "Nomor telepon darurat dan instansi penting Sedayu dan Bantul",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID kontak" },
+        "name": { "type": "string", "description": "Nama instansi e.g. Polsek Sedayu" },
+        "category": { "type": "string", "description": "Kategori kontak: Polisi & Keamanan, Medis & Kesehatan, Pemadam & Darurat, Layanan Publik & RT" },
+        "phoneNumber": { "type": "string", "description": "Nomor telepon panggilan e.g. (0274) 798110" },
+        "whatsappNumber": { "type": "string", "description": "Nomor WhatsApp" },
+        "address": { "type": "string", "description": "Alamat lokasi" },
+        "description": { "type": "string", "description": "Keterangan layanan dan jam operasional" },
+        "isEmergency": { "type": "boolean", "description": "Apakah nomor darurat 24 jam" },
+        "order": { "type": "number", "description": "Urutan tampilan" },
+        "updatedAt": { "type": "string", "description": "Waktu perbaruan terakhir" },
+        "updatedBy": { "type": "string", "description": "User yang memperbarui" }
+      },
+      "required": ["id", "name", "category", "phoneNumber"]
     }
   },
   "firestore": {
@@ -229,6 +248,10 @@
     },
     "/active_sessions/{sessId}": {
       "description": "Sesi login aktif pengguna real-time"
+    },
+    "/kontak_penting/{contactId}": {
+      "schema": { "$ref": "#/entities/KontakPenting" },
+      "description": "Daftar nomor telepon darurat dan penting Sedayu dan sekitarnya"
     }
   }
 }

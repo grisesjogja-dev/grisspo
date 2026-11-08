@@ -40,7 +40,14 @@ import {
   ExternalLink,
   FileWarning,
   FileCheck,
-  Phone
+  Phone,
+  PhoneCall,
+  BellRing,
+  CheckSquare,
+  Square,
+  LifeBuoy,
+  HeartPulse,
+  Flame
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -60,7 +67,8 @@ export const DashboardView: React.FC = () => {
     deletePaymentReceipt,
     sendReceiptNotificationEmail,
     resetFeatureData,
-    getResidentNameByHouse
+    getResidentNameByHouse,
+    toggleBerkasKependudukan
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
 
@@ -142,6 +150,97 @@ export const DashboardView: React.FC = () => {
       return acc + (count * 50000);
     }, 0);
   }, [residents]);
+
+  // Current & Previous Month calculation
+  const now = new Date();
+  const currentMonthName = now.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonthName = prevMonthDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+
+  // Due Date (10th of each month)
+  const todayDayNum = now.getDate();
+  const dueDateNum = 10;
+  const daysUntilDue = dueDateNum - todayDayNum;
+  const isPastDue = todayDayNum > dueDateNum;
+  const isDueToday = todayDayNum === dueDateNum;
+
+  // Push notification reminder simulated state
+  const [pushReminderEnabled, setPushReminderEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('grisspo_due_push_enabled') !== 'false';
+  });
+
+  const handleTogglePushReminder = () => {
+    const next = !pushReminderEnabled;
+    setPushReminderEnabled(next);
+    localStorage.setItem('grisspo_due_push_enabled', String(next));
+    if (next) {
+      alert('Notifikasi Pengingat Jatuh Tempo Diaktifkan! Sistem akan mengingatkan pembayaran iuran dan jimpitan sebelum tanggal 10.');
+    }
+  };
+
+  // Superadmin / Sekretaris Panel Berkas Kependudukan State
+  const [berkasBlockFilter, setBerkasBlockFilter] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
+  const [berkasStatusFilter, setBerkasStatusFilter] = useState<'ALL' | 'BELUM' | 'SUDAH'>('BELUM');
+  const [berkasSearch, setBerkasSearch] = useState('');
+  const [isUpdatingBerkasId, setIsUpdatingBerkasId] = useState<string | null>(null);
+
+  const berkasSummary = useMemo(() => {
+    const total = residents.length;
+    const sudah = residents.filter((r) => r.berkasKependudukan).length;
+    const belum = total - sudah;
+    const percent = total > 0 ? Math.round((sudah / total) * 100) : 0;
+    return { total, sudah, belum, percent };
+  }, [residents]);
+
+  const filteredBerkasResidents = useMemo(() => {
+    return residents.filter((r) => {
+      const matchBlock = berkasBlockFilter === 'ALL' || r.block === berkasBlockFilter;
+      const matchStatus =
+        berkasStatusFilter === 'ALL' ||
+        (berkasStatusFilter === 'SUDAH' && r.berkasKependudukan) ||
+        (berkasStatusFilter === 'BELUM' && !r.berkasKependudukan);
+      const matchSearch =
+        r.name.toLowerCase().includes(berkasSearch.toLowerCase()) ||
+        r.houseNumber.toLowerCase().includes(berkasSearch.toLowerCase());
+      return matchBlock && matchStatus && matchSearch;
+    });
+  }, [residents, berkasBlockFilter, berkasStatusFilter, berkasSearch]);
+
+  const handleToggleBerkasStatus = async (residentId: string, currentStatus?: boolean) => {
+    setIsUpdatingBerkasId(residentId);
+    try {
+      const res = await toggleBerkasKependudukan(residentId, !currentStatus);
+      if (res.success && !currentStatus) {
+        confetti({ particleCount: 50, spread: 60 });
+      }
+    } catch (err: any) {
+      alert('Gagal mengubah status berkas: ' + err.message);
+    } finally {
+      setIsUpdatingBerkasId(null);
+    }
+  };
+
+  const handleSendBerkasReminderWA = (r: Resident) => {
+    const cleanPhone = (r.phone || '081234567800').replace(/[^0-9]/g, '');
+    const waNumber = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone;
+    const message = `*PENGINGAT KELENGKAPAN BERKAS KEPENDUDUKAN (KTP & KK)*
+Paguyuban Griya Sedayu Selaras 1
+
+Yth. Bpk/Ibu *${r.name}* (Rumah ${r.houseNumber})
+Kapanewon Sedayu, Bantul
+
+Berdasarkan pencatatan administrasi kependudukan paguyuban, berkas kependudukan (fotocopy/scan KTP & KK) untuk rumah *${r.houseNumber}* saat ini berstatus *BELUM DISERAHKAN*.
+
+Mohon kesediaan Bpk/Ibu untuk segera menyerahkan berkas kependudukan ke:
+- Bpk. Asrofi (Sekretaris - Rumah B 08)
+- Bpk. Beni (Superadmin / Ketua - Rumah B 24)
+
+Kelengkapan berkas sangat penting untuk akurasi data warga, laporan RT/Dukuh, serta pelayanan warga paguyuban.
+Terima kasih atas kerja samanya.
+_Pengurus Paguyuban Griya Sedayu Selaras 1_`;
+
+    window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`, '_blank');
+  };
 
   // Handle type change in Loket: auto update default amount
   const handlePaymentTypeChange = (type: PaymentReceiptType) => {
@@ -985,6 +1084,81 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
       {/* ============================================================== */}
       {dashboardTab === 'ringkasan' && (
         <div className="space-y-6">
+          {/* ============================================================== */}
+          {/* BILAH NOMOR TELEPON PENTING & DARURAT SEDAYU (WARNA MENCOLOK)   */}
+          {/* ============================================================== */}
+          <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white rounded-2xl p-4 sm:p-5 shadow-xl border-2 border-red-400/60 relative overflow-hidden">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-black/25 flex items-center justify-center shrink-0 border border-white/20">
+                  <PhoneCall size={22} className="text-amber-200 animate-bounce" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white text-red-700 shadow-xs">
+                      HOTLINE DARURAT 24 JAM
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
+                  </div>
+                  <h3 className="text-sm sm:text-base font-black text-white mt-0.5">
+                    Nomor Telepon Penting Sedayu & Bantul
+                  </h3>
+                  <p className="text-[11px] text-rose-100 hidden sm:block">
+                    Panggilan darurat kepolisian, koramil, puskesmas 24 jam, pemadam kebakaran, dan ambulans siaga.
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Dial Badges */}
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href="tel:112"
+                  className="px-3 py-1.5 bg-white text-red-700 hover:bg-rose-50 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md"
+                  title="Panggilan Darurat Bebas Pulsa"
+                >
+                  <LifeBuoy size={14} className="text-red-600" />
+                  <span>Darurat: 112</span>
+                </a>
+
+                <a
+                  href="tel:0274798110"
+                  className="px-3 py-1.5 bg-black/30 hover:bg-black/40 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-white/20"
+                  title="Polsek Sedayu"
+                >
+                  <Shield size={13} className="text-amber-300" />
+                  <span>Polsek: (0274) 798110</span>
+                </a>
+
+                <a
+                  href="tel:0274798081"
+                  className="px-3 py-1.5 bg-black/30 hover:bg-black/40 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-white/20"
+                  title="Puskesmas Sedayu 1 (Argosari - IGD 24 Jam)"
+                >
+                  <HeartPulse size={13} className="text-emerald-300" />
+                  <span>Puskesmas 1: (0274) 798081</span>
+                </a>
+
+                <a
+                  href="tel:0274367406"
+                  className="px-3 py-1.5 bg-black/30 hover:bg-black/40 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-white/20"
+                  title="Pemadam Kebakaran & Penyelamatan Bantul"
+                >
+                  <Flame size={13} className="text-amber-300" />
+                  <span>Damkar: (0274) 367406</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveView('kontak_penting')}
+                  className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black transition flex items-center gap-1 shadow-md ml-auto"
+                >
+                  <span>Lihat Semua Kontak</span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Priority Announcement Alert */}
           {announcements.length > 0 && (
             <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4.5 text-amber-950 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -1014,7 +1188,106 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
           )}
 
           {/* ============================================================== */}
-          {/* INFORMASI TOTAL KEKURANGAN JIMPITAN & IURAN + SAMPAH WARGA */}
+          {/* INDIKATOR VISUAL & NOTIFIKASI PUSH: JATUH TEMPO PEMBAYARAN      */}
+          {/* ============================================================== */}
+          <div className={`p-4 sm:p-5 rounded-2xl border transition shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+            userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+              : isPastDue
+              ? 'bg-rose-50 border-rose-300 text-rose-950 ring-2 ring-rose-400/30'
+              : 'bg-amber-50 border-amber-300 text-amber-950 ring-2 ring-amber-400/20'
+          }`}>
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : isPastDue
+                  ? 'bg-rose-100 text-rose-700 animate-pulse'
+                  : 'bg-amber-100 text-amber-700'
+              }`}>
+                {userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0 ? (
+                  <CheckCircle2 size={24} />
+                ) : isPastDue ? (
+                  <AlertTriangle size={24} />
+                ) : (
+                  <Clock size={24} />
+                )}
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                    userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0
+                      ? 'bg-emerald-200/80 text-emerald-900'
+                      : isPastDue
+                      ? 'bg-rose-200 text-rose-900 font-extrabold'
+                      : 'bg-amber-200 text-amber-900 font-extrabold'
+                  }`}>
+                    {userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0
+                      ? 'Kewajiban Lunas'
+                      : isPastDue
+                      ? 'Melewati Jatuh Tempo (Tanggal 10)'
+                      : `Jatuh Tempo: 10 ${currentMonthName}`}
+                  </span>
+
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Jatuh tempo setiap tgl 10
+                  </span>
+                </div>
+
+                <div className="text-sm font-black text-slate-900 mt-1">
+                  {userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0 ? (
+                    'Terima kasih! Seluruh iuran bulanan + sampah dan jimpitan bulan ini sudah lunas.'
+                  ) : isPastDue ? (
+                    `Perhatian: Pembayaran iuran/jimpitan telah melewati jatuh tempo (10 ${currentMonthName})!`
+                  ) : isDueToday ? (
+                    `Hari ini tanggal jatuh tempo pembayaran iuran & jimpitan bulan ${currentMonthName}!`
+                  ) : (
+                    `Sisa ${daysUntilDue} hari lagi menuju tanggal jatuh tempo (10 ${currentMonthName}).`
+                  )}
+                </div>
+
+                <p className="text-xs text-slate-600 mt-0.5">
+                  {userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0
+                    ? 'Partisipasi Anda sangat berarti demi kelancaran operasional dan keamanan lingkungan GSS 1.'
+                    : 'Mohon tunaikan iuran tepat waktu melalui Loket Pembayaran kas atau transfer ke Bank BRI.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 pt-2 sm:pt-0">
+              <button
+                type="button"
+                onClick={handleTogglePushReminder}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${
+                  pushReminderEnabled
+                    ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200'
+                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                }`}
+                title="Aktifkan notifikasi pengingat jatuh tempo di perangkat ini"
+              >
+                <BellRing size={13} className={pushReminderEnabled ? 'text-blue-600' : 'text-slate-400'} />
+                <span>{pushReminderEnabled ? 'Pengingat Aktif' : 'Aktifkan Pengingat'}</span>
+              </button>
+
+              {(userTotalIuranSampahDeficit > 0 || userCurrentMonthJimpitanDeficit > 0) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDashboardTab('loket');
+                    setSelectedResidentId(currentUser.id);
+                  }}
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition flex items-center gap-1 shadow-sm"
+                >
+                  <Wallet size={13} />
+                  <span>Bayar Sekarang</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ============================================================== */}
+          {/* INFORMASI KEKURANGAN JIMPITAN & IURAN + SAMPAH WARGA           */}
           {/* ============================================================== */}
           <div className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-md border border-slate-800">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
@@ -1043,51 +1316,53 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
             </div>
 
             <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Card 1: Total Kekurangan Jimpitan */}
+              {/* Card 1: Kekurangan Jimpitan s/d Akhir Bulan Sebelumnya */}
               <div className="bg-slate-800/90 rounded-2xl p-4.5 border border-slate-700/80 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
                       <Coins size={14} className="text-amber-400" />
-                      <span>Total Kekurangan Jimpitan</span>
+                      <span>Kekurangan Jimpitan s/d Akhir Bulan Sebelumnya</span>
                     </span>
                     <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
-                      userTotalJimpitanDeficit === 0
+                      userPrevMonthJimpitanDeficit === 0
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                         : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                     }`}>
-                      {userTotalJimpitanDeficit === 0 ? 'LUNAS (RP 0)' : 'KURANG RP ' + userTotalJimpitanDeficit.toLocaleString('id-ID')}
+                      {userPrevMonthJimpitanDeficit === 0 ? 'LUNAS (RP 0)' : 'KURANG RP ' + userPrevMonthJimpitanDeficit.toLocaleString('id-ID')}
                     </span>
                   </div>
 
                   <div className="mt-3 flex items-baseline gap-2">
                     <span className={`text-2xl sm:text-3xl font-black ${
-                      userTotalJimpitanDeficit === 0 ? 'text-emerald-400' : 'text-amber-400'
+                      userPrevMonthJimpitanDeficit === 0 ? 'text-emerald-400' : 'text-amber-400'
                     }`}>
-                      Rp {userTotalJimpitanDeficit.toLocaleString('id-ID')}
+                      Rp {userPrevMonthJimpitanDeficit.toLocaleString('id-ID')}
                     </span>
-                    <span className="text-xs text-slate-400 font-medium">total kekurangan</span>
+                    <span className="text-xs text-slate-400 font-medium">s/d akhir bulan {prevMonthName}</span>
                   </div>
 
                   <div className="mt-3 space-y-1.5 text-[11px] text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-700/50">
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Target Jimpitan Bulan Ini:</span>
+                      <span className="text-slate-400">Target Jimpitan Bulan Ini ({currentMonthName}):</span>
                       <span className="font-semibold text-white">Rp 15.000 (Rp 500/hari)</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Tercatat Terbayar Bulan Ini:</span>
+                      <span className="text-slate-400">Tercatat Jimpitan Bulan Berjalan:</span>
                       <span className="font-semibold text-emerald-400">Rp {userJimpitanPaid.toLocaleString('id-ID')}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Kekurangan Bulan Berjalan:</span>
+                      <span className="text-slate-400">Kekurangan Jimpitan Bulan Berjalan:</span>
                       <span className="font-semibold text-amber-300">Rp {userCurrentMonthJimpitanDeficit.toLocaleString('id-ID')}</span>
                     </div>
-                    {userPrevMonthJimpitanDeficit > 0 && (
-                      <div className="flex justify-between text-rose-300 pt-1 border-t border-slate-800">
-                        <span>Tunggakan Bulan Lalu:</span>
-                        <span className="font-bold">Rp {userPrevMonthJimpitanDeficit.toLocaleString('id-ID')}</span>
-                      </div>
-                    )}
+                    <div className="flex justify-between text-rose-300 pt-1 border-t border-slate-800">
+                      <span>Kekurangan s/d Akhir Bulan Sebelumnya ({prevMonthName}):</span>
+                      <span className="font-bold">Rp {userPrevMonthJimpitanDeficit.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-300 pt-1 border-t border-slate-800 font-semibold">
+                      <span className="text-slate-400">Total Akumulasi Seluruhnya:</span>
+                      <span className="font-black text-amber-400">Rp {userTotalJimpitanDeficit.toLocaleString('id-ID')}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -1279,6 +1554,232 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               </div>
             </div>
           </div>
+
+          {/* ============================================================== */}
+          {/* PANEL RINGKASAN SUPERADMIN: PROGRES BERKAS KEPENDUDUKAN WARGA  */}
+          {/* ============================================================== */}
+          {(currentUser.role === 'superadmin' || currentUser.role === 'sekretaris') && (
+            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-sm space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
+                    <FileText size={22} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                        Akses Khusus Superadmin & Sekretaris
+                      </span>
+                    </div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
+                      Progres Pengumpulan Berkas Kependudukan (KTP & KK Warga)
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Pantau kelengkapan berkas warga, beri checklist verifikasi, atau kirim pengingat WhatsApp langsung.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    onClick={() => setActiveView('warga')}
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition flex items-center gap-1"
+                  >
+                    <span>Buka Data Warga Lengkap</span>
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Progress Bar & Statistics */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Kepala Keluarga</span>
+                  <div className="text-2xl font-black text-slate-900 mt-1">{berkasSummary.total} Rumah</div>
+                  <span className="text-[11px] text-slate-500 mt-0.5 block">Blok A, B, dan C</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+                  <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Sudah Menyerahkan Berkas</span>
+                  <div className="text-2xl font-black text-emerald-700 mt-1">
+                    {berkasSummary.sudah} <span className="text-xs font-semibold text-emerald-600">KK ({berkasSummary.percent}%)</span>
+                  </div>
+                  <span className="text-[11px] text-emerald-800 mt-0.5 block font-medium">Lengkap Fotocopy KTP/KK</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200">
+                  <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider block">Belum Menyerahkan Berkas</span>
+                  <div className="text-2xl font-black text-rose-700 mt-1">
+                    {berkasSummary.belum} <span className="text-xs font-semibold text-rose-600">KK ({100 - berkasSummary.percent}%)</span>
+                  </div>
+                  <span className="text-[11px] text-rose-800 mt-0.5 block font-medium">Membutuhkan Tindak Lanjut</span>
+                </div>
+              </div>
+
+              {/* Visual Progress Bar */}
+              <div>
+                <div className="flex justify-between text-xs font-bold mb-1.5 text-slate-700">
+                  <span>Persentase Kelengkapan Berkas Paguyuban:</span>
+                  <span className="text-indigo-600">{berkasSummary.percent}% Terkumpul ({berkasSummary.sudah}/{berkasSummary.total})</span>
+                </div>
+                <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden p-0.5 border border-slate-200">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500"
+                    style={{ width: `${berkasSummary.percent}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Filters & Search */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+                  <button
+                    onClick={() => setBerkasStatusFilter('BELUM')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                      berkasStatusFilter === 'BELUM'
+                        ? 'bg-rose-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Belum Menyerahkan ({berkasSummary.belum})
+                  </button>
+
+                  <button
+                    onClick={() => setBerkasStatusFilter('SUDAH')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                      berkasStatusFilter === 'SUDAH'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Sudah Menyerahkan ({berkasSummary.sudah})
+                  </button>
+
+                  <button
+                    onClick={() => setBerkasStatusFilter('ALL')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                      berkasStatusFilter === 'ALL'
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Semua ({berkasSummary.total})
+                  </button>
+
+                  <select
+                    value={berkasBlockFilter}
+                    onChange={(e) => setBerkasBlockFilter(e.target.value as any)}
+                    className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700"
+                  >
+                    <option value="ALL">Semua Blok</option>
+                    <option value="A">Blok A</option>
+                    <option value="B">Blok B</option>
+                    <option value="C">Blok C</option>
+                  </select>
+                </div>
+
+                <div className="relative w-full sm:w-64">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={berkasSearch}
+                    onChange={(e) => setBerkasSearch(e.target.value)}
+                    placeholder="Cari nama atau nomor rumah..."
+                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* Table / List */}
+              <div className="overflow-x-auto rounded-2xl border border-slate-200 max-h-96 overflow-y-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider sticky top-0 z-10">
+                    <tr>
+                      <th className="py-2.5 px-3 text-center">No</th>
+                      <th className="py-2.5 px-3">Rumah</th>
+                      <th className="py-2.5 px-3">Nama Warga</th>
+                      <th className="py-2.5 px-3">Status Rumah</th>
+                      <th className="py-2.5 px-3 text-center">Status Berkas</th>
+                      <th className="py-2.5 px-3 text-center">Tindakan Admin</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredBerkasResidents.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-slate-400 font-medium">
+                          Tidak ada data warga yang sesuai dengan filter berkas ini.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredBerkasResidents.map((r, idx) => (
+                        <tr key={r.id} className="hover:bg-slate-50/80 transition">
+                          <td className="py-2.5 px-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                            {r.houseNumber}
+                          </td>
+                          <td className="py-2.5 px-3 font-bold text-slate-800 whitespace-nowrap">
+                            {r.name}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                              {r.statusRumah}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleBerkasStatus(r.id, r.berkasKependudukan)}
+                              disabled={isUpdatingBerkasId === r.id}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black transition ${
+                                r.berkasKependudukan
+                                  ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300'
+                                  : 'bg-rose-100 text-rose-800 hover:bg-rose-200 border border-rose-300'
+                              }`}
+                              title="Klik untuk mengubah status berkas (Superadmin & Sekretaris)"
+                            >
+                              {r.berkasKependudukan ? (
+                                <>
+                                  <CheckSquare size={13} className="text-emerald-700" />
+                                  <span>Sudah Diserahkan</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Square size={13} className="text-rose-600" />
+                                  <span>Belum Menyerahkan</span>
+                                </>
+                              )}
+                            </button>
+                          </td>
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              {!r.berkasKependudukan && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSendBerkasReminderWA(r)}
+                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs transition"
+                                  title="Kirim pengingat WhatsApp untuk serahkan berkas"
+                                >
+                                  <Send size={11} />
+                                  <span>Ingatkan WA</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleBerkasStatus(r.id, r.berkasKependudukan)}
+                                className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold transition"
+                              >
+                                {r.berkasKependudukan ? 'Batal Centang' : 'Tandai Diserahkan'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Ronda Malam Hari Ini Widget */}
           <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl p-6 shadow-md border border-slate-800">

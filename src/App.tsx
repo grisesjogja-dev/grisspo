@@ -13,6 +13,7 @@ import { ForumView } from './components/ForumView';
 import { LoyaltyPointsView } from './components/LoyaltyPointsView';
 import { FasumBookingView } from './components/FasumBookingView';
 import { NotulenDanAbsensiView } from './components/NotulenDanAbsensiView';
+import { KontakPentingView } from './components/KontakPentingView';
 import { LoginModal } from './components/LoginModal';
 import { NotificationModal } from './components/NotificationModal';
 import { EmailAlertsModal } from './components/EmailAlertsModal';
@@ -88,6 +89,8 @@ const MainApp: React.FC = () => {
         return <LoyaltyPointsView />;
       case 'notulen':
         return <NotulenDanAbsensiView />;
+      case 'kontak_penting':
+        return <KontakPentingView />;
       default:
         return <DashboardView />;
     }

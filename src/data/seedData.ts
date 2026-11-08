@@ -1,4 +1,4 @@
-import { Resident, InventoryItem, RondaGroup, Transaction, ForumPost, LoyaltyReward, Announcement, FasumBooking, FasumFacilityConfig, MeetingNote, AttendanceSession, UserRole } from '../types';
+import { Resident, InventoryItem, RondaGroup, Transaction, ForumPost, LoyaltyReward, Announcement, FasumBooking, FasumFacilityConfig, MeetingNote, AttendanceSession, UserRole, ImportantContact } from '../types';
 
 /**
  * 58 Data Warga Perum Griya Sedayu Selaras 1
@@ -417,4 +417,107 @@ export const initialMeetingNotes: MeetingNote[] = [];
  * Data Awal Sesi Absensi Warga (Ronda, Kerjabakti, Rapat Bulanan)
  */
 export const initialAttendanceSessions: AttendanceSession[] = [];
+
+/**
+ * Nomor Telepon Penting dan Instansi Darurat Kapanewon Sedayu & Bantul
+ */
+export const initialImportantContacts: ImportantContact[] = [
+  {
+    id: 'kontak-polsek-sedayu',
+    name: 'Polsek Sedayu (Kepolisian Sektor)',
+    category: 'Polisi & Keamanan',
+    phoneNumber: '(0274) 798110',
+    whatsappNumber: '081328049110',
+    address: 'Jl. Wates Km. 12, Kalirandu, Bangunjiwo / Argorejo, Sedayu, Bantul',
+    description: 'Layanan darurat kepolisian 24 jam, kamtibmas, laka lantas, dan pengaduan warga Kapanewon Sedayu.',
+    isEmergency: true,
+    order: 1
+  },
+  {
+    id: 'kontak-koramil-sedayu',
+    name: 'Koramil 02/Sedayu (TNI AD)',
+    category: 'Polisi & Keamanan',
+    phoneNumber: '(0274) 798118',
+    whatsappNumber: '081227318911',
+    address: 'Jl. Wates Km. 11.5, Sedayu, Bantul, D.I. Yogyakarta',
+    description: 'Komando Rayon Militer 02 Sedayu, pembinaan teritorial, Babinsa, dan keamanan wilayah perumahan.',
+    isEmergency: true,
+    order: 2
+  },
+  {
+    id: 'kontak-puskesmas-sedayu-1',
+    name: 'Puskesmas Sedayu 1 (Argosari)',
+    category: 'Medis & Kesehatan',
+    phoneNumber: '(0274) 798081',
+    whatsappNumber: '08112836118',
+    address: 'Panggang, Argosari, Sedayu, Bantul (Utara Jl. Wates)',
+    description: 'Layanan IGD 24 Jam, rawat inap, persalinan, dan rujukan darurat kesehatan.',
+    isEmergency: true,
+    order: 3
+  },
+  {
+    id: 'kontak-puskesmas-sedayu-2',
+    name: 'Puskesmas Sedayu 2 (Argorejo)',
+    category: 'Medis & Kesehatan',
+    phoneNumber: '(0274) 798082',
+    whatsappNumber: '081227447782',
+    address: 'Jl. Wates Km. 12.5, Dusun Bandut Lor, Argorejo, Sedayu, Bantul',
+    description: 'Pelayanan kesehatan rawat jalan, dokter jaga, laboratorium, dan ambulans rujukan.',
+    isEmergency: true,
+    order: 4
+  },
+  {
+    id: 'kontak-damkar-bantul',
+    name: 'Pemadam Kebakaran & Penyelamatan Bantul',
+    category: 'Pemadam & Darurat',
+    phoneNumber: '(0274) 367406',
+    whatsappNumber: '08112658113',
+    address: 'Pos Damkar Sedayu / Kantor Induk BPBD Bantul',
+    description: 'Penanganan kebakaran, evakuasi hewan berbisa (ular/tawon), kecelakaan air, dan penyelamatan darurat.',
+    isEmergency: true,
+    order: 5
+  },
+  {
+    id: 'kontak-darurat-112',
+    name: 'Call Center Darurat Terpadu 112',
+    category: 'Pemadam & Darurat',
+    phoneNumber: '112',
+    description: 'Layanan panggilan darurat bebas pulsa 24 jam untuk segala jenis bencana dan kegawatdaruratan warga DIY.',
+    isEmergency: true,
+    order: 6
+  },
+  {
+    id: 'kontak-pln-sedayu',
+    name: 'PLN Gangguan & Darurat Listrik (Pos Sedayu)',
+    category: 'Layanan Publik & RT',
+    phoneNumber: '123',
+    whatsappNumber: '087771112123',
+    address: 'Unit Layanan Pelanggan Sedayu / Sedayu Substation',
+    description: 'Laporan padam listrik mendadak, pohon tumbang menimpa kabel, tiang korsleting.',
+    isEmergency: false,
+    order: 7
+  },
+  {
+    id: 'kontak-ambulans-desa',
+    name: 'Ambulans Darurat & Siaga Desa Sedayu',
+    category: 'Medis & Kesehatan',
+    phoneNumber: '085100441188',
+    whatsappNumber: '085100441188',
+    description: 'Layanan antar jemput pasien gawat darurat & jenazah warga Sedayu.',
+    isEmergency: true,
+    order: 8
+  },
+  {
+    id: 'kontak-ketua-paguyuban',
+    name: 'Bpk. Beni (Superadmin / Ketua Paguyuban GSS 1)',
+    category: 'Layanan Publik & RT',
+    phoneNumber: '0812-3456-7840',
+    whatsappNumber: '081234567840',
+    address: 'Rumah B 24, Perum Griya Sedayu Selaras 1',
+    description: 'Koordinator lingkungan perumahan, perizinan fasum, kamtibmas warga GSS 1.',
+    isEmergency: false,
+    order: 9
+  }
+];
+
 
