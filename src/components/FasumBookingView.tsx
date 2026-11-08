@@ -519,6 +519,19 @@ export const FasumBookingView: React.FC = () => {
             </div>
           </div>
 
+          {/* Info Jatuh Tempo Sewa Lahan Parkir & Fasum Bulanan */}
+          <div className="bg-amber-50 border border-amber-200/90 rounded-2xl p-4 text-xs text-amber-900 flex items-start gap-3">
+            <Info size={18} className="text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold block text-amber-950">
+                Ketentuan Jatuh Tempo Sewa Lahan Parkir &amp; Iuran (Tanggal 28):
+              </span>
+              <p className="mt-0.5 text-amber-900/90 leading-relaxed">
+                Sesuai ketetapan Tata Tertib Warga Paguyuban GSS 1, sewa lahan parkir / carport fasum timur Blok C (Rp 30.000/bulan), iuran bulanan (Rp 25.000), dan retribusi sampah memiliki <strong>tanggal jatuh tempo pembayaran setiap tanggal 28 setiap bulannya</strong>. Pembayaran dapat disetorkan langsung via Loket Kas atau transfer rekening resmi Bank BRI Paguyuban.
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {activeFacilities.map((facility) => (
               <div

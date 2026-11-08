@@ -65,7 +65,7 @@ export const TataTertibView: React.FC = () => {
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs">
             <span className="px-3 py-1.5 rounded-xl bg-blue-500/20 text-blue-200 font-semibold border border-blue-400/20">
-              Iuran Kas: Rp 25.000 / bln
+              Iuran, Sampah &amp; Sewa Parkir: Jatuh Tempo Tgl 28
             </span>
             <span className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-200 font-semibold border border-amber-400/20">
               Kunci Portal: 21.00 WIB Tepat

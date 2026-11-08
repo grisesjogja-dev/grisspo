@@ -157,9 +157,9 @@ export const DashboardView: React.FC = () => {
   const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const prevMonthName = prevMonthDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
 
-  // Due Date (10th of each month)
+  // Due Date (28th of each month for Iuran Bulanan, Sewa Lahan Parkir, and Iuran Sampah)
   const todayDayNum = now.getDate();
-  const dueDateNum = 10;
+  const dueDateNum = 28;
   const daysUntilDue = dueDateNum - todayDayNum;
   const isPastDue = todayDayNum > dueDateNum;
   const isDueToday = todayDayNum === dueDateNum;
@@ -174,7 +174,7 @@ export const DashboardView: React.FC = () => {
     setPushReminderEnabled(next);
     localStorage.setItem('grisspo_due_push_enabled', String(next));
     if (next) {
-      alert('Notifikasi Pengingat Jatuh Tempo Diaktifkan! Sistem akan mengingatkan pembayaran iuran dan jimpitan sebelum tanggal 10.');
+      alert('Notifikasi Pengingat Jatuh Tempo Diaktifkan! Sistem akan mengingatkan pembayaran iuran bulanan, sewa lahan parkir, dan iuran sampah sebelum tanggal 28 setiap bulan.');
     }
   };
 
@@ -613,19 +613,19 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                         type: 'iuran_bulanan' as PaymentReceiptType,
                         label: 'Iuran Bulanan Rutin',
                         nominal: 'Rp 25.000 / bln',
-                        desc: 'Kas operasional paguyuban'
+                        desc: 'Kas operasional paguyuban (Jatuh tempo tgl 28)'
                       },
                       {
                         type: 'iuran_bulanan_sampah' as PaymentReceiptType,
                         label: 'Iuran Bulanan + Sampah',
                         nominal: 'Rp 50.000 / bln',
-                        desc: 'Iuran kas + retribusi sampah'
+                        desc: 'Iuran kas + retribusi sampah (Jatuh tempo tgl 28)'
                       },
                       {
                         type: 'sewa_fasum' as PaymentReceiptType,
-                        label: 'Sewa Fasum Paguyuban',
+                        label: 'Sewa Fasum / Lahan Parkir',
                         nominal: 'Sesuai tarif sewa',
-                        desc: 'Balai, Lapangan, Sound, dll'
+                        desc: 'Carport fasum timur Blok C, Balai, Sound (Jatuh tempo tgl 28)'
                       },
                       {
                         type: 'sumbangan_sukarela' as PaymentReceiptType,
@@ -1221,36 +1221,40 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                       ? 'bg-emerald-200/80 text-emerald-900'
                       : isPastDue
                       ? 'bg-rose-200 text-rose-900 font-extrabold'
+                      : isDueToday
+                      ? 'bg-amber-300 text-amber-950 font-black'
                       : 'bg-amber-200 text-amber-900 font-extrabold'
                   }`}>
                     {userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0
-                      ? 'Kewajiban Lunas'
+                      ? 'Kewajiban Lunas (Iuran & Sampah)'
                       : isPastDue
-                      ? 'Melewati Jatuh Tempo (Tanggal 10)'
-                      : `Jatuh Tempo: 10 ${currentMonthName}`}
+                      ? `Melewati Jatuh Tempo (Tanggal 28 ${currentMonthName})`
+                      : isDueToday
+                      ? `Hari Ini Jatuh Tempo (28 ${currentMonthName})`
+                      : `Jatuh Tempo: 28 ${currentMonthName}`}
                   </span>
 
                   <span className="text-[10px] text-slate-500 font-medium">
-                    Jatuh tempo setiap tgl 10
+                    Jatuh tempo setiap tgl 28 (Iuran Bulanan, Sewa Lahan Parkir, Sampah)
                   </span>
                 </div>
 
                 <div className="text-sm font-black text-slate-900 mt-1">
                   {userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0 ? (
-                    'Terima kasih! Seluruh iuran bulanan + sampah dan jimpitan bulan ini sudah lunas.'
+                    'Terima kasih! Seluruh iuran bulanan, sewa lahan parkir, dan iuran sampah bulan ini sudah lunas.'
                   ) : isPastDue ? (
-                    `Perhatian: Pembayaran iuran/jimpitan telah melewati jatuh tempo (10 ${currentMonthName})!`
+                    `Perhatian: Pembayaran iuran bulanan, sewa lahan parkir, atau iuran sampah telah melewati tanggal jatuh tempo (28 ${currentMonthName})!`
                   ) : isDueToday ? (
-                    `Hari ini tanggal jatuh tempo pembayaran iuran & jimpitan bulan ${currentMonthName}!`
+                    `Hari ini tanggal jatuh tempo pembayaran iuran bulanan, sewa lahan parkir, dan iuran sampah bulan ${currentMonthName} (Tanggal 28)!`
                   ) : (
-                    `Sisa ${daysUntilDue} hari lagi menuju tanggal jatuh tempo (10 ${currentMonthName}).`
+                    `Sisa ${daysUntilDue} hari lagi menuju tanggal jatuh tempo pembayaran (28 ${currentMonthName}).`
                   )}
                 </div>
 
                 <p className="text-xs text-slate-600 mt-0.5">
                   {userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0
-                    ? 'Partisipasi Anda sangat berarti demi kelancaran operasional dan keamanan lingkungan GSS 1.'
-                    : 'Mohon tunaikan iuran tepat waktu melalui Loket Pembayaran kas atau transfer ke Bank BRI.'}
+                    ? 'Partisipasi Anda sangat berarti demi kelancaran operasional, kebersihan, dan keamanan lingkungan GSS 1.'
+                    : 'Batas akhir pembayaran iuran bulanan (Rp 25.000), iuran sampah, dan sewa lahan parkir adalah tanggal 28 setiap bulannya melalui Loket Kas atau transfer Bank BRI.'}
                 </p>
               </div>
             </div>

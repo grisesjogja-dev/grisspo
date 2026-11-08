@@ -1970,8 +1970,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       `Paguyuban Griya Sedayu Selaras 1\n\n` +
       `Berdasarkan pembukuan keuangan paguyuban warga, kami menginformasikan bahwa terdapat tunggakan Iuran Bulanan selama *${unpaidMonths} Bulan Berturut-turut* (${monthListStr}) dengan rincian kewajiban:\n` +
       `• Nominal Iuran: Rp 25.000 / KK / bulan\n` +
+      `• Tanggal Jatuh Tempo: Tanggal 28 setiap bulan\n` +
       `• Total Tunggakan: *Rp ${totalArrears.toLocaleString('id-ID')}*\n\n` +
-      `Sesuai Tata Tertib Warga Perum GSS 2026, mohon kerjasamanya untuk segera melakukan pelunasan melalui transfer kas atau konfirmasi ke:\n` +
+      `Sesuai Tata Tertib Warga Perum GSS 2026, mohon kerjasamanya untuk segera melakukan pelunasan sebelum tanggal 28 melalui transfer kas atau konfirmasi ke:\n` +
       `- Bendahara 1: Bpk. Ahmad (Rumah B 02)\n` +
       `- Bendahara 2: Bpk. Robi (Rumah C 15)\n` +
       `- Superadmin: Bpk. Beni (Rumah B 24)\n\n` +

@@ -312,7 +312,7 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
                   <span>Ketentuan Tata Tertib Warga Perum GSS 2026:</span>
                 </div>
                 <p className="text-slate-600 leading-relaxed text-[11px]">
-                  Berdasarkan Tata Tertib 2026, warga dengan tunggakan iuran bulanan &ge; 2 bulan berturut-turut akan menerima notifikasi otomatis ke nomor WhatsApp dan dikenakan pembatasan sementara peminjaman aset inventaris serta fasilitas umum hingga seluruh tunggakan diselesaikan.
+                  Berdasarkan Tata Tertib 2026, tanggal jatuh tempo pembayaran iuran bulanan (Rp 25.000), iuran sampah, dan sewa lahan parkir adalah <strong>tanggal 28 setiap bulannya</strong>. Warga dengan tunggakan &ge; 2 bulan berturut-turut akan menerima notifikasi otomatis ke nomor WhatsApp dan dikenakan pembatasan sementara peminjaman aset inventaris serta fasilitas umum hingga seluruh tunggakan diselesaikan.
                 </p>
               </div>
 

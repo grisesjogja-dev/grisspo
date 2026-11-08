@@ -208,9 +208,9 @@ export const officialTataTertib = {
       title: 'Administrasi Keuangan Perum GSS 1',
       items: [
         'Setiap KK/ Warga yang menetap/ tinggal menempati rumah di Perum GSS dikenakan Iuran Pokok Wajib sebesar Rp 300.000,00/ KK (Termasuk Warga Pengontrak).',
-        'Iuran Wajib Paguyuban GSS 1: Rp 25.000 / bulan.',
-        'Iuran Sampah: Rp 25.000 / bulan (Tidak wajib bagi yang mengelola sampah mandiri).',
-        'Bagi rumah yang tidak ditempati, pemilik atau yang memiliki kewenangan wajib membayar iuran paguyuban sebesar Rp 25.000 / bulan (Berlaku mulai iuran bulan November 2023).',
+        'Iuran Wajib Paguyuban GSS 1: Rp 25.000 / bulan (Jatuh tempo pembayaran tanggal 28 setiap bulan).',
+        'Iuran Sampah: Rp 25.000 / bulan (Tidak wajib bagi yang mengelola sampah mandiri. Jatuh tempo pembayaran tanggal 28 setiap bulan).',
+        'Bagi rumah yang tidak ditempati, pemilik atau yang memiliki kewenangan wajib membayar iuran paguyuban sebesar Rp 25.000 / bulan (Jatuh tempo tanggal 28 setiap bulan, berlaku mulai iuran bulan November 2023).',
         'Tali Asih sebesar Rp 100.000,00 diambil dari dana kas paguyuban untuk warga yang sakit (Rawat Inap di Rumah Sakit).',
         'Uang bantuan snack bagi warga yang ketempatan pertemuan rutin bulanan adalah sebesar Rp 7.500 x jumlah rumah yang ditempati.'
       ]
@@ -251,7 +251,7 @@ export const officialTataTertib = {
       items: [
         'Angkutan material bertonase besar dilarang melintas (maksimal truk engkel). Jika terpaksa melintas dan membuat jalan rusak, maka pemilik material wajib memperbaiki jalan yang rusak.',
         'Pemilik kendaraan bermotor (roda dua/roda empat) dihimbau untuk memarkir kendaraan di carport rumah masing-masing.',
-        'Warga dapat memanfaatkan lahan fasum sebelah timur Blok C untuk membuat carport dengan biaya sewa Rp 30.000 (bulanan).',
+        'Warga dapat memanfaatkan lahan fasum sebelah timur Blok C untuk membuat carport / sewa lahan parkir dengan biaya sewa Rp 30.000 (bulanan). Jatuh tempo pembayaran sewa lahan parkir adalah tanggal 28 setiap bulan.',
         'Warga diperkenankan menyewa lahan fasum yang masih kosong dengan aturan: (1) Menandatangani surat perjanjian sewa lahan fasum, (2) Sewa minimal 1 slot (5,0m x 2,5m) biaya sewa Rp 2.400 / m² / bulan, (3) Lahan fasum boleh didirikan bangunan tidak permanen, (4) Wajib menyerahkan kembali jika diperlukan untuk kepentingan umum.',
         'Parkir kendaraan roda 4 / roda 2 tamu diperbolehkan di badan jalan/fasum dengan catatan TIDAK mengganggu arus lalu lintas perumahan. Apabila menginap, wajib menghubungi pengurus untuk dicarikan tempat parkir sementara.'
       ]
