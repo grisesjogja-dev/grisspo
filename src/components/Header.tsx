@@ -82,13 +82,13 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="text-amber-200">Darurat:</span> <span className="font-mono font-black text-white">112</span>
           </a>
           <a href="tel:0274798110" className="hover:underline hidden sm:flex items-center gap-1 shrink-0 bg-red-800/40 px-2 py-0.5 rounded-lg border border-red-300/30">
-            <span className="text-amber-200">Polsek:</span> <span className="font-mono font-bold text-white">(0274) 798110</span>
+            <span className="text-amber-200">Polsek:</span> <span className="font-mono font-bold text-white">(0274) 6498549</span>
           </a>
           <a href="tel:0274798081" className="hover:underline hidden md:flex items-center gap-1 shrink-0 bg-red-800/40 px-2 py-0.5 rounded-lg border border-red-300/30">
-            <span className="text-emerald-200">Puskesmas 1 (24 Jam):</span> <span className="font-mono font-bold text-white">(0274) 798081</span>
+            <span className="text-emerald-200">Puskesmas 1 (24 Jam):</span> <span className="font-mono font-bold text-white">(0274) 6498280</span>
           </a>
           <a href="tel:0274367406" className="hover:underline hidden lg:flex items-center gap-1 shrink-0 bg-red-800/40 px-2 py-0.5 rounded-lg border border-red-300/30">
-            <span className="text-amber-200">Damkar:</span> <span className="font-mono font-bold text-white">(0274) 367406</span>
+            <span className="text-amber-200">Damkar:</span> <span className="font-mono font-bold text-white">(0274) 6462100</span>
           </a>
         </div>
 
