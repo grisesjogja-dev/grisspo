@@ -85,6 +85,7 @@ export interface JimpitDailyReport {
 }
 
 export type IncomeCategory =
+  | 'Saldo Kas Awal'
   | 'Iuran Bulanan (Rp 25.000)'
   | 'Iuran Sampah (Rp 25.000)'
   | 'Iuran Bulanan + Sampah (Rp 50.000)'

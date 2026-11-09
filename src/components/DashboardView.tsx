@@ -1052,30 +1052,32 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                               <Send size={13} />
                             </button>
 
-                            {/* Edit & Delete: ONLY Superadmin and Bendahara */}
+                            {/* Edit: Bendahara & Superadmin */}
                             {isBendaharaOrAdmin && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingReceipt(rc)}
-                                  className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                  title="Edit Transaksi Pembayaran (Superadmin / Bendahara)"
-                                >
-                                  <Edit2 size={13} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (confirm(`Hapus kwitansi pembayaran #${rc.receiptNumber} (${rc.residentName})? Saldo kas akan disesuaikan.`)) {
-                                      deletePaymentReceipt(rc.id);
-                                    }
-                                  }}
-                                  className="p-1 text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                  title="Hapus Pembayaran (Superadmin / Bendahara)"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              </>
+                              <button
+                                type="button"
+                                onClick={() => setEditingReceipt(rc)}
+                                className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                title="Edit Transaksi Pembayaran (Bendahara / Superadmin)"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                            )}
+
+                            {/* Delete: Strictly ONLY Superadmin */}
+                            {isSuperadmin && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm(`Hapus kwitansi pembayaran #${rc.receiptNumber} (${rc.residentName})? Saldo kas akan disesuaikan. (Khusus Superadmin)`)) {
+                                    deletePaymentReceipt(rc.id);
+                                  }
+                                }}
+                                className="p-1 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                title="Hapus Pembayaran (Khusus Superadmin)"
+                              >
+                                <Trash2 size={13} />
+                              </button>
                             )}
                           </div>
                         </td>
@@ -2312,21 +2314,27 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               </div>
 
               <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (confirm(`Hapus permanen kwitansi #${editingReceipt.receiptNumber} (${editingReceipt.residentName})? Saldo kas paguyuban otomatis akan disesuaikan.`)) {
-                      await deletePaymentReceipt(editingReceipt.id);
-                      setEditingReceipt(null);
-                      alert('Kwitansi dan transaksi kas terkait berhasil dihapus!');
-                    }
-                  }}
-                  className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl flex items-center gap-1.5 transition text-xs"
-                  title="Hapus Pembayaran Ini"
-                >
-                  <Trash2 size={14} />
-                  <span>Hapus</span>
-                </button>
+                {isSuperadmin ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (confirm(`Hapus permanen kwitansi #${editingReceipt.receiptNumber} (${editingReceipt.residentName})? Saldo kas paguyuban otomatis akan disesuaikan. (Khusus Superadmin)`)) {
+                        await deletePaymentReceipt(editingReceipt.id);
+                        setEditingReceipt(null);
+                        alert('Kwitansi dan transaksi kas terkait berhasil dihapus!');
+                      }
+                    }}
+                    className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl flex items-center gap-1.5 transition text-xs"
+                    title="Hapus Pembayaran Ini (Hanya Superadmin)"
+                  >
+                    <Trash2 size={14} />
+                    <span>Hapus (Superadmin)</span>
+                  </button>
+                ) : (
+                  <div className="text-[10px] text-slate-400 italic">
+                    Hapus data hanya dapat dilakukan oleh Superadmin
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <button
                     type="button"

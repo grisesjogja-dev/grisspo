@@ -134,12 +134,13 @@ export const permissions = {
   canManageFinance: (role: UserRole) =>
     role === 'superadmin' || role === 'bendahara1' || role === 'bendahara2',
 
-  // Finance & Payments: Superadmin, Bendahara 1, and Bendahara 2 can edit and delete processed payments
-  canDeleteFinance: (role: UserRole) =>
-    role === 'superadmin' || role === 'bendahara1' || role === 'bendahara2',
+  // Deletion: Strictly Superadmin only for all features
+  canDeleteFinance: (role: UserRole) => role === 'superadmin',
 
   canManagePayments: (role: UserRole) =>
     role === 'superadmin' || role === 'bendahara1' || role === 'bendahara2',
+
+  canDeletePayments: (role: UserRole) => role === 'superadmin',
 
   // Inventory: Superadmin and Admin Inventaris can edit
   canManageInventory: (role: UserRole) =>

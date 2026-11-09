@@ -246,6 +246,7 @@ export const KeuanganView: React.FC = () => {
 
   // Available categories strictly matching Dashboard Loket Pembayaran & Tatib 2026:
   const incomeCategories: IncomeCategory[] = [
+    'Saldo Kas Awal',
     'Iuran Bulanan (Rp 25.000)',
     'Iuran Bulanan + Sampah (Rp 50.000)',
     'Sewa Fasum',
@@ -892,7 +893,7 @@ export const KeuanganView: React.FC = () => {
                 <th className="py-3 px-4">Dicatat Oleh</th>
                 <th className="py-3 px-4 text-right">Nominal</th>
                 <th className="py-3 px-4 text-center">Audit SHA-256</th>
-                {canDelete && <th className="py-3 px-4 text-center">Aksi Bendahara & Admin</th>}
+                {(canAdd || canDelete) && <th className="py-3 px-4 text-center">Aksi (Edit / Hapus)</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -945,27 +946,31 @@ export const KeuanganView: React.FC = () => {
                     </button>
                   </td>
 
-                  {canDelete && (
+                  {(canAdd || canDelete) && (
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => handleOpenEdit(trx)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                          title="Edit Transaksi Kas (Akses: Bendahara & Superadmin)"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm(`Hapus transaksi "${trx.description}"? Aksi ini permanen.`)) {
-                              deleteTransaction(trx.id);
-                            }
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                          title="Hapus Transaksi (Akses: Bendahara & Superadmin)"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {canAdd && (
+                          <button
+                            onClick={() => handleOpenEdit(trx)}
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            title="Edit Transaksi Kas (Akses: Bendahara & Superadmin)"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`Hapus transaksi "${trx.description}"? Aksi ini hanya dapat dilakukan oleh Superadmin.`)) {
+                                deleteTransaction(trx.id);
+                              }
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                            title="Hapus Transaksi (Hanya Superadmin)"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   )}
@@ -1040,7 +1045,8 @@ export const KeuanganView: React.FC = () => {
                   onChange={(e) => {
                     const cat = e.target.value as any;
                     setTrxCategory(cat);
-                    if (cat === 'Iuran Bulanan (Rp 25.000)') setTrxAmount(25000);
+                    if (cat === 'Saldo Kas Awal') setTrxAmount(1000000);
+                    else if (cat === 'Iuran Bulanan (Rp 25.000)') setTrxAmount(25000);
                     else if (cat === 'Iuran Bulanan + Sampah (Rp 50.000)') setTrxAmount(50000);
                     else if (cat === 'Iuran Sampah (Rp 25.000)') setTrxAmount(25000);
                     else if (cat === 'Sewa Fasum' || cat === 'Sewa Fasum (Rp 30.000/bln)') setTrxAmount(30000);
@@ -1051,17 +1057,24 @@ export const KeuanganView: React.FC = () => {
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {trxType === 'pemasukan'
-                    ? incomeCategories.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))
+                    ? incomeCategories
+                        .filter((c) => c !== 'Saldo Kas Awal' || currentUser.role === 'superadmin')
+                        .map((c) => (
+                          <option key={c} value={c}>
+                            {c === 'Saldo Kas Awal' ? '⭐️ Saldo Kas Awal (Superadmin)' : c}
+                          </option>
+                        ))
                     : expenseCategories.map((c) => (
                         <option key={c} value={c}>
                           {c}
                         </option>
                       ))}
                 </select>
+                {trxCategory === 'Saldo Kas Awal' && (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg mt-1 border border-amber-200">
+                    Opsi khusus <strong>Superadmin</strong> untuk memasukkan saldo awal kas paguyuban agar perhitungan total pemasukan dan saldo kas akurat.
+                  </p>
+                )}
               </div>
 
               {/* Amount */}
@@ -1257,9 +1270,12 @@ export const KeuanganView: React.FC = () => {
                   onChange={(e) => setEditCategory(e.target.value as any)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold"
                 >
-                  {(editType === 'pemasukan' ? incomeCategories : expenseCategories).map((cat) => (
+                  {(editType === 'pemasukan'
+                    ? incomeCategories.filter((c) => c !== 'Saldo Kas Awal' || currentUser.role === 'superadmin')
+                    : expenseCategories
+                  ).map((cat) => (
                     <option key={cat} value={cat}>
-                      {cat}
+                      {cat === 'Saldo Kas Awal' ? '⭐️ Saldo Kas Awal (Superadmin)' : cat}
                     </option>
                   ))}
                 </select>

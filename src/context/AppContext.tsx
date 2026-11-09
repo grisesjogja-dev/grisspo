@@ -2100,8 +2100,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTransaction = async (id: string) => {
-    if (!['superadmin', 'bendahara1', 'bendahara2'].includes(currentUser?.role || '')) {
-      alert('Akses Ditolak: Hanya Bendahara dan Admin yang memiliki hak akses menghapus transaksi keuangan!');
+    if (currentUser?.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin yang memiliki hak akses menghapus transaksi keuangan!');
       return;
     }
     await markAsDeleted(id, 'keuangan_transaksi');
@@ -2761,8 +2761,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deletePaymentReceipt = async (id: string) => {
-    if (!['superadmin', 'bendahara1', 'bendahara2'].includes(currentUser?.role || '')) {
-      alert('Akses Ditolak: Hanya Bendahara dan Admin yang memiliki hak akses menghapus data pembayaran!');
+    if (currentUser?.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin yang memiliki hak akses menghapus data pembayaran!');
       return;
     }
     const toDelete = paymentReceipts.find((p) => p.id === id);
