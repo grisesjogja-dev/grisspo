@@ -93,7 +93,7 @@ export const LoyaltyPointsView: React.FC = () => {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-xs font-semibold mb-3 border border-white/20">
               <Trophy size={14} className="text-amber-200" />
-              <span>Program Apresiasi Gotong Royong Warga GSS</span>
+              <span>Program Apresiasi Keaktifan Warga GSS</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
               Sistem Poin Loyalitas (GRISS-POIN)
@@ -137,7 +137,7 @@ export const LoyaltyPointsView: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 text-xs">
           <div className="p-3.5 rounded-xl bg-amber-50 border-2 border-amber-200 text-center flex flex-col justify-between">
             <div>
-              <span className="font-black text-amber-800 text-xl block">+25 Poin</span>
+              <span className="font-black text-amber-800 text-xl block">+15 Poin</span>
               <span className="font-extrabold text-slate-900 block mt-1">Hadir Ronda / Jimpit</span>
             </div>
             <p className="text-[11px] text-slate-500 mt-2">Kehadiran jadwal ronda & jimpit malam</p>
@@ -169,7 +169,7 @@ export const LoyaltyPointsView: React.FC = () => {
 
           <div className="p-3.5 rounded-xl bg-rose-50 border-2 border-rose-200 text-center flex flex-col justify-between">
             <div>
-              <span className="font-black text-rose-800 text-xl block">+10 Poin</span>
+              <span className="font-black text-rose-800 text-xl block">+20 Poin</span>
               <span className="font-extrabold text-slate-900 block mt-1">Aktif Jimpitan 1 Bulan</span>
             </div>
             <p className="text-[11px] text-slate-500 mt-2">Min Rp 500 tiap hari tanpa kosong 1 bulan</p>
