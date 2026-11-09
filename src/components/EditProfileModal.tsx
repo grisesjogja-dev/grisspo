@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { User, Phone, Home, Users, Lock, Shield, CheckCircle2, X, Sparkles } from 'lucide-react';
+import { User, Phone, Home, Users, Lock, Shield, CheckCircle2, X, Sparkles, Fingerprint } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { registerResidentBiometrics } from '../utils/webauthn';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
   const [password, setPassword] = useState(currentResident?.password || '');
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [bioNotice, setBioNotice] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,6 +181,39 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-[10px] text-slate-400 mt-0.5">Password khusus untuk login akun rumah ini</p>
+            </div>
+
+            {/* Daftarkan Biometrik Sidik Jari / Wajah */}
+            <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                    <Fingerprint size={15} className="text-emerald-600" />
+                    <span>Autentikasi Biometrik Perangkat</span>
+                  </div>
+                  <p className="text-[10px] text-emerald-700">
+                    Aktifkan login instan dengan sidik jari atau Face ID di HP / laptop ini.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!currentResident) return;
+                    setBioNotice('Membuka sensor biometrik...');
+                    const res = await registerResidentBiometrics(currentResident);
+                    setBioNotice(res.message);
+                    setTimeout(() => setBioNotice(''), 4000);
+                  }}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition shrink-0"
+                >
+                  Daftarkan Biometrik
+                </button>
+              </div>
+              {bioNotice && (
+                <p className="text-[11px] font-bold text-emerald-800 mt-2 bg-emerald-100/80 p-2 rounded-lg">
+                  {bioNotice}
+                </p>
+              )}
             </div>
 
             <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">

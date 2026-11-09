@@ -61,6 +61,7 @@ interface AppContextType {
   currentUser: User | null;
   setCurrentUser: (user: User | null) => void;
   loginWithHouseNumber: (houseInput: string, passInput: string) => { success: boolean; message: string };
+  loginAsResident: (resident: Resident) => void;
   switchRoleWithPassword: (houseNumber: string, passwordInput: string) => { success: boolean; message: string };
   logout: () => void;
   updateResidentProfile: (updates: { name: string; phone: string; familyMembers?: number; password?: string }) => Promise<void>;
@@ -1220,6 +1221,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       success: true,
       message: `Login berhasil! Selamat datang Bpk/Ibu ${resident.name} (${resident.houseNumber}) - Role: ${resident.role.toUpperCase()}`
     };
+  };
+
+  // Direct login for authenticated biometrics session
+  const loginAsResident = (resident: Resident) => {
+    const loggedUser: User = {
+      id: resident.id,
+      username: `Griss${resident.houseNumber.replace(/\s+/g, '')}`,
+      name: resident.name,
+      houseNumber: resident.houseNumber,
+      role: resident.role,
+      points: resident.points,
+      phone: resident.phone
+    };
+    lastActivityTimeRef.current = Date.now();
+    setCurrentUser(loggedUser);
+    localStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
+    syncActiveSessionToCloud(loggedUser);
+    setActiveView('dashboard');
   };
 
   // Switch role with mandatory password validation
@@ -2610,21 +2629,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 1. Add corresponding cash transaction to Paguyuban Book
     let cat: Transaction['category'] = 'Iuran Bulanan (Rp 25.000)';
     if (data.paymentType === 'iuran_bulanan') cat = 'Iuran Bulanan (Rp 25.000)';
+    else if (data.paymentType === 'iuran_sampah') cat = 'Iuran Sampah (Rp 25.000)';
     else if (data.paymentType === 'iuran_bulanan_sampah') cat = 'Iuran Bulanan + Sampah (Rp 50.000)';
     else if (data.paymentType === 'sewa_fasum') cat = 'Sewa Fasum';
     else if (data.paymentType === 'sumbangan_sukarela') cat = 'Sumbangan Sukarela';
     else cat = 'Lain-lain Pemasukan';
 
-    const methodLabel = data.paymentMethod === 'transfer_bank_bri'
+    const methodLabel = data.paymentMethod === 'transfer_bank_bri' || data.paymentMethod === 'transfer_bank'
       ? 'Transfer Bank BRI (155801007310503 a/n Benisius Rahmat Basuki)'
       : 'Tunai ke Bendahara';
 
     const desc = `${data.paymentTypeName} - ${data.residentName} (${data.residentHouse}) [No. Kwitansi: ${receiptNum}] via ${methodLabel}${data.periodMonth ? ` - Periode: ${data.periodMonth}` : ''}${data.notes ? ` (${data.notes})` : ''}`;
 
+    const numAmount = Number(data.amount) || 0;
+
     const createdTrx = await addTransaction({
       type: 'pemasukan',
       category: cat,
-      amount: data.amount,
+      amount: numAmount,
       date: dateStr,
       description: desc,
       recordedBy: currentUser ? `${currentUser.name} (${currentUser.role})` : 'Bendahara Kas',
@@ -2639,7 +2661,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         r.houseNumber.replace(/\s+/g, '').toUpperCase() === data.residentHouse.replace(/\s+/g, '').toUpperCase()
     );
     if (res) {
-      if (data.paymentType === 'iuran_bulanan' || data.paymentType === 'iuran_bulanan_sampah') {
+      if (data.paymentType === 'iuran_bulanan' || data.paymentType === 'iuran_bulanan_sampah' || data.paymentType === 'iuran_sampah') {
         const currentUnpaid = res.iuranUnpaidMonths || 0;
         const newUnpaid = Math.max(0, currentUnpaid - 1);
         const newUnpaidNames = (res.unpaidMonthNames || []).slice(1);
@@ -2707,6 +2729,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (relatedTrx) {
         let cat: Transaction['category'] = 'Iuran Bulanan (Rp 25.000)';
         if (receipt.paymentType === 'iuran_bulanan') cat = 'Iuran Bulanan (Rp 25.000)';
+        else if (receipt.paymentType === 'iuran_sampah') cat = 'Iuran Sampah (Rp 25.000)';
         else if (receipt.paymentType === 'iuran_bulanan_sampah') cat = 'Iuran Bulanan + Sampah (Rp 50.000)';
         else if (receipt.paymentType === 'sewa_fasum') cat = 'Sewa Fasum';
         else if (receipt.paymentType === 'sumbangan_sukarela') cat = 'Sumbangan Sukarela';
@@ -3171,6 +3194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentUser,
         setCurrentUser,
         loginWithHouseNumber,
+        loginAsResident,
         switchRoleWithPassword,
         logout,
         updateResidentProfile,

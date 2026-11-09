@@ -71,6 +71,35 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
+      {/* BILAH ATAS PORTAL: NOMOR TELEPON PENTING & DARURAT SEDAYU */}
+      <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white text-[11px] font-bold py-1 px-3 sm:px-6 shadow-xs flex flex-wrap items-center justify-between gap-2 border-b border-red-500/30">
+        <div className="flex items-center gap-2 overflow-x-auto py-0.5 no-scrollbar">
+          <span className="inline-flex items-center gap-1 bg-white text-red-700 px-2 py-0.2 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 shadow-xs">
+            <PhoneCall size={10} className="text-red-600 animate-pulse" />
+            <span>Hotline Darurat Sedayu</span>
+          </span>
+          <a href="tel:112" className="hover:underline flex items-center gap-1 shrink-0 bg-red-800/40 px-2 py-0.5 rounded-lg border border-red-300/30">
+            <span className="text-amber-200">Darurat:</span> <span className="font-mono font-black text-white">112</span>
+          </a>
+          <a href="tel:0274798110" className="hover:underline hidden sm:flex items-center gap-1 shrink-0 bg-red-800/40 px-2 py-0.5 rounded-lg border border-red-300/30">
+            <span className="text-amber-200">Polsek:</span> <span className="font-mono font-bold text-white">(0274) 798110</span>
+          </a>
+          <a href="tel:0274798081" className="hover:underline hidden md:flex items-center gap-1 shrink-0 bg-red-800/40 px-2 py-0.5 rounded-lg border border-red-300/30">
+            <span className="text-emerald-200">Puskesmas 1 (24 Jam):</span> <span className="font-mono font-bold text-white">(0274) 798081</span>
+          </a>
+          <a href="tel:0274367406" className="hover:underline hidden lg:flex items-center gap-1 shrink-0 bg-red-800/40 px-2 py-0.5 rounded-lg border border-red-300/30">
+            <span className="text-amber-200">Damkar:</span> <span className="font-mono font-bold text-white">(0274) 367406</span>
+          </a>
+        </div>
+
+        <button
+          onClick={() => setActiveView('kontak_penting')}
+          className="text-[10px] font-black text-amber-100 hover:text-white flex items-center gap-1 underline underline-offset-2 shrink-0 ml-auto"
+        >
+          <span>Daftar Kontak Lengkap &raquo;</span>
+        </button>
+      </div>
+
       <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Brand */}

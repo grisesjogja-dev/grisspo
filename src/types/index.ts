@@ -211,6 +211,7 @@ export type FasumPaymentMethod = 'transfer_bank' | 'tunai_bendahara';
 
 export type PaymentReceiptType =
   | 'iuran_bulanan'
+  | 'iuran_sampah'
   | 'iuran_bulanan_sampah'
   | 'sewa_fasum'
   | 'sumbangan_sukarela'

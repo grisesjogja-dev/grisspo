@@ -247,6 +247,8 @@ _Pengurus Paguyuban Griya Sedayu Selaras 1_`;
     setSelectedPaymentType(type);
     if (type === 'iuran_bulanan') {
       setFormAmount(25000);
+    } else if (type === 'iuran_sampah') {
+      setFormAmount(25000);
     } else if (type === 'iuran_bulanan_sampah') {
       setFormAmount(50000);
     } else if (type === 'sewa_fasum') {
@@ -274,6 +276,7 @@ _Pengurus Paguyuban Griya Sedayu Selaras 1_`;
     try {
       const typeLabels: Record<PaymentReceiptType, string> = {
         iuran_bulanan: 'Iuran Bulanan Rutin (Rp 25.000)',
+        iuran_sampah: 'Iuran Sampah (Rp 25.000)',
         iuran_bulanan_sampah: 'Iuran Bulanan + Sampah (Rp 50.000)',
         sewa_fasum: 'Sewa Fasum Paguyuban GSS',
         sumbangan_sukarela: 'Sumbangan Sukarela Warga',
@@ -616,6 +619,12 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                         desc: 'Kas operasional paguyuban (Jatuh tempo tgl 28)'
                       },
                       {
+                        type: 'iuran_sampah' as PaymentReceiptType,
+                        label: 'Iuran Sampah Saja',
+                        nominal: 'Rp 25.000 / bln',
+                        desc: 'Retribusi sampah lingkungan (Jatuh tempo tgl 28)'
+                      },
+                      {
                         type: 'iuran_bulanan_sampah' as PaymentReceiptType,
                         label: 'Iuran Bulanan + Sampah',
                         nominal: 'Rp 50.000 / bln',
@@ -919,6 +928,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               >
                 <option value="ALL">Semua Jenis Pembayaran</option>
                 <option value="iuran_bulanan">Iuran Bulanan (Rp 25.000)</option>
+                <option value="iuran_sampah">Iuran Sampah (Rp 25.000)</option>
                 <option value="iuran_bulanan_sampah">Iuran Bulanan + Sampah (Rp 50.000)</option>
                 <option value="sewa_fasum">Sewa Fasum</option>
                 <option value="sumbangan_sukarela">Sumbangan Sukarela</option>
@@ -1084,80 +1094,6 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
       {/* ============================================================== */}
       {dashboardTab === 'ringkasan' && (
         <div className="space-y-6">
-          {/* ============================================================== */}
-          {/* BILAH NOMOR TELEPON PENTING & DARURAT SEDAYU (WARNA MENCOLOK)   */}
-          {/* ============================================================== */}
-          <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white rounded-2xl p-4 sm:p-5 shadow-xl border-2 border-red-400/60 relative overflow-hidden">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex items-start sm:items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-black/25 flex items-center justify-center shrink-0 border border-white/20">
-                  <PhoneCall size={22} className="text-amber-200 animate-bounce" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white text-red-700 shadow-xs">
-                      HOTLINE DARURAT 24 JAM
-                    </span>
-                    <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
-                  </div>
-                  <h3 className="text-sm sm:text-base font-black text-white mt-0.5">
-                    Nomor Telepon Penting Sedayu & Bantul
-                  </h3>
-                  <p className="text-[11px] text-rose-100 hidden sm:block">
-                    Panggilan darurat kepolisian, koramil, puskesmas 24 jam, pemadam kebakaran, dan ambulans siaga.
-                  </p>
-                </div>
-              </div>
-
-              {/* Quick Dial Badges */}
-              <div className="flex flex-wrap items-center gap-2">
-                <a
-                  href="tel:112"
-                  className="px-3 py-1.5 bg-white text-red-700 hover:bg-rose-50 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md"
-                  title="Panggilan Darurat Bebas Pulsa"
-                >
-                  <LifeBuoy size={14} className="text-red-600" />
-                  <span>Darurat: 112</span>
-                </a>
-
-                <a
-                  href="tel:0274798110"
-                  className="px-3 py-1.5 bg-black/30 hover:bg-black/40 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-white/20"
-                  title="Polsek Sedayu"
-                >
-                  <Shield size={13} className="text-amber-300" />
-                  <span>Polsek: (0274) 798110</span>
-                </a>
-
-                <a
-                  href="tel:0274798081"
-                  className="px-3 py-1.5 bg-black/30 hover:bg-black/40 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-white/20"
-                  title="Puskesmas Sedayu 1 (Argosari - IGD 24 Jam)"
-                >
-                  <HeartPulse size={13} className="text-emerald-300" />
-                  <span>Puskesmas 1: (0274) 798081</span>
-                </a>
-
-                <a
-                  href="tel:0274367406"
-                  className="px-3 py-1.5 bg-black/30 hover:bg-black/40 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-white/20"
-                  title="Pemadam Kebakaran & Penyelamatan Bantul"
-                >
-                  <Flame size={13} className="text-amber-300" />
-                  <span>Damkar: (0274) 367406</span>
-                </a>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveView('kontak_penting')}
-                  className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black transition flex items-center gap-1 shadow-md ml-auto"
-                >
-                  <span>Lihat Semua Kontak</span>
-                  <ChevronRight size={13} />
-                </button>
-              </div>
-            </div>
-          </div>
 
           {/* Priority Announcement Alert */}
           {announcements.length > 0 && (
@@ -2299,6 +2235,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     const newType = e.target.value as PaymentReceiptType;
                     const typeLabels: Record<PaymentReceiptType, string> = {
                       iuran_bulanan: 'Iuran Bulanan Rutin (Rp 25.000)',
+                      iuran_sampah: 'Iuran Sampah (Rp 25.000)',
                       iuran_bulanan_sampah: 'Iuran Bulanan + Sampah (Rp 50.000)',
                       sewa_fasum: 'Sewa Fasum Paguyuban GSS',
                       sumbangan_sukarela: 'Sumbangan Sukarela Warga',
@@ -2306,6 +2243,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     };
                     let newAmount = editingReceipt.amount;
                     if (newType === 'iuran_bulanan') newAmount = 25000;
+                    else if (newType === 'iuran_sampah') newAmount = 25000;
                     else if (newType === 'iuran_bulanan_sampah') newAmount = 50000;
                     else if (newType === 'sewa_fasum' && newAmount === 25000) newAmount = 30000;
                     setEditingReceipt({
@@ -2318,6 +2256,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="iuran_bulanan">Iuran Bulanan Rutin (Rp 25.000)</option>
+                  <option value="iuran_sampah">Iuran Sampah (Rp 25.000)</option>
                   <option value="iuran_bulanan_sampah">Iuran Bulanan + Sampah (Rp 50.000)</option>
                   <option value="sewa_fasum">Sewa Fasum Paguyuban GSS</option>
                   <option value="sumbangan_sukarela">Sumbangan Sukarela Warga</option>

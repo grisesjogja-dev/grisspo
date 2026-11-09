@@ -14,6 +14,7 @@ import { LoyaltyPointsView } from './components/LoyaltyPointsView';
 import { FasumBookingView } from './components/FasumBookingView';
 import { NotulenDanAbsensiView } from './components/NotulenDanAbsensiView';
 import { KontakPentingView } from './components/KontakPentingView';
+import { LandingLoginView } from './components/LandingLoginView';
 import { LoginModal } from './components/LoginModal';
 import { NotificationModal } from './components/NotificationModal';
 import { EmailAlertsModal } from './components/EmailAlertsModal';
@@ -60,10 +61,10 @@ const MainApp: React.FC = () => {
     }
   }, [currentUser, residents]);
 
-  // When user is NOT logged in: strictly lock to Jimpitan Online landing page
+  // When user is NOT logged in: simple, flexible landing page with login form & biometrics
   const renderCurrentView = () => {
     if (!currentUser) {
-      return <JimpitanView onOpenLogin={() => setIsLoginOpen(true)} />;
+      return <LandingLoginView onOpenLogin={() => setIsLoginOpen(true)} />;
     }
 
     switch (activeView) {

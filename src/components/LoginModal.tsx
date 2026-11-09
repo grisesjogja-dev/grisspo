@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { KeyRound, X, Home, Lock, AlertCircle, UserCheck } from 'lucide-react';
+import { KeyRound, X, Home, Lock, AlertCircle, UserCheck, Fingerprint } from 'lucide-react';
+import { authenticateResidentBiometrics } from '../utils/webauthn';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -8,12 +9,13 @@ interface LoginModalProps {
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
-  const { loginWithHouseNumber } = useApp();
+  const { loginWithHouseNumber, residents, loginAsResident } = useApp();
   // Form login otomatis kosong, semua user wajib input username dan password
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isBiometricLoading, setIsBiometricLoading] = useState(false);
 
   if (!isOpen) return null;
 
@@ -128,6 +130,59 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             >
               <KeyRound size={16} />
               <span>Verifikasi Sandi & Masuk</span>
+            </button>
+
+            {/* Tombol Login dengan Biometrik (Web Authentication API: Fingerprint / Face ID) */}
+            <div className="relative py-2 text-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <span className="relative bg-white px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                atau autentikasi cepat
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                setErrorMsg('');
+                setSuccessMsg('');
+                setIsBiometricLoading(true);
+                try {
+                  const bioRes = await authenticateResidentBiometrics();
+                  if (bioRes.success && (bioRes.residentHouse || bioRes.residentId)) {
+                    // Find resident
+                    const foundRes = residents.find(
+                      (r) =>
+                        (bioRes.residentId && r.id === bioRes.residentId) ||
+                        (bioRes.residentHouse &&
+                          r.houseNumber.replace(/\s+/g, '').toUpperCase() ===
+                            bioRes.residentHouse.replace(/\s+/g, '').toUpperCase())
+                    );
+                    if (foundRes) {
+                      loginAsResident(foundRes);
+                      setSuccessMsg(`Autentikasi biometrik berhasil! Selamat datang, ${foundRes.name}.`);
+                      setTimeout(() => {
+                        onClose();
+                        setSuccessMsg('');
+                      }, 900);
+                    } else {
+                      setErrorMsg('Data warga terdaftar biometrik tidak ditemukan.');
+                    }
+                  } else {
+                    setErrorMsg(bioRes.message || 'Autentikasi biometrik gagal.');
+                  }
+                } catch (err: any) {
+                  setErrorMsg('Gagal memproses biometrik: ' + (err.message || 'Perangkat tidak merespons'));
+                } finally {
+                  setIsBiometricLoading(false);
+                }
+              }}
+              disabled={isBiometricLoading}
+              className="w-full py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold rounded-xl text-xs transition shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 border border-emerald-400/30"
+            >
+              <Fingerprint size={16} className={isBiometricLoading ? 'animate-spin' : 'animate-pulse text-emerald-200'} />
+              <span>{isBiometricLoading ? 'Menghubungkan Sensor...' : 'Login dengan Biometrik (Fingerprint / Face ID)'}</span>
             </button>
           </form>
         </div>
