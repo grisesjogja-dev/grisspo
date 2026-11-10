@@ -9,7 +9,7 @@ interface PengurusModalProps {
 }
 
 export const PengurusModal: React.FC<PengurusModalProps> = ({ isOpen, onClose }) => {
-  const { getResidentNameByHouse } = useApp();
+  const { getResidentNameByHouse, residents } = useApp();
   if (!isOpen) return null;
 
   const getPositionBadge = (pos: string) => {
@@ -63,58 +63,79 @@ export const PengurusModal: React.FC<PengurusModalProps> = ({ isOpen, onClose })
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {dataPengurusGSS.map((p, idx) => (
-              <div
-                key={idx}
-                className="bg-slate-50/80 rounded-2xl border border-slate-200 p-4 hover:border-blue-300 transition flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <span
-                      className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${getPositionBadge(
-                        p.position
-                      )}`}
+            {dataPengurusGSS.map((p, idx) => {
+              // Sinkronisasi langsung nama dan nomor kontak pengurus dari Data Warga
+              const residentRecord = residents.find(
+                (r) =>
+                  r.houseNumber.replace(/\s+/g, '').toUpperCase() ===
+                  p.houseNumber.replace(/\s+/g, '').toUpperCase()
+              );
+
+              const activeName = residentRecord ? residentRecord.name : getResidentNameByHouse(p.houseNumber, p.name);
+              const activePhone = residentRecord?.phone || p.phone;
+
+              // Format nomor WhatsApp internasional (62xxx)
+              const rawDigits = (activePhone || '').replace(/[^0-9]/g, '');
+              const waNumber = rawDigits.startsWith('0')
+                ? '62' + rawDigits.slice(1)
+                : rawDigits.startsWith('62')
+                ? rawDigits
+                : '62' + rawDigits;
+
+              return (
+                <div
+                  key={idx}
+                  className="bg-slate-50/80 rounded-2xl border border-slate-200 p-4 hover:border-blue-300 transition flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span
+                        className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${getPositionBadge(
+                          p.position
+                        )}`}
+                      >
+                        {p.position}
+                      </span>
+                      <span className="font-mono text-xs font-black bg-white px-2 py-0.5 rounded-md border border-slate-200 text-slate-800">
+                        Rumah {p.houseNumber}
+                      </span>
+                    </div>
+
+                    <h3 className="text-base font-black text-slate-900">
+                      Bpk. {activeName}
+                    </h3>
+
+                    <div className="mt-2 space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Tugas & Tanggung Jawab:
+                      </span>
+                      {p.tasks.map((task, tIdx) => (
+                        <div key={tIdx} className="flex items-start gap-1.5 text-xs text-slate-600">
+                          <CheckCircle2 size={12} className="text-blue-500 mt-0.5 shrink-0" />
+                          <span>{task}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-3 mt-3 border-t border-slate-200 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      Kontak WhatsApp:
+                    </span>
+                    <a
+                      href={`https://wa.me/${waNumber}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition"
+                      title={`Hubungi Bpk. ${activeName} (${p.position})`}
                     >
-                      {p.position}
-                    </span>
-                    <span className="font-mono text-xs font-black bg-white px-2 py-0.5 rounded-md border border-slate-200 text-slate-800">
-                      Rumah {p.houseNumber}
-                    </span>
-                  </div>
-
-                  <h3 className="text-base font-black text-slate-900">
-                    Bpk. {getResidentNameByHouse(p.houseNumber, p.name)}
-                  </h3>
-
-                  <div className="mt-2 space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Tugas & Tanggung Jawab:
-                    </span>
-                    {p.tasks.map((task, tIdx) => (
-                      <div key={tIdx} className="flex items-start gap-1.5 text-xs text-slate-600">
-                        <CheckCircle2 size={12} className="text-blue-500 mt-0.5 shrink-0" />
-                        <span>{task}</span>
-                      </div>
-                    ))}
+                      <Phone size={12} />
+                      <span>{activePhone}</span>
+                    </a>
                   </div>
                 </div>
-
-                <div className="pt-3 mt-3 border-t border-slate-200 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    Kontak WhatsApp:
-                  </span>
-                  <a
-                    href={`https://wa.me/62${p.phone.replace(/[^0-9]/g, '').slice(1)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200"
-                  >
-                    <Phone size={12} />
-                    <span>{p.phone}</span>
-                  </a>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="p-4 bg-blue-50/80 rounded-2xl border border-blue-200 text-xs text-blue-900 flex items-center gap-3">

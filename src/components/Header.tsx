@@ -164,17 +164,6 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right controls */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Nomor Telepon Penting Sedayu (Mencolok - Emergency Red) */}
-            <button
-              onClick={() => setActiveView('kontak_penting')}
-              className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black transition flex items-center gap-1.5 text-xs shadow-md shadow-red-600/30 border border-red-400/40 animate-pulse shrink-0"
-              title="Nomor Telepon Penting & Darurat Sedayu (Polsek, Koramil, Puskesmas, Damkar)"
-            >
-              <PhoneCall size={14} className="text-amber-200" />
-              <span className="hidden sm:inline">Kontak Darurat Sedayu</span>
-              <span className="sm:hidden font-bold">Darurat</span>
-            </button>
-
             {/* Struktur Pengurus Paguyuban Button (Always visible) */}
             <button
               onClick={() => setIsPengurusOpen(true)}

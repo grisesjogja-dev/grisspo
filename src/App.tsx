@@ -23,6 +23,8 @@ import { IuranWarningModal } from './components/IuranWarningModal';
 import { EditProfileModal } from './components/EditProfileModal';
 import { MasterResetModal } from './components/MasterResetModal';
 import { ActiveSessionsModal } from './components/ActiveSessionsModal';
+import { VersionChangelogModal } from './components/VersionChangelogModal';
+import { APP_VERSION, APP_BUILD_DATE } from './data/versionInfo';
 import { Clock } from 'lucide-react';
 
 const MainApp: React.FC = () => {
@@ -42,6 +44,7 @@ const MainApp: React.FC = () => {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isMasterResetOpen, setIsMasterResetOpen] = useState(false);
   const [isActiveSessionsOpen, setIsActiveSessionsOpen] = useState(false);
+  const [isVersionChangelogOpen, setIsVersionChangelogOpen] = useState(false);
 
   // Trigger warning modal on login or user switch if resident has >= 2 months unpaid iuran
   React.useEffect(() => {
@@ -117,18 +120,43 @@ const MainApp: React.FC = () => {
         {renderCurrentView()}
       </main>
 
-      {/* Footer */}
+      {/* Footer dengan Penomoran Versi Aplikasi & Changelog Update Sistem */}
       <footer className="bg-white border-t border-slate-200 py-6 mb-16 lg:mb-0 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 space-y-1">
+        <div className="max-w-7xl mx-auto px-4 space-y-2">
+          {/* Penomoran Versi Aplikasi Berdasarkan Update-Update Sistem */}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span className="inline-flex items-center gap-1.5 bg-slate-900 text-white text-[11px] font-black px-3 py-1 rounded-full shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Versi Aplikasi: {APP_VERSION}</span>
+            </span>
+            <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-mono">
+              Build {APP_BUILD_DATE}
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsVersionChangelogOpen(true)}
+              className="inline-flex items-center gap-1 text-[11px] font-black text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-0.5 rounded-full transition cursor-pointer"
+              title="Lihat riwayat catatan pembaruan sistem dari awal peluncuran hingga versi terbaru"
+            >
+              <span>Riwayat Pembaruan Sistem (Changelog) &raquo;</span>
+            </button>
+          </div>
+
           <p className="font-bold text-slate-700">
             GRISSPO &bull; Griya Sedayu Selaras Portal Online 2026
           </p>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-400 max-w-2xl mx-auto">
             Paguyuban Warga Perumahan Griya Sedayu Selaras 1 - Argorejo, Sedayu, Bantul, D.I. Yogyakarta 55752
           </p>
-          <p className="text-[10px] text-blue-600 font-mono pt-1">
-            Real-Time Cloud Sync &bull; Enkripsi SHA-256 Integritas Kas &bull; Notifikasi Anomali Email
-          </p>
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-[10px] text-slate-400 font-mono">
+            <span>Firebase Cloud Real-Time</span>
+            <span>&bull;</span>
+            <span>Enkripsi SHA-256 Integritas Kas</span>
+            <span>&bull;</span>
+            <span>FIDO2 / WebAuthn Biometrik</span>
+            <span>&bull;</span>
+            <span>RBAC Security Enforced</span>
+          </div>
         </div>
       </footer>
 
@@ -161,6 +189,10 @@ const MainApp: React.FC = () => {
       <ActiveSessionsModal
         isOpen={isActiveSessionsOpen}
         onClose={() => setIsActiveSessionsOpen(false)}
+      />
+      <VersionChangelogModal
+        isOpen={isVersionChangelogOpen}
+        onClose={() => setIsVersionChangelogOpen(false)}
       />
 
       {/* 30-min Inactivity Auto-logout Alert Modal */}

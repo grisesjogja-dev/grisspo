@@ -503,17 +503,24 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
             </div>
 
             <div className="shrink-0 flex flex-col sm:flex-row md:flex-col gap-2 w-full md:w-auto">
-              <a
-                href={`https://wa.me/6281234567824?text=${encodeURIComponent(
-                  `Halo Bpk. Asrofi (Sekretaris Paguyuban GSS 1 - Rumah B 08), saya ${currentResidentRecord.name} dari Rumah ${currentResidentRecord.houseNumber} ingin mengonfirmasi dan menyerahkan berkas kependudukan (KTP/KK) keluarga kami.`
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md transition"
-              >
-                <Phone size={14} />
-                <span>Hubungi Sekretaris (B 08)</span>
-              </a>
+              {(() => {
+                const sekRes = residents.find((r) => r.houseNumber.replace(/\s+/g, '').toUpperCase() === 'B08');
+                const rawPhone = (sekRes?.phone || '0812-3456-7824').replace(/[^0-9]/g, '');
+                const waPhone = rawPhone.startsWith('0') ? '62' + rawPhone.slice(1) : rawPhone.startsWith('62') ? rawPhone : '62' + rawPhone;
+                return (
+                  <a
+                    href={`https://wa.me/${waPhone}?text=${encodeURIComponent(
+                      `Halo Bpk. ${sekRes?.name || 'Asrofi'} (Sekretaris Paguyuban GSS 1 - Rumah B 08), saya ${currentResidentRecord.name} dari Rumah ${currentResidentRecord.houseNumber} ingin mengonfirmasi dan menyerahkan berkas kependudukan (KTP/KK) keluarga kami.`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md transition"
+                  >
+                    <Phone size={14} />
+                    <span>Hubungi Sekretaris ({sekRes?.name || 'B 08'})</span>
+                  </a>
+                );
+              })()}
               <span className="text-[10px] text-center text-slate-500">
                 Verifikasi hanya oleh Superadmin &amp; Sekretaris
               </span>
