@@ -107,18 +107,48 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Selected residents for today's jimpit with their individual nominal
+  // Aturan: Hanya rumah dengan status "DI HUNI PEMILIK" yang muncul dalam kartu jimpit online
   const [selectedMap, setSelectedMap] = useState<Record<string, { selected: boolean; nominal: number; method: 'cash' | 'transfer' }>>(() => {
     const init: Record<string, { selected: boolean; nominal: number; method: 'cash' | 'transfer' }> = {};
     residents.forEach((r) => {
-      const isOccupied = r.statusRumah.includes('HUNI') || r.statusRumah.includes('MEMBAYAR');
-      init[r.houseNumber] = {
-        selected: isOccupied,
-        nominal: 500,
-        method: 'cash'
-      };
+      const isOwnerOccupied = r.statusRumah?.trim().toUpperCase() === 'DI HUNI PEMILIK';
+      if (isOwnerOccupied) {
+        init[r.houseNumber] = {
+          selected: true,
+          nominal: 500,
+          method: 'cash'
+        };
+      }
     });
     return init;
   });
+
+  // Sinkronisasi otomatis: ketika status rumah diubah ke "DI HUNI PEMILIK", otomatis muncul di kartu jimpit online
+  React.useEffect(() => {
+    setSelectedMap((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      residents.forEach((r) => {
+        const isOwnerOccupied = r.statusRumah?.trim().toUpperCase() === 'DI HUNI PEMILIK';
+        if (isOwnerOccupied) {
+          if (!next[r.houseNumber]) {
+            next[r.houseNumber] = {
+              selected: true,
+              nominal: 500,
+              method: 'cash'
+            };
+            changed = true;
+          }
+        } else {
+          if (next[r.houseNumber]) {
+            delete next[r.houseNumber];
+            changed = true;
+          }
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [residents]);
 
   // Modal for submitted report
   const [submittedReport, setSubmittedReport] = useState<JimpitDailyReport | null>(null);
@@ -233,9 +263,11 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     });
   };
 
-  // Filter residents for Input Tab
+  // Filter residents for Input Tab: Hanya rumah dengan status "DI HUNI PEMILIK" yang muncul dalam kartu
   const filteredResidents = useMemo(() => {
     return residents.filter((r) => {
+      const isOwnerOccupied = r.statusRumah?.trim().toUpperCase() === 'DI HUNI PEMILIK';
+      if (!isOwnerOccupied) return false;
       const matchBlock = blockFilter === 'ALL' || r.block === blockFilter;
       const matchSearch =
         r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1040,7 +1072,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 Rp {currentTotalRevenue.toLocaleString('id-ID')}
               </div>
               <div className="text-xs text-slate-400 mt-0.5">
-                {totalSelectedCount} dari {residents.length} rumah berpartisipasi (Kelipatan Rp 500)
+                {totalSelectedCount} dari {residents.filter((r) => r.statusRumah?.trim().toUpperCase() === 'DI HUNI PEMILIK').length} rumah berpenghuni pemilik (Kelipatan Rp 500)
               </div>
             </div>
 

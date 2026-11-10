@@ -82,6 +82,7 @@ export const DashboardView: React.FC = () => {
   // --- LOKET PAYMENT FORM STATES ---
   const [selectedResidentId, setSelectedResidentId] = useState<string>(() => residents[0]?.id || '');
   const [selectedPaymentType, setSelectedPaymentType] = useState<PaymentReceiptType>('iuran_bulanan');
+  const [formDate, setFormDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [formAmount, setFormAmount] = useState<number>(25000);
   const [formPeriod, setFormPeriod] = useState<string>(() => {
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -293,6 +294,7 @@ _Pengurus Paguyuban Griya Sedayu Selaras 1_`;
         amount: Number(formAmount),
         periodMonth: formPeriod,
         paymentMethod: formPaymentMethod,
+        date: formDate,
         notes: formNotes || undefined
       });
 
@@ -675,11 +677,24 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   </div>
                 </div>
 
-                {/* 3. Nominal & Periode */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* 3. Tanggal, Nominal & Periode Transaksi */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                   <div>
                     <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      3. Jumlah Pembayaran (Rp)
+                      3. Tanggal Transaksi
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formDate}
+                      onChange={(e) => setFormDate(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      4. Jumlah Pembayaran (Rp)
                     </label>
                     <input
                       type="number"
@@ -694,7 +709,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
 
                   <div>
                     <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      4. Bulan / Periode Pembayaran
+                      5. Bulan / Periode
                     </label>
                     <input
                       type="text"
@@ -707,10 +722,10 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   </div>
                 </div>
 
-                {/* 4. Metode Pembayaran (NO QRIS, ONLY BRI OR TUNAI) */}
+                {/* 6. Metode Pembayaran (NO QRIS, ONLY BRI OR TUNAI) */}
                 <div>
                   <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    5. Metode Pembayaran
+                    6. Metode Pembayaran
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label
@@ -765,10 +780,10 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   </div>
                 </div>
 
-                {/* 5. Catatan Tambahan */}
+                {/* 7. Catatan Tambahan */}
                 <div>
                   <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    6. Catatan Tambahan (Opsional)
+                    7. Catatan Tambahan (Opsional)
                   </label>
                   <input
                     type="text"
@@ -1775,126 +1790,6 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 <span className="text-[10px] text-slate-400 block font-semibold">Denda Tidak Ronda:</span>
                 <span className="text-xs font-bold text-red-400 mt-1 block">
                   Rp 15.000 / Regu
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Informasi Pengurus Paguyuban Warga Perum GSS */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
-                  <Users size={22} />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
-                    Struktur Organisasi Resmi
-                  </span>
-                  <h3 className="text-base font-black text-slate-900">
-                    Informasi Pengurus Paguyuban Warga Perum GSS 1
-                  </h3>
-                </div>
-              </div>
-              <span className="text-xs bg-slate-100 text-slate-700 px-3 py-1 rounded-full font-semibold">
-                Periode 2026
-              </span>
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {/* Ketua: Beni */}
-              <div className="p-3.5 rounded-2xl bg-red-50/50 border border-red-200/80 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider block">
-                    Ketua Paguyuban
-                  </span>
-                  <span className="text-sm font-black text-slate-900 block mt-0.5">
-                    {getResidentNameByHouse('B 24', 'Bpk. BENI')}
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-mono">Rumah B 24</span>
-                </div>
-                <span className="text-[10px] bg-red-100 text-red-800 font-extrabold px-2 py-0.5 rounded-md">
-                  Superadmin
-                </span>
-              </div>
-
-              {/* Wakil Ketua: Waluyo */}
-              <div className="p-3.5 rounded-2xl bg-blue-50/50 border border-blue-200/80 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">
-                    Wakil Ketua
-                  </span>
-                  <span className="text-sm font-black text-slate-900 block mt-0.5">
-                    {getResidentNameByHouse('A 13', 'Bpk. WALUYO')}
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-mono">Rumah A 13</span>
-                </div>
-                <span className="text-[10px] bg-blue-100 text-blue-800 font-extrabold px-2 py-0.5 rounded-md">
-                  Wakil
-                </span>
-              </div>
-
-              {/* Bendahara 1: Ahmad */}
-              <div className="p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">
-                    Bendahara 1
-                  </span>
-                  <span className="text-sm font-black text-slate-900 block mt-0.5">
-                    {getResidentNameByHouse('B 02', 'Bpk. AHMAD')}
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-mono">Rumah B 02</span>
-                </div>
-                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-md">
-                  Kas Utama
-                </span>
-              </div>
-
-              {/* Bendahara 2: Robi */}
-              <div className="p-3.5 rounded-2xl bg-teal-50/50 border border-teal-200/80 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider block">
-                    Bendahara 2
-                  </span>
-                  <span className="text-sm font-black text-slate-900 block mt-0.5">
-                    {getResidentNameByHouse('C 15', 'Bpk. ROBI')}
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-mono">Rumah C 15</span>
-                </div>
-                <span className="text-[10px] bg-teal-100 text-teal-800 font-extrabold px-2 py-0.5 rounded-md">
-                  Sampah/Fasum
-                </span>
-              </div>
-
-              {/* Sekretaris: Asrofi */}
-              <div className="p-3.5 rounded-2xl bg-purple-50/50 border border-purple-200/80 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider block">
-                    Sekretaris
-                  </span>
-                  <span className="text-sm font-black text-slate-900 block mt-0.5">
-                    {getResidentNameByHouse('B 08', 'Bpk. ASROFI')}
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-mono">Rumah B 08</span>
-                </div>
-                <span className="text-[10px] bg-purple-100 text-purple-800 font-extrabold px-2 py-0.5 rounded-md">
-                  Administrasi
-                </span>
-              </div>
-
-              {/* Koordinator Kamtibmas: Joko Tri */}
-              <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200/80 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">
-                    Koord. Kamtibmas
-                  </span>
-                  <span className="text-sm font-black text-slate-900 block mt-0.5">
-                    {getResidentNameByHouse('C 12', 'Bpk. JOKO TRI')}
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-mono">Rumah C 12</span>
-                </div>
-                <span className="text-[10px] bg-amber-100 text-amber-800 font-extrabold px-2 py-0.5 rounded-md">
-                  Keamanan
                 </span>
               </div>
             </div>

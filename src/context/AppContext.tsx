@@ -160,6 +160,7 @@ interface AppContextType {
     amount: number;
     periodMonth?: string;
     paymentMethod: PaymentMethodType;
+    date?: string;
     notes?: string;
   }) => Promise<PaymentReceipt>;
   updatePaymentReceipt: (receipt: PaymentReceipt) => Promise<void>;
@@ -1113,13 +1114,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('grisspo_important_contacts', JSON.stringify(importantContacts));
   }, [importantContacts]);
 
-  // Calculations for Financial summary with bulletproof type safety and number conversion
-  const totalIncome = transactions
+  // Calculations for Financial summary: Bulletproof synchronization with all transactions AND paymentReceipts
+  const transactionsIncome = transactions
     .filter((t) => {
       const typeStr = String(t.type || '').trim().toLowerCase();
       return typeStr === 'pemasukan' || typeStr === 'income';
     })
     .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+
+  // If any payment receipt in paymentReceipts is not yet recorded in transactions, reconcile it automatically
+  const transactionIdsSet = new Set(transactions.map((t) => t.id));
+  const unlinkedReceiptsIncome = paymentReceipts
+    .filter((r) => !r.transactionId || !transactionIdsSet.has(r.transactionId))
+    .reduce((acc, r) => acc + (Number(r.amount) || 0), 0);
+
+  const totalIncome = transactionsIncome + unlinkedReceiptsIncome;
 
   const totalExpense = transactions
     .filter((t) => {
@@ -1129,6 +1138,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
   const currentBalance = totalIncome - totalExpense;
+
+  // Auto-synchronize payment receipts into transactions so they always match in realtime
+  useEffect(() => {
+    if (paymentReceipts.length === 0) return;
+    const currentTrxIds = new Set(transactions.map((t) => t.id));
+    const missingReceipts = paymentReceipts.filter(
+      (r) => !r.transactionId || !currentTrxIds.has(r.transactionId)
+    );
+
+    if (missingReceipts.length > 0) {
+      const newTrxList: Transaction[] = [];
+      const updatedReceiptsList: PaymentReceipt[] = [];
+
+      for (const receipt of missingReceipts) {
+        let cat: Transaction['category'] = 'Iuran Bulanan (Rp 25.000)';
+        if (receipt.paymentType === 'iuran_bulanan') cat = 'Iuran Bulanan (Rp 25.000)';
+        else if (receipt.paymentType === 'iuran_sampah') cat = 'Iuran Sampah (Rp 25.000)';
+        else if (receipt.paymentType === 'iuran_bulanan_sampah') cat = 'Iuran Bulanan + Sampah (Rp 50.000)';
+        else if (receipt.paymentType === 'sewa_fasum') cat = 'Sewa Fasum';
+        else if (receipt.paymentType === 'sumbangan_sukarela') cat = 'Sumbangan Sukarela';
+        else cat = 'Lain-lain Pemasukan';
+
+        const methodLabel =
+          receipt.paymentMethod === 'transfer_bank_bri' || receipt.paymentMethod === 'transfer_bank'
+            ? 'Transfer Bank BRI'
+            : 'Tunai';
+
+        const trxId = receipt.transactionId || `trx-sync-${receipt.id}`;
+        const newTrx: Transaction = {
+          id: trxId,
+          type: 'pemasukan',
+          category: cat,
+          amount: Number(receipt.amount) || 0,
+          date: receipt.date || new Date().toISOString().slice(0, 10),
+          description: `${receipt.paymentTypeName} - ${receipt.residentName} (${receipt.residentHouse}) [No. Kwitansi: ${receipt.receiptNumber}] via ${methodLabel}${
+            receipt.periodMonth ? ` - Periode: ${receipt.periodMonth}` : ''
+          }${receipt.notes ? ` (${receipt.notes})` : ''}`,
+          recordedBy: receipt.recordedBy || 'Bendahara Kas',
+          userRole: receipt.recorderRole || 'bendahara1',
+          sourceHouse: receipt.residentHouse,
+          encryptedHash: `hash-sync-${Date.now()}`,
+          isAnomaly: false,
+          timestamp: new Date(receipt.createdAt || Date.now()).getTime()
+        };
+
+        newTrxList.push(newTrx);
+        if (!receipt.transactionId) {
+          updatedReceiptsList.push({ ...receipt, transactionId: trxId });
+        }
+      }
+
+      if (newTrxList.length > 0) {
+        setTransactions((prev) => {
+          const nextTrx = [...newTrxList, ...prev];
+          localStorage.setItem('grisspo_transactions', JSON.stringify(nextTrx));
+          return nextTrx;
+        });
+        newTrxList.forEach((t) => {
+          setDoc(doc(db, 'keuangan_transaksi', t.id), t).catch(() => {});
+        });
+      }
+
+      if (updatedReceiptsList.length > 0) {
+        setPaymentReceipts((prev) => {
+          const nextR = prev.map((r) => {
+            const found = updatedReceiptsList.find((u) => u.id === r.id);
+            return found ? found : r;
+          });
+          localStorage.setItem('grisspo_payment_receipts', JSON.stringify(nextR));
+          return nextR;
+        });
+        updatedReceiptsList.forEach((r) => {
+          setDoc(doc(db, 'pembayaran_kwitansi', r.id), r).catch(() => {});
+        });
+      }
+    }
+  }, [paymentReceipts, transactions]);
 
   // Strict Password Validator
   // Rule: Setiap memilih role atau login wajib memasukkan password masing-masing
@@ -2620,9 +2706,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     amount: number;
     periodMonth?: string;
     paymentMethod: PaymentMethodType;
+    date?: string;
     notes?: string;
   }): Promise<PaymentReceipt> => {
-    const dateStr = new Date().toISOString().slice(0, 10);
+    const dateStr = data.date || new Date().toISOString().slice(0, 10);
     const receiptNum = `KWT-GSS-${dateStr.replace(/-/g, '')}-${String(Math.floor(1000 + Math.random() * 9000))}`;
     const receiptId = `receipt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 

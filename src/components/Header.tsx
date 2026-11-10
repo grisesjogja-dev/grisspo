@@ -44,10 +44,50 @@ export const Header: React.FC<HeaderProps> = ({
     activeSessions,
     logout,
     setIsPengurusOpen,
-    setActiveView
+    setActiveView,
+    importantContacts
   } = useApp();
 
   const [showRoleMenu, setShowRoleMenu] = useState(false);
+
+  // Synchronized quick dial emergency contacts from importantContacts
+  const quickEmergencyContacts = React.useMemo(() => {
+    const c112 = importantContacts.find((c) => c.phoneNumber.includes('112') || c.name.includes('112'));
+    const polsek = importantContacts.find((c) => c.name.toLowerCase().includes('polsek'));
+    const ambulans = importantContacts.find((c) => c.name.toLowerCase().includes('ambulans') || c.name.toLowerCase().includes('puskesmas'));
+    const damkar = importantContacts.find((c) => c.name.toLowerCase().includes('damkar'));
+
+    return [
+      {
+        label: 'Darurat',
+        displayPhone: c112?.phoneNumber || '112',
+        telNumber: (c112?.phoneNumber || '112').replace(/[^0-9]/g, ''),
+        color: 'text-amber-200',
+        visibility: 'flex'
+      },
+      {
+        label: 'Polsek',
+        displayPhone: polsek?.phoneNumber || '(0274) 6498549',
+        telNumber: (polsek?.phoneNumber || '02746498549').replace(/[^0-9]/g, ''),
+        color: 'text-amber-200',
+        visibility: 'hidden sm:flex'
+      },
+      {
+        label: 'Ambulans',
+        displayPhone: ambulans?.phoneNumber || ambulans?.whatsappNumber || '0813-9389-0345',
+        telNumber: (ambulans?.phoneNumber || ambulans?.whatsappNumber || '081393890345').replace(/[^0-9]/g, ''),
+        color: 'text-emerald-200',
+        visibility: 'hidden md:flex'
+      },
+      {
+        label: 'Damkar',
+        displayPhone: damkar?.phoneNumber || '(0274) 6462100',
+        telNumber: (damkar?.phoneNumber || '02746462100').replace(/[^0-9]/g, ''),
+        color: 'text-amber-200',
+        visibility: 'hidden lg:flex'
+      }
+    ];
+  }, [importantContacts]);
 
   const getRoleBadge = (role: string) => {
     switch (role) {
@@ -78,19 +118,15 @@ export const Header: React.FC<HeaderProps> = ({
             <PhoneCall size={10} className="text-red-600 animate-pulse" />
             <span>Hotline Darurat Sedayu</span>
           </span>
-          <a href="tel:112" className="hover:underline flex items-center gap-1 shrink-0 bg-red-800/40 px-2 py-0.5 rounded-lg border border-red-300/30">
-            <span className="text-amber-200">Darurat:</span> <span className="font-mono font-black text-white">112</span>
-          </a>
-          <a href="tel:0274798110" className="hover:underline hidden sm:flex items-center gap-1 shrink-0 bg-red-800/40 px-2 py-0.5 rounded-lg border border-red-300/30">
-            <span className="text-amber-200">Polsek:</span> <span className="font-mono font-bold text-white">(0274) 6498549</span>
-          </a>
-          <a href="tel:0274798081" className="hover:underline hidden md:flex items-center gap-1 shrink-0 bg-red-800/40 px-2 py-0.5 rounded-lg border border-red-300/30">
-            <span className="text-emerald-200">Ambulans:</span> <span className="font-mono font-bold text-white">0813-9389-0345
-</span>
-          </a>
-          <a href="tel:0274367406" className="hover:underline hidden lg:flex items-center gap-1 shrink-0 bg-red-800/40 px-2 py-0.5 rounded-lg border border-red-300/30">
-            <span className="text-amber-200">Damkar:</span> <span className="font-mono font-bold text-white">(0274) 6462100</span>
-          </a>
+          {quickEmergencyContacts.map((c, idx) => (
+            <a
+              key={idx}
+              href={`tel:${c.telNumber}`}
+              className={`hover:underline items-center gap-1 shrink-0 bg-red-800/40 px-2 py-0.5 rounded-lg border border-red-300/30 ${c.visibility}`}
+            >
+              <span className={c.color}>{c.label}:</span> <span className="font-mono font-bold text-white">{c.displayPhone}</span>
+            </a>
+          ))}
         </div>
 
         <button
