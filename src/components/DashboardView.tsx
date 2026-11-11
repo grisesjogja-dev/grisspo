@@ -324,9 +324,17 @@ _Pengurus Paguyuban Griya Sedayu Selaras 1_`;
       ? 'Transfer BANK BRI (Rek. 155801007310503 a/n Benisius Rahmat Basuki)'
       : 'Tunai ke Bendahara Paguyuban';
 
+    const receiptDateFormatted = receipt.date
+      ? new Date(`${receipt.date}T12:00:00`).toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        })
+      : new Date(receipt.createdAt).toLocaleDateString('id-ID');
+
     const message = `*KWITANSI RESMI PEMBAYARAN KAS GSS 1*
 No. Kwitansi: *#${receipt.receiptNumber}*
-Tanggal: ${new Date(receipt.createdAt).toLocaleString('id-ID')}
+Tanggal: ${receiptDateFormatted}
 
 Yth. Bpk/Ibu: *${receipt.residentName}*
 No. Rumah: *${receipt.residentHouse}*
@@ -2000,9 +2008,15 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Waktu Pembayaran:</span>
+                    <span className="text-slate-500">Tanggal Transaksi:</span>
                     <span className="font-bold text-slate-900">
-                      {new Date(activeReceiptModal.createdAt).toLocaleString('id-ID')}
+                      {activeReceiptModal.date
+                        ? new Date(`${activeReceiptModal.date}T12:00:00`).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })
+                        : new Date(activeReceiptModal.createdAt).toLocaleDateString('id-ID')}
                     </span>
                   </div>
 

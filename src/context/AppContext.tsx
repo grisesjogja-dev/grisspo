@@ -771,7 +771,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               });
             }
           });
-          cloudTrx.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+          cloudTrx.sort((a, b) => {
+            const dateA = a.date || '';
+            const dateB = b.date || '';
+            if (dateB !== dateA) return dateB.localeCompare(dateA);
+            return (b.timestamp || 0) - (a.timestamp || 0);
+          });
           setTransactions(cloudTrx);
           localStorage.setItem('grisspo_transactions', JSON.stringify(cloudTrx));
         }
@@ -971,7 +976,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             deleteDoc(doc(db, 'pembayaran_kwitansi', d.id)).catch(() => {});
           }
         });
-        cloudReceipts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        cloudReceipts.sort((a, b) => {
+          const dateA = a.date || a.createdAt?.slice(0, 10) || '';
+          const dateB = b.date || b.createdAt?.slice(0, 10) || '';
+          if (dateB !== dateA) return dateB.localeCompare(dateA);
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
         setPaymentReceipts(cloudReceipts);
         localStorage.setItem('grisspo_payment_receipts', JSON.stringify(cloudReceipts));
         setIsCloudSynced(true);
@@ -2136,14 +2146,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addTransaction = async (
     trxData: Omit<Transaction, 'id' | 'encryptedHash' | 'timestamp' | 'isAnomaly'>
   ): Promise<Transaction> => {
-    const now = Date.now();
+    // Tanggal transaksi yang terinput dalam database adalah tanggal yang dipilih (bukan tanggal perangkat)
+    const effectiveTimestamp = trxData.date
+      ? new Date(`${trxData.date}T12:00:00`).getTime()
+      : Date.now();
+
     const hash = await computeTransactionHash(
       trxData.type,
       trxData.category,
       trxData.amount,
       trxData.date,
       trxData.recordedBy,
-      now
+      effectiveTimestamp
     );
 
     const anomalyCheck = detectFinancialAnomaly(trxData);
@@ -2162,11 +2176,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...trxData,
       type: cleanType,
       amount: numericAmount,
-      id: `trx-${now}`,
+      id: `trx-${effectiveTimestamp}-${Math.random().toString(36).substring(2, 6)}`,
       encryptedHash: hash,
       isAnomaly,
       anomalyReason,
-      timestamp: now
+      timestamp: effectiveTimestamp
     };
 
     setTransactions((prev) => [newTrx, ...prev]);
@@ -2204,6 +2218,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateTransaction = async (trx: Transaction) => {
     const numericAmount = Number(trx.amount) || 0;
     const cleanType = (String(trx.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran';
+    const effectiveTimestamp = trx.date
+      ? new Date(`${trx.date}T12:00:00`).getTime()
+      : trx.timestamp || Date.now();
 
     const updatedHash = await computeTransactionHash(
       cleanType,
@@ -2211,12 +2228,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       numericAmount,
       trx.date,
       trx.recordedBy,
-      trx.timestamp
+      effectiveTimestamp
     );
     const updated: Transaction = {
       ...trx,
       type: cleanType,
       amount: numericAmount,
+      timestamp: effectiveTimestamp,
       encryptedHash: updatedHash
     };
     setTransactions((prev) => prev.map((t) => (t.id === trx.id ? updated : t)));
@@ -2785,10 +2803,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordedBy: currentUser ? `${currentUser.name} (${currentUser.houseNumber})` : 'Bendahara GSS',
       recorderRole: currentUser?.role || 'bendahara1',
       transactionId: createdTrx.id,
-      createdAt: new Date().toISOString()
+      createdAt: new Date(`${dateStr}T12:00:00`).toISOString()
     };
 
-    const nextReceipts = [newReceipt, ...paymentReceipts];
+    const nextReceipts = [newReceipt, ...paymentReceipts].sort((a, b) => {
+      const dateA = a.date || a.createdAt?.slice(0, 10) || '';
+      const dateB = b.date || b.createdAt?.slice(0, 10) || '';
+      if (dateB !== dateA) return dateB.localeCompare(dateA);
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
     setPaymentReceipts(nextReceipts);
     localStorage.setItem('grisspo_payment_receipts', JSON.stringify(nextReceipts));
 
@@ -2835,6 +2858,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ...relatedTrx,
           amount: receipt.amount,
           category: cat,
+          date: receipt.date || relatedTrx.date,
           description: desc
         });
       }

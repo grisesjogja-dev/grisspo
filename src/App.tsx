@@ -121,7 +121,7 @@ const MainApp: React.FC = () => {
       </main>
 
       {/* Footer dengan Penomoran Versi Aplikasi & Changelog Update Sistem */}
-      <footer className="bg-white border-t border-slate-200 py-6 mb-16 lg:mb-0 text-center text-xs text-slate-500">
+      <footer className="bg-white border-t border-slate-200 py-6 mb-16 md:mb-0 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 space-y-2">
           {/* Penomoran Versi Aplikasi Berdasarkan Update-Update Sistem */}
           <div className="flex flex-wrap items-center justify-center gap-2">

@@ -6,17 +6,27 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.6.0';
+export const APP_VERSION = 'v1.7.0';
 export const APP_BUILD_DATE = '11 November 2026';
-export const APP_BUILD_CODE = '2026.11.11-v1.6.0';
-export const APP_RELEASE_NAME = 'Edisi Tampilan Rapi, Status Kosong Dijimpit & Sinkronisasi Real-Time';
+export const APP_BUILD_CODE = '2026.11.11-v1.7.0';
+export const APP_RELEASE_NAME = 'Edisi Menu Terpadu, Tanggal Transaksi Database & Responsif Penuh';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.7.0',
+    releaseDate: '11 November 2026',
+    releaseTitle: 'Penataan Menu Navigasi Terpadu & Sinkronisasi Tanggal Transaksi',
+    badge: 'Terbaru',
+    highlights: [
+      'Struktur Menu Atas baru yang rapi: dashboard, jimpit, keuangan (dropdown: sewa fasum dan kas), info (dropdown: data warga, jadwal ronda, notulen & absensi, tata tertib), inventaris, forum, Grisspoin.',
+      'Tanggal transaksi kas dan kwitansi yang tersimpan dalam database kini 100% menggunakan tanggal yang dipilih pada formulir (bukan tanggal perangkat).',
+      'Desain navigasi responsif multi-device: dropdown desktop interaktif serta bottom navigation sheet yang mulus untuk pengguna ponsel dan tablet.'
+    ]
+  },
   {
     version: 'v1.6.0',
     releaseDate: '11 November 2026',
     releaseTitle: 'Tombol Detail Rapi, Status Rumah Kosong (Dijimpit) & Sinkronisasi Real-Time',
-    badge: 'Terbaru',
     highlights: [
       'Tombol "Detail" ukuran kecil untuk menyembunyikan keterangan panjang agar tampilan portal selalu rapi dan nyaman dibaca.',
       'Penambahan pilihan status rumah "KOSONG (DIJIMPIT)" pada data warga, filter hunian, dan formulir data kependudukan.',
