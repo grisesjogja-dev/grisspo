@@ -8,6 +8,7 @@ export type StatusRumah =
   | 'DI HUNI PEMILIK'
   | 'DI HUNI KONTRAK'
   | 'KOSONG (MEMBAYAR IURAN)'
+  | 'KOSONG (DIJIMPIT)'
   | 'KOSONG (ADA PEMILIK)'
   | 'BELUM ADA PEMILIK';
 
