@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { Resident, StatusRumah, UserRole } from '../types';
 import { permissions } from '../utils/security';
+import { DetailToggle } from './DetailToggle';
 import {
   Users,
   Search,
@@ -110,6 +111,7 @@ export const DataWargaView: React.FC = () => {
   const totalCount = residents.length;
   const dihuniPemilik = residents.filter((r) => r.statusRumah === 'DI HUNI PEMILIK').length;
   const dihuniKontrak = residents.filter((r) => r.statusRumah === 'DI HUNI KONTRAK').length;
+  const kosongDijimpit = residents.filter((r) => r.statusRumah === 'KOSONG (DIJIMPIT)').length;
   const kosongBayar = residents.filter((r) => r.statusRumah === 'KOSONG (MEMBAYAR IURAN)').length;
   const kosongAdaPemilik = residents.filter((r) => r.statusRumah === 'KOSONG (ADA PEMILIK)').length;
   const belumAdaPemilik = residents.filter((r) => r.statusRumah === 'BELUM ADA PEMILIK').length;
@@ -122,6 +124,8 @@ export const DataWargaView: React.FC = () => {
         return 'bg-emerald-100 text-emerald-800 border-emerald-300';
       case 'DI HUNI KONTRAK':
         return 'bg-sky-100 text-sky-800 border-sky-300';
+      case 'KOSONG (DIJIMPIT)':
+        return 'bg-purple-100 text-purple-850 border-purple-300 font-bold';
       case 'KOSONG (MEMBAYAR IURAN)':
         return 'bg-amber-100 text-amber-800 border-amber-300';
       case 'KOSONG (ADA PEMILIK)':
@@ -244,9 +248,11 @@ export const DataWargaView: React.FC = () => {
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
             Data 58 Warga Perumahan Griya Sedayu Selaras 1
           </h2>
-          <p className="mt-2 text-slate-300 text-xs sm:text-sm leading-relaxed">
-            Data resmi checklist warga mencakup Blok A (16 rumah), Blok B (27 rumah), dan Blok C (15 rumah). Hanya Superadmin yang memiliki hak akses untuk mengubah atau menghapus data.
-          </p>
+          <DetailToggle variant="dark" label="Detail Info Warga">
+            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed bg-white/5 p-3 rounded-xl border border-white/10">
+              Data resmi checklist warga mencakup Blok A (16 rumah), Blok B (27 rumah), dan Blok C (15 rumah). Hanya Superadmin yang memiliki hak akses untuk mengubah atau menghapus data.
+            </p>
+          </DetailToggle>
 
           <div className="mt-5 flex flex-wrap gap-2.5 items-center">
             {canEditOrDelete ? (
@@ -301,7 +307,7 @@ export const DataWargaView: React.FC = () => {
       </div>
 
       {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <span className="text-[11px] font-bold text-slate-500 uppercase">Total Unit</span>
           <div className="text-2xl font-black text-slate-900 mt-1">{totalCount} Rumah</div>
@@ -317,17 +323,23 @@ export const DataWargaView: React.FC = () => {
         <div className="bg-white p-4 rounded-2xl border border-sky-100 shadow-xs">
           <span className="text-[11px] font-bold text-sky-700 uppercase">Dihuni Kontrak</span>
           <div className="text-2xl font-black text-sky-600 mt-1">{dihuniKontrak}</div>
-          <div className="text-[10px] text-sky-700">Wajib lapor berkas</div>
+          <div className="text-[10px] text-sky-700">Wajib jimpit & iuran</div>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-purple-100 shadow-xs">
+          <span className="text-[11px] font-bold text-purple-700 uppercase">Kosong (Dijimpit)</span>
+          <div className="text-2xl font-black text-purple-600 mt-1">{kosongDijimpit}</div>
+          <div className="text-[10px] text-purple-700">Masuk Jimpit Online</div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-amber-100 shadow-xs">
-          <span className="text-[11px] font-bold text-amber-700 uppercase">Kosong (Bayar Iuran)</span>
+          <span className="text-[11px] font-bold text-amber-700 uppercase">Kosong (Bayar)</span>
           <div className="text-2xl font-black text-amber-600 mt-1">{kosongBayar}</div>
           <div className="text-[10px] text-amber-700">Tetap iuran kas</div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-orange-100 shadow-xs col-span-2 sm:col-span-1">
-          <span className="text-[11px] font-bold text-orange-700 uppercase">Kosong / Belum Ada</span>
+        <div className="bg-white p-4 rounded-2xl border border-orange-100 shadow-xs">
+          <span className="text-[11px] font-bold text-orange-700 uppercase">Kosong / Belum</span>
           <div className="text-2xl font-black text-orange-600 mt-1">{kosongAdaPemilik + belumAdaPemilik}</div>
           <div className="text-[10px] text-orange-700">Rumah belum dihuni</div>
         </div>
@@ -564,6 +576,7 @@ export const DataWargaView: React.FC = () => {
                   <option value="ALL">Semua Status Hunian</option>
                   <option value="DI HUNI PEMILIK">DI HUNI PEMILIK</option>
                   <option value="DI HUNI KONTRAK">DI HUNI KONTRAK</option>
+                  <option value="KOSONG (DIJIMPIT)">KOSONG (DIJIMPIT)</option>
                   <option value="KOSONG (MEMBAYAR IURAN)">KOSONG (MEMBAYAR IURAN)</option>
                   <option value="KOSONG (ADA PEMILIK)">KOSONG (ADA PEMILIK)</option>
                   <option value="BELUM ADA PEMILIK">BELUM ADA PEMILIK</option>
@@ -820,6 +833,7 @@ export const DataWargaView: React.FC = () => {
                 >
                   <option value="DI HUNI PEMILIK">DI HUNI PEMILIK</option>
                   <option value="DI HUNI KONTRAK">DI HUNI KONTRAK</option>
+                  <option value="KOSONG (DIJIMPIT)">KOSONG (DIJIMPIT)</option>
                   <option value="KOSONG (MEMBAYAR IURAN)">KOSONG (MEMBAYAR IURAN)</option>
                   <option value="KOSONG (ADA PEMILIK)">KOSONG (ADA PEMILIK)</option>
                   <option value="BELUM ADA PEMILIK">BELUM ADA PEMILIK</option>

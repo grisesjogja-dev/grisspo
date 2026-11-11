@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useApp, defaultGuestUser } from '../context/AppContext';
 import { DayOfWeek } from '../types';
+import { DetailToggle } from './DetailToggle';
 import {
   Shield,
   Clock,
@@ -45,9 +46,11 @@ export const JadwalRondaView: React.FC = () => {
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
             Jadwal Ronda Malam & Pengambilan Jimpitan
           </h2>
-          <p className="mt-2 text-slate-300 text-xs sm:text-sm leading-relaxed">
-            Kegiatan ronda malam dilaksanakan 7 hari seminggu. Tim ronda bertugas menjaga ketertiban, menutup & mengunci portal gerbang perumahan pukul 21.00 WIB, mengambil jimpitan warga, serta membersihkan pendopo.
-          </p>
+          <DetailToggle variant="dark" label="Detail Tugas Ronda">
+            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed bg-white/5 p-3 rounded-xl border border-white/10">
+              Kegiatan ronda malam dilaksanakan 7 hari seminggu. Tim ronda bertugas menjaga ketertiban, menutup &amp; mengunci portal gerbang perumahan pukul 21.00 WIB, mengambil jimpitan warga, serta membersihkan pendopo.
+            </p>
+          </DetailToggle>
 
           <div className="mt-5 flex flex-wrap gap-2.5 items-center">
             <button

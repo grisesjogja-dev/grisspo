@@ -43,6 +43,18 @@ import {
   Key,
   Edit2
 } from 'lucide-react';
+import { DetailToggle } from './DetailToggle';
+
+export const isStatusEligibleForJimpitan = (status?: string): boolean => {
+  if (!status) return false;
+  const s = status.trim().toUpperCase();
+  return (
+    s === 'DI HUNI PEMILIK' ||
+    s === 'DI HUNI KONTRAK' ||
+    s === 'KOSONG (DIJIMPIT)' ||
+    s === 'KOSONG (DI JIMPIT)'
+  );
+};
 
 interface JimpitanViewProps {
   onOpenLogin?: () => void;
@@ -107,12 +119,12 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Selected residents for today's jimpit with their individual nominal
-  // Aturan: Hanya rumah dengan status "DI HUNI PEMILIK" yang muncul dalam kartu jimpit online
+  // Aturan: Rumah dengan status "DI HUNI PEMILIK", "DI HUNI KONTRAK", dan "KOSONG (DIJIMPIT)" muncul dalam kartu jimpit online
   const [selectedMap, setSelectedMap] = useState<Record<string, { selected: boolean; nominal: number; method: 'cash' | 'transfer' }>>(() => {
     const init: Record<string, { selected: boolean; nominal: number; method: 'cash' | 'transfer' }> = {};
     residents.forEach((r) => {
-      const isOwnerOccupied = r.statusRumah?.trim().toUpperCase() === 'DI HUNI PEMILIK';
-      if (isOwnerOccupied) {
+      const isEligible = isStatusEligibleForJimpitan(r.statusRumah);
+      if (isEligible) {
         init[r.houseNumber] = {
           selected: true,
           nominal: 500,
@@ -123,14 +135,14 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     return init;
   });
 
-  // Sinkronisasi otomatis: ketika status rumah diubah ke "DI HUNI PEMILIK", otomatis muncul di kartu jimpit online
+  // Sinkronisasi otomatis secara realtime: ketika status rumah diubah ke "DI HUNI PEMILIK", "DI HUNI KONTRAK", atau "KOSONG (DIJIMPIT)", otomatis muncul di kartu jimpit online
   React.useEffect(() => {
     setSelectedMap((prev) => {
       const next = { ...prev };
       let changed = false;
       residents.forEach((r) => {
-        const isOwnerOccupied = r.statusRumah?.trim().toUpperCase() === 'DI HUNI PEMILIK';
-        if (isOwnerOccupied) {
+        const isEligible = isStatusEligibleForJimpitan(r.statusRumah);
+        if (isEligible) {
           if (!next[r.houseNumber]) {
             next[r.houseNumber] = {
               selected: true,
@@ -263,11 +275,11 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     });
   };
 
-  // Filter residents for Input Tab: Hanya rumah dengan status "DI HUNI PEMILIK" yang muncul dalam kartu
+  // Filter residents for Input Tab: Rumah dengan status "DI HUNI PEMILIK", "DI HUNI KONTRAK", dan "KOSONG (DIJIMPIT)" muncul dalam kartu
   const filteredResidents = useMemo(() => {
     return residents.filter((r) => {
-      const isOwnerOccupied = r.statusRumah?.trim().toUpperCase() === 'DI HUNI PEMILIK';
-      if (!isOwnerOccupied) return false;
+      const isEligible = isStatusEligibleForJimpitan(r.statusRumah);
+      if (!isEligible) return false;
       const matchBlock = blockFilter === 'ALL' || r.block === blockFilter;
       const matchSearch =
         r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -553,16 +565,19 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
               <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
                 Selamat Datang di Portal Warga Griya Sedayu Selaras 1
               </h3>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Anda dapat langsung menggunakan <strong>Input Jimpitan</strong> dan <strong>Absensi Petugas Ronda Hari Ini</strong> di bawah. Untuk membuka seluruh menu portal (Buku Kas Keuangan, Notulen Rapat, Data Warga, Inventaris, Booking Fasum, Forum, dan Poin Loyalitas), silakan login akun warga Anda:
-              </p>
-              
-              <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-xs text-slate-300 space-y-1">
-                <p className="font-semibold text-white">Panduan Login Warga:</p>
-                <p className="text-[11px] text-slate-300">
-                  Masukkan nomor rumah (misal: <span className="font-mono text-amber-300 font-bold">GrissB24</span> atau <span className="font-mono text-amber-300 font-bold">B 24</span>) dan password akun pribadi Anda pada form di samping.
-                </p>
-              </div>
+              <DetailToggle variant="dark" label="Panduan & Detail Portal">
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-300 leading-relaxed bg-white/5 p-3 rounded-xl border border-white/10">
+                    Anda dapat langsung menggunakan <strong>Input Jimpitan</strong> dan <strong>Absensi Petugas Ronda Hari Ini</strong> di bawah. Untuk membuka seluruh menu portal (Buku Kas Keuangan, Notulen Rapat, Data Warga, Inventaris, Booking Fasum, Forum, dan Poin Loyalitas), silakan login akun warga Anda:
+                  </p>
+                  <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-xs text-slate-300 space-y-1">
+                    <p className="font-semibold text-white">Panduan Login Warga:</p>
+                    <p className="text-[11px] text-slate-300">
+                      Masukkan nomor rumah (misal: <span className="font-mono text-amber-300 font-bold">GrissB24</span> atau <span className="font-mono text-amber-300 font-bold">B 24</span>) dan password akun pribadi Anda pada form di samping.
+                    </p>
+                  </div>
+                </div>
+              </DetailToggle>
             </div>
 
             {/* Inline Login Form */}
@@ -1072,7 +1087,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 Rp {currentTotalRevenue.toLocaleString('id-ID')}
               </div>
               <div className="text-xs text-slate-400 mt-0.5">
-                {totalSelectedCount} dari {residents.filter((r) => r.statusRumah?.trim().toUpperCase() === 'DI HUNI PEMILIK').length} rumah berpenghuni pemilik (Kelipatan Rp 500)
+                {totalSelectedCount} dari {residents.filter((r) => isStatusEligibleForJimpitan(r.statusRumah)).length} rumah wajib jimpit (Pemilik, Kontrak &amp; Kosong Dijimpit) &bull; Kelipatan Rp 500
               </div>
             </div>
 
@@ -1187,8 +1202,18 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                         <div className="text-[11px] text-slate-500 font-mono">
                           Rumah {resident.houseNumber} &bull; Blok {resident.block}
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
-                          Status: {resident.statusRumah}
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span
+                            className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${
+                              resident.statusRumah === 'DI HUNI PEMILIK'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : resident.statusRumah === 'DI HUNI KONTRAK'
+                                ? 'bg-sky-50 text-sky-800 border-sky-300'
+                                : 'bg-purple-50 text-purple-800 border-purple-300'
+                            }`}
+                          >
+                            {resident.statusRumah}
+                          </span>
                         </div>
                       </div>
                     </label>

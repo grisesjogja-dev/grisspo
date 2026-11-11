@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp, defaultGuestUser } from '../context/AppContext';
 import { InventoryItem, InventoryCondition } from '../types';
 import { permissions } from '../utils/security';
+import { DetailToggle } from './DetailToggle';
 import {
   Package,
   Search,
@@ -156,9 +157,11 @@ export const InventarisView: React.FC = () => {
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
             Data Inventaris Paguyuban GSS (33 Barang Resmi)
           </h2>
-          <p className="mt-2 text-slate-300 text-xs sm:text-sm leading-relaxed">
-            Pencatatan seluruh perlengkapan paguyuban (piring, gelas, lampu sorot, jumbo, sound, tikar, dll). Dikelola khusus oleh Admin Inventaris (Bpk. SONY B 23) dan Superadmin.
-          </p>
+          <DetailToggle variant="dark" label="Detail Inventaris">
+            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed bg-white/5 p-3 rounded-xl border border-white/10">
+              Pencatatan seluruh perlengkapan paguyuban (piring, gelas, lampu sorot, jumbo, sound, tikar, dll). Dikelola khusus oleh Admin Inventaris (Bpk. SONY B 23) dan Superadmin.
+            </p>
+          </DetailToggle>
 
           <div className="mt-5 flex flex-wrap gap-2.5 items-center">
             {canEdit && (

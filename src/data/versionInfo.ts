@@ -6,17 +6,28 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.5.2';
-export const APP_BUILD_DATE = '10 November 2026';
-export const APP_BUILD_CODE = '2026.11.10-patch2';
-export const APP_RELEASE_NAME = 'Edisi Pemutakhiran Layanan & Keamanan Terpadu';
+export const APP_VERSION = 'v1.6.0';
+export const APP_BUILD_DATE = '11 November 2026';
+export const APP_BUILD_CODE = '2026.11.11-v1.6.0';
+export const APP_RELEASE_NAME = 'Edisi Tampilan Rapi, Status Kosong Dijimpit & Sinkronisasi Real-Time';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.6.0',
+    releaseDate: '11 November 2026',
+    releaseTitle: 'Tombol Detail Rapi, Status Rumah Kosong (Dijimpit) & Sinkronisasi Real-Time',
+    badge: 'Terbaru',
+    highlights: [
+      'Tombol "Detail" ukuran kecil untuk menyembunyikan keterangan panjang agar tampilan portal selalu rapi dan nyaman dibaca.',
+      'Penambahan pilihan status rumah "KOSONG (DIJIMPIT)" pada data warga, filter hunian, dan formulir data kependudukan.',
+      'Kartu Jimpit Online kini otomatis menampilkan dan mensinkronkan rumah dengan status "DI HUNI PEMILIK", "DI HUNI KONTRAK", dan "KOSONG (DIJIMPIT)".',
+      'Seluruh inputan, editan, dan penghapusan data tersinkronisasi secara real-time via Google Cloud Firestore ke seluruh user di berbagai perangkat.'
+    ]
+  },
   {
     version: 'v1.5.2',
     releaseDate: '10 November 2026',
     releaseTitle: 'Sinkronisasi Kontak Pengurus & Penataan Navigasi Darurat',
-    badge: 'Terbaru',
     highlights: [
       'Nomor kontak & nama pengurus paguyuban di modal "Pengurus Paguyuban" tersinkronisasi otomatis dengan Data Warga.',
       'Penghapusan tombol darurat berkedip di deretan menu bar header; kontak darurat kini eksklusif di bilah atas portal.',

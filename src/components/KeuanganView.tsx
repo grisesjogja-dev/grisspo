@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp, defaultGuestUser } from '../context/AppContext';
 import { Transaction, IncomeCategory, ExpenseCategory } from '../types';
+import { DetailToggle } from './DetailToggle';
 import { exportFinanceToPDF, exportFinanceToExcel, exportMonthlyKasSummaryPDF } from '../utils/exportUtils';
 import { permissions, verifyTransactionIntegrity } from '../utils/security';
 import {
@@ -343,9 +344,11 @@ export const KeuanganView: React.FC = () => {
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
             Laporan Keuangan Kas Paguyuban GSS
           </h2>
-          <p className="mt-2 text-slate-300 text-xs sm:text-sm leading-relaxed">
-            Setiap rupiah iuran warga, jimpitan ronda, dan sewa fasum dikelola secara terbuka dan dapat dipantau seluruh warga secara real-time. Dilengkapi audit enkripsi integritas SHA-256 dan deteksi anomali otomatis.
-          </p>
+          <DetailToggle variant="dark" label="Detail Audit Kas">
+            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed bg-white/5 p-3 rounded-xl border border-white/10">
+              Setiap rupiah iuran warga, jimpitan ronda, dan sewa fasum dikelola secara terbuka dan dapat dipantau seluruh warga secara real-time. Dilengkapi audit enkripsi integritas SHA-256 dan deteksi anomali otomatis.
+            </p>
+          </DetailToggle>
 
           <div className="mt-5 flex flex-wrap gap-2.5">
             {canAdd ? (

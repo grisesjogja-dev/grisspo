@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp, defaultGuestUser } from '../context/AppContext';
 import { DayOfWeek, PaymentReceipt, PaymentReceiptType, PaymentMethodType, Resident } from '../types';
+import { DetailToggle } from './DetailToggle';
 import {
   Coins,
   ReceiptText,
@@ -419,9 +420,11 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
             )}
           </p>
 
-          <p className="mt-3 text-slate-300 text-xs sm:text-sm leading-relaxed max-w-2xl">
-            Sistem terintegrasi iuran kas bulanan (Rp 25.000), iuran sampah (Rp 50.000), sewa fasum, jimpitan ronda, dan otomatisasi kwitansi resmi WhatsApp & Email via <strong className="text-blue-300 font-mono">grises.jogja@gmail.com</strong>.
-          </p>
+          <DetailToggle variant="dark" label="Detail Keterangan Sistem">
+            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-2xl bg-white/5 p-3 rounded-xl border border-white/10">
+              Sistem terintegrasi iuran kas bulanan (Rp 25.000), iuran sampah (Rp 50.000), sewa fasum, jimpitan ronda, dan otomatisasi kwitansi resmi WhatsApp &amp; Email via <strong className="text-blue-300 font-mono">grises.jogja@gmail.com</strong>.
+            </p>
+          </DetailToggle>
 
           {/* Tab Selection */}
           <div className="mt-6 flex flex-wrap gap-2 pt-2 border-t border-white/10">
@@ -544,9 +547,11 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               <h3 className="text-xl font-black text-slate-900 tracking-tight">
                 Penerimaan Pembayaran Kas, Iuran Bulanan, Sampah, Fasum & Sumbangan
               </h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-                Setiap pembayaran otomatis menambah Saldo Kas Paguyuban, menerbitkan Kwitansi digital bernomor resmi, serta dapat langsung dikirimkan ke WhatsApp dan Email warga via <strong className="text-slate-800 font-mono">grises.jogja@gmail.com</strong>.
-              </p>
+              <DetailToggle variant="light" label="Detail Loket Kas">
+                <p className="text-xs text-slate-600 max-w-2xl bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  Setiap pembayaran otomatis menambah Saldo Kas Paguyuban, menerbitkan Kwitansi digital bernomor resmi, serta dapat langsung dikirimkan ke WhatsApp dan Email warga via <strong className="text-slate-800 font-mono">grises.jogja@gmail.com</strong>.
+                </p>
+              </DetailToggle>
             </div>
 
             <div className="flex items-center gap-2">
@@ -918,11 +923,13 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   ? 'Seluruh Arsip Kwitansi & Transaksi Pembayaran Warga'
                   : `Riwayat Pembayaran Diterima untuk Rumah ${currentUser.houseNumber}`}
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {isBendaharaOrAdmin
-                  ? 'Superadmin dan Bendahara dapat melihat, mengedit nominal/catatan, menghapus transaksi, serta mengirimkan Kwitansi via WhatsApp & Email grises.jogja@gmail.com.'
-                  : 'Warga memiliki hak akses untuk memeriksa seluruh riwayat pembayaran yang sah (view-only) dan mencetak bukti kwitansi digital.'}
-              </p>
+              <DetailToggle variant="light" label="Detail Riwayat">
+                <p className="text-xs text-slate-600 max-w-2xl bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  {isBendaharaOrAdmin
+                    ? 'Superadmin dan Bendahara dapat melihat, mengedit nominal/catatan, menghapus transaksi, serta mengirimkan Kwitansi via WhatsApp & Email grises.jogja@gmail.com.'
+                    : 'Warga memiliki hak akses untuk memeriksa seluruh riwayat pembayaran yang sah (view-only) dan mencetak bukti kwitansi digital.'}
+                </p>
+              </DetailToggle>
             </div>
 
             {isBendaharaOrAdmin && (

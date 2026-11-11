@@ -8,6 +8,7 @@ import {
   FasumTimeSlot,
   FasumPaymentMethod
 } from '../types';
+import { DetailToggle } from './DetailToggle';
 import {
   Building2,
   Calendar,
@@ -350,9 +351,11 @@ export const FasumBookingView: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               Pemesanan Fasilitas Umum (Fasum) GSS
             </h1>
-            <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
-              Warga Perumahan Griya Sedayu Selaras dapat menyewa Balai Pertemuan, Lapangan Badminton, Gazebo, Tenda & Kursi Paguyuban. Pembayaran sewa secara otomatis masuk ke Buku Kas Paguyuban Warga.
-            </p>
+            <DetailToggle variant="dark" label="Detail Info Fasum">
+              <p className="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed bg-white/5 p-3 rounded-xl border border-white/10">
+                Warga Perumahan Griya Sedayu Selaras dapat menyewa Balai Pertemuan, Lapangan Badminton, Gazebo, Tenda &amp; Kursi Paguyuban. Pembayaran sewa secara otomatis masuk ke Buku Kas Paguyuban Warga.
+              </p>
+            </DetailToggle>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">

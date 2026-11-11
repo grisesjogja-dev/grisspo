@@ -7,6 +7,7 @@ import {
   AttendanceItem,
   AttendanceSession
 } from '../types';
+import { DetailToggle } from './DetailToggle';
 import confetti from 'canvas-confetti';
 import {
   FileText,
@@ -263,9 +264,11 @@ export const NotulenDanAbsensiView: React.FC = () => {
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
             Notulen Rapat & Absensi Paguyuban
           </h2>
-          <p className="mt-2 text-blue-100 text-xs sm:text-sm leading-relaxed">
-            Pusat pencatatan hasil musyawarah warga (tanggal, isi, status proses, dan penanggung jawab) serta checklist kehadiran Kerja Bakti (+40 Poin) dan Rapat Bulanan (+25 Poin) dengan hak akses pengurus.
-          </p>
+          <DetailToggle variant="dark" label="Detail Info Notulen & Absensi">
+            <p className="text-blue-100 text-xs sm:text-sm leading-relaxed bg-white/5 p-3 rounded-xl border border-white/10">
+              Pusat pencatatan hasil musyawarah warga (tanggal, isi, status proses, dan penanggung jawab) serta checklist kehadiran Kerja Bakti (+40 Poin) dan Rapat Bulanan (+25 Poin) dengan hak akses pengurus.
+            </p>
+          </DetailToggle>
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs">
             <span className="px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-sm font-semibold flex items-center gap-1.5">
