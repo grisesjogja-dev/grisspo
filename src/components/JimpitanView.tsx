@@ -176,7 +176,39 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   // Find ronda members on duty for selected day
   const dutyGroup = rondaSchedule.find((g) => g.day === selectedDay);
 
-  // --- STATE FOR ABSENSI PETUGAS RONDA HARI INI (SEMUA ROLE BISA AKSES) ---
+  // --- STATE & OTORISASI ABSENSI PETUGAS RONDA HARI INI ---
+  // Khusus hanya petugas ronda di hari tersebut dan admin yang bisa melakukan absensi ronda
+  const isAdminRole = useMemo(() => {
+    if (!currentUser) return false;
+    return ['superadmin', 'sekretaris', 'bendahara1', 'bendahara2', 'admin_inventaris'].includes(currentUser.role);
+  }, [currentUser]);
+
+  const isDutyOfficerToday = useMemo(() => {
+    if (!currentUser || !dutyGroup) return false;
+    const currentHouseClean = (currentUser.houseNumber || '').replace(/\s+/g, '').toUpperCase();
+    const currentNameClean = (currentUser.name || '').replace(/^(bapak|ibu|mas|mbak)\s+/i, '').trim().toLowerCase();
+
+    return dutyGroup.members.some((memberName) => {
+      const memClean = memberName.replace(/^(bapak|ibu|mas|mbak)\s+/i, '').trim().toLowerCase();
+      // 1. Direct name match
+      if (currentNameClean && (memClean.includes(currentNameClean) || currentNameClean.includes(memClean))) {
+        return true;
+      }
+      // 2. Check resident record matching memberName by house
+      const res = residents.find(
+        (r) =>
+          r.name.toLowerCase().includes(memClean) ||
+          memClean.includes(r.name.toLowerCase().replace(/^(bapak|ibu|mas|mbak)\s+/i, '').trim())
+      );
+      if (res && res.houseNumber.replace(/\s+/g, '').toUpperCase() === currentHouseClean) {
+        return true;
+      }
+      return false;
+    });
+  }, [currentUser, dutyGroup, residents]);
+
+  const canDoRondaAttendance = isAdminRole || isDutyOfficerToday;
+
   const [rondaAttendanceMap, setRondaAttendanceMap] = useState<Record<string, boolean>>({});
   const [isSavingRondaAttendance, setIsSavingRondaAttendance] = useState(false);
   const [rondaAttendanceSavedMsg, setRondaAttendanceSavedMsg] = useState<string | null>(null);
@@ -197,6 +229,14 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
   const handleSaveRondaAttendance = async () => {
     if (!dutyGroup) return;
+    if (!canDoRondaAttendance) {
+      alert(
+        `Akses Dibatasi: Khusus hanya petugas ronda hari ${selectedDay} (${dutyGroup.members.join(
+          ', '
+        )}) dan Pengurus/Admin yang memiliki wewenang mencatat dan mengirim absensi ronda.`
+      );
+      return;
+    }
     if (todayRondaSession) {
       alert(`Pemberitahuan: Absensi ronda untuk tanggal ${selectedDate} sudah pernah dikirim sebelumnya (${todayRondaSession.recordedBy}). Sesuai ketentuan, checklist absensi ronda hanya bisa dikirim 1 hari 1 kali.`);
       return;
@@ -904,7 +944,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
             </div>
           </div>
 
-          {/* ABSENSI PETUGAS RONDA HARI INI (HANYA MUNCUL PETUGAS HARI ITU & SEMUA ROLE BISA AKSES) */}
+          {/* ABSENSI PETUGAS RONDA HARI INI (KHUSUS PETUGAS RONDA HARI TERSEBUT & ADMIN) */}
           {dutyGroup && (
             <div className="bg-white border-2 border-amber-300 rounded-2xl p-5 shadow-sm space-y-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-amber-100">
@@ -913,13 +953,26 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     {dutyGroup.day.slice(0, 3)}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-extrabold text-slate-900 text-sm sm:text-base">
                         Absensi Petugas Ronda Hari {dutyGroup.day}
                       </h3>
-                      <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-extrabold text-[10px]">
-                        Semua Role Bisa Akses
-                      </span>
+                      {isAdminRole ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-extrabold text-[10px]">
+                          <ShieldCheck size={11} className="text-blue-600" />
+                          <span>Akses Pengurus / Admin (Bisa Absen)</span>
+                        </span>
+                      ) : isDutyOfficerToday ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-[10px]">
+                          <CheckCircle2 size={11} className="text-emerald-600" />
+                          <span>Petugas Ronda Hari Ini (Bisa Absen)</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-extrabold text-[10px]">
+                          <Lock size={11} className="text-rose-600" />
+                          <span>Khusus Petugas Hari Ini &amp; Admin</span>
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">
                       Checklist kehadiran petugas jaga ronda & jimpit hari {dutyGroup.day} ({selectedDate}). Hadir mendapatkan{' '}
@@ -941,6 +994,18 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 )}
               </div>
 
+              {/* Informational banner when user is not authorized */}
+              {!canDoRondaAttendance && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-medium flex items-start sm:items-center gap-2.5">
+                  <Lock size={16} className="text-rose-600 shrink-0 mt-0.5 sm:mt-0" />
+                  <div>
+                    <strong>Akses Khusus:</strong> Absensi ronda hanya dapat dicentang dan dikirimkan oleh{' '}
+                    <strong>Petugas Ronda Hari {dutyGroup.day}</strong> ({dutyGroup.members.join(', ')}) atau{' '}
+                    <strong>Pengurus/Admin Paguyuban</strong>. Anda dapat melihat jadwal dan status absensi ini.
+                  </div>
+                </div>
+              )}
+
               {/* Duty Officers Checklist Grid (ONLY Duty Officers for this Day) */}
               <div>
                 <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-2">
@@ -956,17 +1021,29 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                         memberName.trim().toLowerCase().includes(r.name.trim().toLowerCase())
                     );
                     const isCaptain = dutyGroup.captain === memberName;
+                    const isEditable = canDoRondaAttendance && !todayRondaSession;
 
                     return (
                       <div
                         key={memberName}
-                        onClick={() =>
+                        onClick={() => {
+                          if (!canDoRondaAttendance) {
+                            alert(
+                              `Akses Dibatasi: Anda tidak bertugas pada jadwal ronda hari ${dutyGroup.day}. Khusus petugas jaga hari ini (${dutyGroup.members.join(
+                                ', '
+                              )}) dan Admin/Pengurus yang dapat mencentang absensi.`
+                            );
+                            return;
+                          }
+                          if (todayRondaSession) return;
                           setRondaAttendanceMap((prev) => ({
                             ...prev,
                             [memberName]: !isChecked
-                          }))
-                        }
-                        className={`p-3 rounded-xl border-2 cursor-pointer transition select-none flex flex-col justify-between ${
+                          }));
+                        }}
+                        className={`p-3 rounded-xl border-2 transition select-none flex flex-col justify-between ${
+                          !isEditable ? 'cursor-not-allowed' : 'cursor-pointer'
+                        } ${
                           isChecked
                             ? 'bg-amber-50/80 border-amber-400 text-amber-950 shadow-xs'
                             : 'bg-slate-50 border-slate-200 text-slate-500 opacity-70 hover:opacity-100'
@@ -1040,20 +1117,26 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
                   <button
                     type="button"
-                    disabled={isSavingRondaAttendance || !!todayRondaSession}
+                    disabled={isSavingRondaAttendance || !!todayRondaSession || !canDoRondaAttendance}
                     onClick={handleSaveRondaAttendance}
                     className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-black rounded-xl shadow-md transition ${
-                      todayRondaSession
+                      todayRondaSession || !canDoRondaAttendance
                         ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
                         : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-amber-600/20'
                     }`}
                   >
-                    <CheckSquare size={14} />
+                    {!canDoRondaAttendance ? (
+                      <Lock size={14} />
+                    ) : (
+                      <CheckSquare size={14} />
+                    )}
                     <span>
                       {isSavingRondaAttendance
                         ? 'Menyimpan...'
                         : todayRondaSession
                         ? 'Absensi Ronda Sudah Tercatat Hari Ini'
+                        : !canDoRondaAttendance
+                        ? 'Terkunci (Khusus Petugas Hari Ini & Admin)'
                         : `Simpan Absensi Ronda (+25 Poin / Petugas)`}
                     </span>
                   </button>

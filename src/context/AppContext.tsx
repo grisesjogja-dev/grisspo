@@ -100,7 +100,10 @@ interface AppContextType {
 
   // Finance
   transactions: Transaction[];
-  addTransaction: (trx: Omit<Transaction, 'id' | 'encryptedHash' | 'timestamp' | 'isAnomaly'>) => Promise<Transaction>;
+  addTransaction: (
+    trx: Omit<Transaction, 'id' | 'encryptedHash' | 'timestamp' | 'isAnomaly'>,
+    options?: { skipReceiptCreation?: boolean }
+  ) => Promise<Transaction>;
   deleteTransaction: (id: string) => Promise<void>;
   updateTransaction: (trx: Transaction) => Promise<void>;
   totalIncome: number;
@@ -1149,9 +1152,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const currentBalance = totalIncome - totalExpense;
 
-  // Auto-synchronize payment receipts into transactions so they always match in realtime
+  // Auto-synchronize payment receipts <-> transactions bidirectionally so they always match in realtime
   useEffect(() => {
-    if (paymentReceipts.length === 0) return;
+    // 1. PaymentReceipts -> Transactions synchronization
     const currentTrxIds = new Set(transactions.map((t) => t.id));
     const missingReceipts = paymentReceipts.filter(
       (r) => !r.transactionId || !currentTrxIds.has(r.transactionId)
@@ -1224,7 +1227,73 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
     }
-  }, [paymentReceipts, transactions]);
+
+    // 2. Transactions (Pemasukan) -> PaymentReceipts synchronization
+    const currentReceiptTrxIds = new Set(paymentReceipts.map((r) => r.transactionId).filter(Boolean));
+    const currentReceiptIds = new Set(paymentReceipts.map((r) => r.id));
+    const missingTrxForReceipts = transactions.filter((t) => {
+      const typeClean = String(t.type || '').trim().toLowerCase();
+      const isIncome = typeClean === 'pemasukan' || typeClean === 'income';
+      if (!isIncome) return false;
+      return (
+        !currentReceiptTrxIds.has(t.id) &&
+        !currentReceiptIds.has(`receipt-${t.id}`) &&
+        !currentReceiptIds.has(t.id)
+      );
+    });
+
+    if (missingTrxForReceipts.length > 0) {
+      const newReceiptsList: PaymentReceipt[] = [];
+      for (const trx of missingTrxForReceipts) {
+        const dateStr = trx.date || new Date(trx.timestamp || Date.now()).toISOString().slice(0, 10);
+        let pType: PaymentReceiptType = 'pemasukan_lain';
+        const catL = (trx.category || '').toLowerCase();
+        if (catL.includes('sampah') && catL.includes('bulanan')) pType = 'iuran_bulanan_sampah';
+        else if (catL.includes('sampah')) pType = 'iuran_sampah';
+        else if (catL.includes('bulanan') || catL.includes('iuran')) pType = 'iuran_bulanan';
+        else if (catL.includes('fasum')) pType = 'sewa_fasum';
+        else if (catL.includes('sumbangan')) pType = 'sumbangan_sukarela';
+
+        const house = trx.sourceHouse || '';
+        const matchedRes = residents.find(
+          (r) => house && r.houseNumber.replace(/\s+/g, '').toUpperCase() === house.replace(/\s+/g, '').toUpperCase()
+        );
+
+        const rId = `receipt-${trx.id}`;
+        const newR: PaymentReceipt = {
+          id: rId,
+          receiptNumber: `KWT-GSS-${dateStr.replace(/-/g, '')}-${trx.id.slice(-4).toUpperCase()}`,
+          date: dateStr,
+          residentId: matchedRes ? matchedRes.id : (house ? `w-${house.replace(/\s+/g, '').toLowerCase()}` : 'gss-paguyuban'),
+          residentName: matchedRes ? matchedRes.name : (house ? `Warga ${house}` : trx.recordedBy || 'Warga GSS'),
+          residentHouse: house || 'Paguyuban GSS',
+          residentPhone: matchedRes?.phone || '0812-3456-7800',
+          paymentType: pType,
+          paymentTypeName: trx.category,
+          amount: Number(trx.amount) || 0,
+          periodMonth: dateStr.slice(0, 7),
+          paymentMethod: (trx.description || '').toLowerCase().includes('transfer') ? 'transfer_bank' : 'tunai',
+          notes: trx.description,
+          recordedBy: trx.recordedBy || 'Bendahara Kas',
+          recorderRole: trx.userRole || 'bendahara1',
+          transactionId: trx.id,
+          createdAt: new Date(trx.timestamp || `${dateStr}T12:00:00`).toISOString()
+        };
+        newReceiptsList.push(newR);
+      }
+
+      if (newReceiptsList.length > 0) {
+        setPaymentReceipts((prev) => {
+          const next = [...newReceiptsList, ...prev];
+          localStorage.setItem('grisspo_payment_receipts', JSON.stringify(next));
+          return next;
+        });
+        newReceiptsList.forEach((r) => {
+          setDoc(doc(db, 'pembayaran_kwitansi', r.id), r).catch(() => {});
+        });
+      }
+    }
+  }, [paymentReceipts, transactions, residents]);
 
   // Strict Password Validator
   // Rule: Setiap memilih role atau login wajib memasukkan password masing-masing
@@ -2144,7 +2213,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Finance Transactions with Firestore sync
   const addTransaction = async (
-    trxData: Omit<Transaction, 'id' | 'encryptedHash' | 'timestamp' | 'isAnomaly'>
+    trxData: Omit<Transaction, 'id' | 'encryptedHash' | 'timestamp' | 'isAnomaly'>,
+    options?: { skipReceiptCreation?: boolean }
   ): Promise<Transaction> => {
     // Tanggal transaksi yang terinput dalam database adalah tanggal yang dipilih (bukan tanggal perangkat)
     const effectiveTimestamp = trxData.date
@@ -2184,10 +2254,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setTransactions((prev) => [newTrx, ...prev]);
+    localStorage.setItem('grisspo_transactions', JSON.stringify([newTrx, ...transactions]));
     try {
       await setDoc(doc(db, 'keuangan_transaksi', newTrx.id), newTrx);
     } catch (err) {
       console.warn('Firestore save transaction notice:', err);
+    }
+
+    // Auto-create matching payment receipt for kas masuk so that all devices immediately see it in Riwayat Pembayaran Kas
+    if (cleanType === 'pemasukan' && !options?.skipReceiptCreation) {
+      const dateStr = trxData.date || new Date(effectiveTimestamp).toISOString().slice(0, 10);
+      let pType: PaymentReceiptType = 'pemasukan_lain';
+      const catL = (trxData.category || '').toLowerCase();
+      if (catL.includes('sampah') && catL.includes('bulanan')) pType = 'iuran_bulanan_sampah';
+      else if (catL.includes('sampah')) pType = 'iuran_sampah';
+      else if (catL.includes('bulanan') || catL.includes('iuran')) pType = 'iuran_bulanan';
+      else if (catL.includes('fasum')) pType = 'sewa_fasum';
+      else if (catL.includes('sumbangan')) pType = 'sumbangan_sukarela';
+
+      const house = trxData.sourceHouse || '';
+      const matchedRes = residents.find(
+        (r) => house && r.houseNumber.replace(/\s+/g, '').toUpperCase() === house.replace(/\s+/g, '').toUpperCase()
+      );
+
+      const rId = `receipt-${newTrx.id}`;
+      const newR: PaymentReceipt = {
+        id: rId,
+        receiptNumber: `KWT-GSS-${dateStr.replace(/-/g, '')}-${newTrx.id.slice(-4).toUpperCase()}`,
+        date: dateStr,
+        residentId: matchedRes ? matchedRes.id : (house ? `w-${house.replace(/\s+/g, '').toLowerCase()}` : 'gss-paguyuban'),
+        residentName: matchedRes ? matchedRes.name : (house ? `Warga ${house}` : trxData.recordedBy || 'Warga GSS'),
+        residentHouse: house || 'Paguyuban GSS',
+        residentPhone: matchedRes?.phone || '0812-3456-7800',
+        paymentType: pType,
+        paymentTypeName: trxData.category,
+        amount: numericAmount,
+        periodMonth: dateStr.slice(0, 7),
+        paymentMethod: (trxData.description || '').toLowerCase().includes('transfer') ? 'transfer_bank' : 'tunai',
+        notes: trxData.description,
+        recordedBy: trxData.recordedBy || (currentUser ? `${currentUser.name} (${currentUser.houseNumber})` : 'Bendahara Kas'),
+        recorderRole: trxData.userRole || currentUser?.role || 'bendahara1',
+        transactionId: newTrx.id,
+        createdAt: new Date(effectiveTimestamp).toISOString()
+      };
+
+      setPaymentReceipts((prev) => {
+        const next = [newR, ...prev.filter((p) => p.id !== rId && p.transactionId !== newTrx.id)];
+        localStorage.setItem('grisspo_payment_receipts', JSON.stringify(next));
+        return next;
+      });
+
+      try {
+        await setDoc(doc(db, 'pembayaran_kwitansi', newR.id), newR);
+      } catch (err) {
+        console.warn('Firestore auto receipt notice:', err);
+      }
+
+      // Update resident payment status if iuran
+      if (matchedRes && (pType === 'iuran_bulanan' || pType === 'iuran_bulanan_sampah' || pType === 'iuran_sampah')) {
+        const curUnpaid = matchedRes.iuranUnpaidMonths || 0;
+        const nextUnpaid = Math.max(0, curUnpaid - 1);
+        const nextUnpaidNames = (matchedRes.unpaidMonthNames || []).slice(1);
+        const updatedRes = {
+          ...matchedRes,
+          monthlyIuranPaid: true,
+          iuranUnpaidMonths: nextUnpaid,
+          unpaidMonthNames: nextUnpaidNames,
+          points: (matchedRes.points || 0) + 10
+        };
+        setResidents((prev) => prev.map((r) => (r.id === matchedRes.id ? updatedRes : r)));
+        setDoc(doc(db, 'warga', matchedRes.id), updatedRes).catch(() => {});
+      }
     }
 
     if (trxData.sourceHouse) {
@@ -2212,6 +2349,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await deleteDoc(doc(db, 'keuangan_transaksi', id));
     } catch (err) {
       console.warn('Firestore delete transaction notice:', err);
+    }
+
+    // Also delete any linked receipt in pembayaran_kwitansi
+    const linkedReceipt = paymentReceipts.find((r) => r.transactionId === id || r.id === `receipt-${id}`);
+    if (linkedReceipt) {
+      await markAsDeleted(linkedReceipt.id, 'pembayaran_kwitansi');
+      const updatedReceipts = paymentReceipts.filter((r) => r.id !== linkedReceipt.id);
+      setPaymentReceipts(updatedReceipts);
+      localStorage.setItem('grisspo_payment_receipts', JSON.stringify(updatedReceipts));
+      try {
+        await deleteDoc(doc(db, 'pembayaran_kwitansi', linkedReceipt.id));
+      } catch (err) {}
     }
   };
 
@@ -2238,10 +2387,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       encryptedHash: updatedHash
     };
     setTransactions((prev) => prev.map((t) => (t.id === trx.id ? updated : t)));
+    localStorage.setItem('grisspo_transactions', JSON.stringify(transactions.map((t) => (t.id === trx.id ? updated : t))));
     try {
       await setDoc(doc(db, 'keuangan_transaksi', trx.id), updated);
     } catch (err) {
       console.warn('Firestore update transaction notice:', err);
+    }
+
+    // Also sync update to linked payment receipt if present
+    const linkedReceipt = paymentReceipts.find((r) => r.transactionId === trx.id || r.id === `receipt-${trx.id}`);
+    if (linkedReceipt) {
+      const updatedReceipt: PaymentReceipt = {
+        ...linkedReceipt,
+        amount: numericAmount,
+        date: trx.date || linkedReceipt.date,
+        paymentTypeName: trx.category,
+        notes: trx.description
+      };
+      setPaymentReceipts((prev) => prev.map((r) => (r.id === linkedReceipt.id ? updatedReceipt : r)));
+      localStorage.setItem('grisspo_payment_receipts', JSON.stringify(paymentReceipts.map((r) => (r.id === linkedReceipt.id ? updatedReceipt : r))));
+      try {
+        await setDoc(doc(db, 'pembayaran_kwitansi', linkedReceipt.id), updatedReceipt);
+      } catch (err) {}
     }
   };
 
@@ -2748,16 +2915,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const numAmount = Number(data.amount) || 0;
 
-    const createdTrx = await addTransaction({
-      type: 'pemasukan',
-      category: cat,
-      amount: numAmount,
-      date: dateStr,
-      description: desc,
-      recordedBy: currentUser ? `${currentUser.name} (${currentUser.role})` : 'Bendahara Kas',
-      userRole: currentUser?.role || 'bendahara1',
-      sourceHouse: data.residentHouse
-    });
+    const createdTrx = await addTransaction(
+      {
+        type: 'pemasukan',
+        category: cat,
+        amount: numAmount,
+        date: dateStr,
+        description: desc,
+        recordedBy: currentUser ? `${currentUser.name} (${currentUser.role})` : 'Bendahara Kas',
+        userRole: currentUser?.role || 'bendahara1',
+        sourceHouse: data.residentHouse
+      },
+      { skipReceiptCreation: true }
+    );
 
     // 2. If iuran, update resident arrears
     const res = residents.find(
@@ -2929,6 +3099,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt,
       pointsAwarded: true
     };
+
+    // Khusus absensi ronda: hanya petugas ronda di hari tersebut dan admin/pengurus yang berwenang
+    if (sessionData.type === 'ronda') {
+      const isAdminRole = currentUser && ['superadmin', 'sekretaris', 'bendahara1', 'bendahara2', 'admin_inventaris'].includes(currentUser.role);
+      const isDutyToday = (() => {
+        if (!currentUser) return false;
+        const targetDay = sessionData.day || 'Senin';
+        const group = rondaSchedule.find((g) => g.day === targetDay);
+        if (!group) return false;
+        const currentHouseClean = (currentUser.houseNumber || '').replace(/\s+/g, '').toUpperCase();
+        const currentNameClean = (currentUser.name || '').replace(/^(bapak|ibu|mas|mbak)\s+/i, '').trim().toLowerCase();
+        return group.members.some((m) => {
+          const mClean = m.replace(/^(bapak|ibu|mas|mbak)\s+/i, '').trim().toLowerCase();
+          if (currentNameClean && (mClean.includes(currentNameClean) || currentNameClean.includes(mClean))) return true;
+          const r = residents.find((res) => res.name.toLowerCase().includes(mClean));
+          return r && r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentHouseClean;
+        });
+      })();
+
+      if (!isAdminRole && !isDutyToday) {
+        throw new Error(
+          'Akses Dibatasi: Khusus hanya petugas ronda pada hari tersebut dan admin/pengurus yang berhak melakukan absensi ronda.'
+        );
+      }
+    }
 
     // Rincian GRISS-POIN Baru:
     // - Hadir ronda / jimpit: 25 poin

@@ -62,6 +62,7 @@ export const DashboardView: React.FC = () => {
     rondaSchedule,
     announcements,
     setActiveView,
+    transactions,
     paymentReceipts,
     recordCashierPayment,
     updatePaymentReceipt,
@@ -77,7 +78,7 @@ export const DashboardView: React.FC = () => {
   const [dashboardTab, setDashboardTab] = useState<'ringkasan' | 'loket' | 'riwayat'>('ringkasan');
 
   // Permission flags
-  const isBendaharaOrAdmin = ['superadmin', 'bendahara1', 'bendahara2'].includes(currentUser.role);
+  const isBendaharaOrAdmin = ['superadmin', 'sekretaris', 'bendahara1', 'bendahara2', 'admin_inventaris'].includes(currentUser.role);
   const isSuperadmin = currentUser.role === 'superadmin';
 
   // --- LOKET PAYMENT FORM STATES ---
@@ -375,12 +376,69 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
     }
   };
 
-  // Filtered receipts for History Tab
+  // Filtered receipts for History Tab (Real-Time across all devices and input methods)
+  const allReceipts = useMemo(() => {
+    const list: PaymentReceipt[] = [...paymentReceipts];
+    const existingTrxIds = new Set(paymentReceipts.map((r) => r.transactionId).filter(Boolean));
+    const existingReceiptIds = new Set(paymentReceipts.map((r) => r.id));
+
+    // Combine any incoming transactions that don't yet have an explicit receipt
+    for (const trx of transactions) {
+      const typeClean = String(trx.type || '').trim().toLowerCase();
+      if (typeClean !== 'pemasukan' && typeClean !== 'income') continue;
+      if (existingTrxIds.has(trx.id) || existingReceiptIds.has(`receipt-${trx.id}`) || existingReceiptIds.has(trx.id)) {
+        continue;
+      }
+
+      const dateStr = trx.date || new Date(trx.timestamp || Date.now()).toISOString().slice(0, 10);
+      let pType: PaymentReceiptType = 'pemasukan_lain';
+      const catL = (trx.category || '').toLowerCase();
+      if (catL.includes('sampah') && catL.includes('bulanan')) pType = 'iuran_bulanan_sampah';
+      else if (catL.includes('sampah')) pType = 'iuran_sampah';
+      else if (catL.includes('bulanan') || catL.includes('iuran')) pType = 'iuran_bulanan';
+      else if (catL.includes('fasum')) pType = 'sewa_fasum';
+      else if (catL.includes('sumbangan')) pType = 'sumbangan_sukarela';
+
+      const house = trx.sourceHouse || '';
+      const matchedRes = residents.find(
+        (r) => house && r.houseNumber.replace(/\s+/g, '').toUpperCase() === house.replace(/\s+/g, '').toUpperCase()
+      );
+
+      list.push({
+        id: `receipt-${trx.id}`,
+        receiptNumber: `KWT-GSS-${dateStr.replace(/-/g, '')}-${trx.id.slice(-4).toUpperCase()}`,
+        date: dateStr,
+        residentId: matchedRes ? matchedRes.id : (house ? `w-${house.replace(/\s+/g, '').toLowerCase()}` : 'gss-paguyuban'),
+        residentName: matchedRes ? matchedRes.name : (house ? `Warga ${house}` : trx.recordedBy || 'Warga GSS'),
+        residentHouse: house || 'Paguyuban GSS',
+        residentPhone: matchedRes?.phone || '0812-3456-7800',
+        paymentType: pType,
+        paymentTypeName: trx.category,
+        amount: Number(trx.amount) || 0,
+        periodMonth: dateStr.slice(0, 7),
+        paymentMethod: (trx.description || '').toLowerCase().includes('transfer') ? 'transfer_bank' : 'tunai',
+        notes: trx.description,
+        recordedBy: trx.recordedBy || 'Bendahara Kas',
+        recorderRole: trx.userRole || 'bendahara1',
+        transactionId: trx.id,
+        createdAt: new Date(trx.timestamp || `${dateStr}T12:00:00`).toISOString()
+      });
+    }
+
+    return list.sort((a, b) => {
+      const dateA = a.date || a.createdAt?.slice(0, 10) || '';
+      const dateB = b.date || b.createdAt?.slice(0, 10) || '';
+      if (dateB !== dateA) return dateB.localeCompare(dateA);
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [paymentReceipts, transactions, residents]);
+
   const visibleReceipts = useMemo(() => {
-    let list = paymentReceipts;
+    let list = allReceipts;
     // Non-admin residents can only view their own house payments
     if (!isBendaharaOrAdmin) {
-      list = list.filter((r) => r.residentHouse === currentUser.houseNumber);
+      const userHouseClean = currentUser.houseNumber.replace(/\s+/g, '').toUpperCase();
+      list = list.filter((r) => r.residentHouse.replace(/\s+/g, '').toUpperCase() === userHouseClean);
     }
 
     return list.filter((r) => {
@@ -394,7 +452,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
         (r.periodMonth && r.periodMonth.toLowerCase().includes(q));
       return matchType && matchQuery;
     });
-  }, [paymentReceipts, isBendaharaOrAdmin, currentUser.houseNumber, filterHistoryType, searchHistoryQuery]);
+  }, [allReceipts, isBendaharaOrAdmin, currentUser.houseNumber, filterHistoryType, searchHistoryQuery]);
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200">

@@ -6,17 +6,27 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.7.0';
+export const APP_VERSION = 'v1.7.1';
 export const APP_BUILD_DATE = '11 November 2026';
-export const APP_BUILD_CODE = '2026.11.11-v1.7.0';
-export const APP_RELEASE_NAME = 'Edisi Menu Terpadu, Tanggal Transaksi Database & Responsif Penuh';
+export const APP_BUILD_CODE = '2026.11.11-v1.7.1';
+export const APP_RELEASE_NAME = 'Edisi Otorisasi Khusus Absensi Ronda & Sinkronisasi Kas Masuk Multi-Device';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.7.1',
+    releaseDate: '11 November 2026',
+    releaseTitle: 'Otorisasi Khusus Absensi Ronda & Sinkronisasi Real-Time Kas Masuk',
+    badge: 'Terbaru',
+    highlights: [
+      'Otorisasi Ketat Absensi Ronda: Khusus hanya petugas ronda yang bertugas pada hari tersebut dan Pengurus/Admin yang memiliki wewenang melakukan checklist dan menyimpan absensi ronda.',
+      'Perbaikan Bug Sinkronisasi Kas Masuk Multi-Device: Setiap pencatatan kas masuk oleh admin/bendahara dari perangkat berbeda (baik via Loket Kas maupun Catat Transaksi Keuangan) langsung otomatis tersinkronisasi secara real-time ke Riwayat Pembayaran Kas, Buku Kas, dan database cloud.',
+      'Rekonsiliasi Kwitansi & Transaksi Dua Arah (Bidirectional Cloud Sync) menjamin seluruh data mutasi kas paguyuban selalu konsisten di semua perangkat warga dan pengurus.'
+    ]
+  },
   {
     version: 'v1.7.0',
     releaseDate: '11 November 2026',
     releaseTitle: 'Penataan Menu Navigasi Terpadu & Sinkronisasi Tanggal Transaksi',
-    badge: 'Terbaru',
     highlights: [
       'Struktur Menu Atas baru yang rapi: dashboard, jimpit, keuangan (dropdown: sewa fasum dan kas), info (dropdown: data warga, jadwal ronda, notulen & absensi, tata tertib), inventaris, forum, Grisspoin.',
       'Tanggal transaksi kas dan kwitansi yang tersimpan dalam database kini 100% menggunakan tanggal yang dipilih pada formulir (bukan tanggal perangkat).',
