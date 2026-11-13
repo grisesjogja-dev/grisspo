@@ -37,6 +37,7 @@ import {
   initialFasumBookings,
   initialMeetingNotes,
   initialAttendanceSessions,
+  initialJimpitReports,
   fasumFacilities,
   initialImportantContacts
 } from '../data/seedData';
@@ -617,15 +618,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Jimpitan Reports
   const [jimpitReports, setJimpitReports] = useState<JimpitDailyReport[]>(() => {
     const saved = localStorage.getItem('grisspo_jimpit_reports');
-    if (saved) {
-      try {
-        const list: JimpitDailyReport[] = JSON.parse(saved);
-        return list.filter((j) => !initialDeletedIds.includes(j.id));
-      } catch {
-        return [];
-      }
-    }
-    return [];
+    const list: JimpitDailyReport[] = saved ? JSON.parse(saved) : [];
+    const filtered = list.filter((j) => !initialDeletedIds.includes(j.id));
+    const merged = [
+      ...initialJimpitReports,
+      ...filtered.filter((j) => j.date !== '2026-11-11' && j.date !== '2026-11-12')
+    ];
+    return merged;
   });
 
   // Transactions
@@ -690,7 +689,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [attendanceSessions, setAttendanceSessions] = useState<AttendanceSession[]>(() => {
     const saved = localStorage.getItem('grisspo_attendance_sessions');
     const base: AttendanceSession[] = saved ? JSON.parse(saved) : initialAttendanceSessions;
-    return base.filter((s) => !initialDeletedIds.includes(s.id));
+    const filtered = base.filter((s) => !initialDeletedIds.includes(s.id));
+    const merged = [
+      ...initialAttendanceSessions,
+      ...filtered.filter((s) => s.date !== '2026-11-11' && s.date !== '2026-11-12')
+    ];
+    return merged;
   });
 
   // Notulen Rapat Paguyuban
