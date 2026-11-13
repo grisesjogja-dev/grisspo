@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, findResidentByMemberName, normalizeCleanName } from '../context/AppContext';
 import { DayOfWeek, JimpitDailyReport, Resident } from '../types';
 import {
   exportJimpitanReportToExcel,
@@ -72,10 +72,12 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     currentUser,
     attendanceSessions,
     submitAttendanceSession,
+    updateAttendanceSession,
     deleteAttendanceSession,
     resetFeatureData,
     loginWithHouseNumber,
-    getResidentNameByHouse
+    getResidentNameByHouse,
+    confirmAction
   } = useApp();
 
   const isSuperadmin = currentUser?.role === 'superadmin';
@@ -97,12 +99,15 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   // Active sub-tab: 'input' | 'laporan_harian' | 'laporan_bulanan' | 'riwayat'
   const [tab, setTab] = useState<'input' | 'laporan_harian' | 'laporan_bulanan' | 'riwayat'>('input');
 
-  // Today string
-  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  // Today string (local timezone YYYY-MM-DD so WIB 00:00-06:59 does not shift to yesterday)
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
 
   const getDayName = (dateStr: string): DayOfWeek => {
     const days: DayOfWeek[] = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    const d = new Date(dateStr);
+    const d = new Date(`${dateStr}T12:00:00`);
     return days[d.getDay()] || 'Senin';
   };
 
@@ -186,20 +191,16 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   const isDutyOfficerToday = useMemo(() => {
     if (!currentUser || !dutyGroup) return false;
     const currentHouseClean = (currentUser.houseNumber || '').replace(/\s+/g, '').toUpperCase();
-    const currentNameClean = (currentUser.name || '').replace(/^(bapak|ibu|mas|mbak)\s+/i, '').trim().toLowerCase();
+    const currentNameClean = normalizeCleanName(currentUser.name || '');
 
     return dutyGroup.members.some((memberName) => {
-      const memClean = memberName.replace(/^(bapak|ibu|mas|mbak)\s+/i, '').trim().toLowerCase();
+      const memClean = normalizeCleanName(memberName);
       // 1. Direct name match
       if (currentNameClean && (memClean.includes(currentNameClean) || currentNameClean.includes(memClean))) {
         return true;
       }
-      // 2. Check resident record matching memberName by house
-      const res = residents.find(
-        (r) =>
-          r.name.toLowerCase().includes(memClean) ||
-          memClean.includes(r.name.toLowerCase().replace(/^(bapak|ibu|mas|mbak)\s+/i, '').trim())
-      );
+      // 2. Check resident record matching memberName (with nickname alias support)
+      const res = findResidentByMemberName(memberName, residents);
       if (res && res.houseNumber.replace(/\s+/g, '').toUpperCase() === currentHouseClean) {
         return true;
       }
@@ -208,24 +209,39 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   }, [currentUser, dutyGroup, residents]);
 
   const canDoRondaAttendance = isAdminRole || isDutyOfficerToday;
+  // Tombol kirim jimpit hanya bisa aktif di akun petugas ronda hari tersebut dan super admin
+  const canSubmitJimpit = isSuperadmin || isDutyOfficerToday;
 
   const [rondaAttendanceMap, setRondaAttendanceMap] = useState<Record<string, boolean>>({});
   const [isSavingRondaAttendance, setIsSavingRondaAttendance] = useState(false);
   const [rondaAttendanceSavedMsg, setRondaAttendanceSavedMsg] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (dutyGroup) {
-      const init: Record<string, boolean> = {};
-      dutyGroup.members.forEach((m) => {
-        init[m] = true;
-      });
-      setRondaAttendanceMap(init);
-    }
-  }, [dutyGroup?.day, selectedDate]);
-
   const todayRondaSession = useMemo(() => {
     return attendanceSessions.find((s) => s.type === 'ronda' && s.date === selectedDate);
   }, [attendanceSessions, selectedDate]);
+
+  // Sinkronkan checklist absensi ronda dengan data sesi tersimpan di Firestore/AppContext secara real-time
+  React.useEffect(() => {
+    if (!dutyGroup) return;
+    const nextMap: Record<string, boolean> = {};
+    dutyGroup.members.forEach((m) => {
+      if (todayRondaSession && todayRondaSession.attendees.length > 0) {
+        const res = findResidentByMemberName(m, residents);
+        const mClean = normalizeCleanName(m);
+        const savedAtt = todayRondaSession.attendees.find((a) => {
+          if (res && (a.residentId === res.id || a.residentHouse.replace(/\s+/g, '').toUpperCase() === res.houseNumber.replace(/\s+/g, '').toUpperCase())) {
+            return true;
+          }
+          const attClean = normalizeCleanName(a.residentName);
+          return attClean === mClean || attClean.includes(mClean) || mClean.includes(attClean);
+        });
+        nextMap[m] = savedAtt ? savedAtt.isPresent : true;
+      } else {
+        nextMap[m] = true;
+      }
+    });
+    setRondaAttendanceMap(nextMap);
+  }, [dutyGroup?.day, selectedDate, todayRondaSession, residents]);
 
   const handleSaveRondaAttendance = async () => {
     if (!dutyGroup) return;
@@ -233,22 +249,13 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
       alert(
         `Akses Dibatasi: Khusus hanya petugas ronda hari ${selectedDay} (${dutyGroup.members.join(
           ', '
-        )}) dan Pengurus/Admin yang memiliki wewenang mencatat dan mengirim absensi ronda.`
+        )}) dan Pengurus/Admin yang memiliki wewenang mencatat dan memperbarui absensi ronda.`
       );
       return;
     }
-    if (todayRondaSession) {
-      alert(`Pemberitahuan: Absensi ronda untuk tanggal ${selectedDate} sudah pernah dikirim sebelumnya (${todayRondaSession.recordedBy}). Sesuai ketentuan, checklist absensi ronda hanya bisa dikirim 1 hari 1 kali.`);
-      return;
-    }
-    setIsSavingRondaAttendance(true);
 
     const attendees = dutyGroup.members.map((memberName) => {
-      const res = residents.find(
-        (r) =>
-          r.name.trim().toLowerCase().includes(memberName.trim().toLowerCase()) ||
-          memberName.trim().toLowerCase().includes(r.name.trim().toLowerCase())
-      );
+      const res = findResidentByMemberName(memberName, residents);
       return {
         residentId: res ? res.id : `ronda-${memberName}`,
         residentName: res ? res.name : memberName,
@@ -259,32 +266,56 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     });
 
     const presentCount = attendees.filter((a) => a.isPresent).length;
+    const isUpdating = Boolean(todayRondaSession);
 
-    try {
-      await submitAttendanceSession({
-        type: 'ronda',
-        title: `Absensi Petugas Ronda Hari ${selectedDay} (${selectedDate})`,
-        date: selectedDate,
-        day: selectedDay,
-        attendees,
-        recordedBy: currentUser ? `${currentUser.name} (${currentUser.houseNumber})` : 'Petugas Ronda',
-        userRole: currentUser?.role || 'warga',
-        pointsAwarded: true
-      });
+    confirmAction({
+      title: isUpdating ? 'Perbarui Absensi Petugas Ronda' : 'Kirim Absensi Petugas Ronda',
+      message: isUpdating
+        ? `Perbarui data absensi ronda ${selectedDay} (${selectedDate}) menjadi ${presentCount} petugas hadir? Poin petugas akan otomatis disesuaikan secara real-time.`
+        : `Simpan absensi kehadiran ${presentCount} petugas untuk jadwal ronda ${selectedDay} (${selectedDate})? Petugas hadir akan memperoleh masing-masing +25 GRISS-POIN.`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'primary',
+      onConfirm: async () => {
+        setIsSavingRondaAttendance(true);
+        try {
+          if (todayRondaSession) {
+            await updateAttendanceSession({
+              ...todayRondaSession,
+              day: selectedDay,
+              attendees,
+              recordedBy: currentUser ? `${currentUser.name} (${currentUser.houseNumber})` : todayRondaSession.recordedBy
+            });
+          } else {
+            await submitAttendanceSession({
+              type: 'ronda',
+              title: `Absensi Petugas Ronda Hari ${selectedDay} (${selectedDate})`,
+              date: selectedDate,
+              day: selectedDay,
+              attendees,
+              recordedBy: currentUser ? `${currentUser.name} (${currentUser.houseNumber})` : 'Petugas Ronda',
+              userRole: currentUser?.role || 'warga',
+              pointsAwarded: true
+            });
+          }
 
-      try {
-        confetti({ particleCount: 60, spread: 60 });
-      } catch {}
+          try {
+            confetti({ particleCount: 60, spread: 60 });
+          } catch {}
 
-      setRondaAttendanceSavedMsg(
-        `Absensi ronda berhasil disimpan! ${presentCount} petugas hadir dan memperoleh masing-masing +25 GRISS-POIN.`
-      );
-      setTimeout(() => setRondaAttendanceSavedMsg(null), 6000);
-    } catch (err: any) {
-      alert('Gagal menyimpan absensi ronda: ' + err.message);
-    } finally {
-      setIsSavingRondaAttendance(false);
-    }
+          setRondaAttendanceSavedMsg(
+            isUpdating
+              ? `Absensi ronda berhasil diperbarui! (${presentCount} dari ${dutyGroup.members.length} petugas hadir).`
+              : `Absensi ronda berhasil disimpan! ${presentCount} petugas hadir dan memperoleh masing-masing +25 GRISS-POIN.`
+          );
+          setTimeout(() => setRondaAttendanceSavedMsg(null), 6000);
+        } catch (err: any) {
+          alert('Gagal menyimpan absensi ronda: ' + err.message);
+        } finally {
+          setIsSavingRondaAttendance(false);
+        }
+      }
+    });
   };
 
   // Quick preset nominal options (multiples of 500)
@@ -342,9 +373,11 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     }, 0);
   }, [selectedMap]);
 
-  // Check if jimpitan for selectedDate has already been processed (enforcing 1x per day rule)
+  // Check if daily jimpitan for selectedDate has already been processed (enforcing 1x per day rule for ronda collection)
   const isAlreadySubmittedToday = useMemo(() => {
-    return jimpitReports.some((r) => r.date === selectedDate);
+    return jimpitReports.some(
+      (r) => r.date === selectedDate && r.reportType !== 'pelunasan' && !r.id.startsWith('jimpit-pay-')
+    );
   }, [jimpitReports, selectedDate]);
 
   // Form submit handler
@@ -353,6 +386,12 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
     if (!currentUser) {
       alert('Akses Ditolak: Input jimpitan hanya bisa dilakukan ketika warga sudah login!');
+      return;
+    }
+
+    // Tombol kirim jimpit hanya bisa aktif di akun petugas ronda hari tersebut dan super admin
+    if (!canSubmitJimpit) {
+      alert('Akses Dibatasi: Tombol kirim jimpit hanya aktif di akun petugas ronda hari tersebut dan Superadmin.');
       return;
     }
 
@@ -366,48 +405,66 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
       return;
     }
 
-    const entries: JimpitDailyReport['entries'] = [];
-    residents.forEach((r) => {
+    const invalidEntry = wajibJimpitResidents.find((r) => {
       const data = selectedMap[r.houseNumber];
-      if (data && data.selected && data.nominal > 0) {
-        entries.push({
-          houseNumber: r.houseNumber,
-          residentName: r.name,
-          nominal: data.nominal,
-          paymentMethod: data.method,
-          timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
-          collectedBy: collectorName
-        });
-      }
+      return data && data.selected && (Number(data.nominal) || 0) < 500;
     });
-
-    const reportData = {
-      date: selectedDate,
-      day: selectedDay,
-      collectedBy: collectorName,
-      entries,
-      totalNominal: currentTotalRevenue,
-      notes
-    };
-
-    submitDailyJimpit(reportData);
-
-    try {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-    } catch {
-      // ignore
+    if (invalidEntry) {
+      alert(`Nominal jimpitan minimal Rp 500 untuk setiap rumah yang dipilih (${invalidEntry.houseNumber} kurang dari Rp 500)!`);
+      return;
     }
 
-    const simulatedSavedReport: JimpitDailyReport = {
-      ...reportData,
-      id: `rep-${Date.now()}`,
-      createdAt: new Date().toISOString()
-    };
-    setSubmittedReport(simulatedSavedReport);
+    confirmAction({
+      title: 'Konfirmasi Pengiriman Jimpit',
+      message: `Kirim pencatatan uang jimpitan tanggal ${selectedDate} (${selectedDay}) sebesar Rp ${currentTotalRevenue.toLocaleString('id-ID')} (${totalSelectedCount} rumah)? Dana otomatis masuk langsung ke total pemasukan dan saldo kas paguyuban.`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'primary',
+      onConfirm: () => {
+        const entries: JimpitDailyReport['entries'] = [];
+        residents.forEach((r) => {
+          const data = selectedMap[r.houseNumber];
+          if (data && data.selected && data.nominal > 0) {
+            entries.push({
+              houseNumber: r.houseNumber,
+              residentName: r.name,
+              nominal: data.nominal,
+              paymentMethod: data.method,
+              timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+              collectedBy: collectorName
+            });
+          }
+        });
+
+        const reportData = {
+          date: selectedDate,
+          day: selectedDay,
+          collectedBy: collectorName,
+          entries,
+          totalNominal: currentTotalRevenue,
+          notes
+        };
+
+        submitDailyJimpit(reportData);
+
+        try {
+          confetti({
+            particleCount: 80,
+            spread: 70,
+            origin: { y: 0.6 }
+          });
+        } catch {
+          // ignore
+        }
+
+        const simulatedSavedReport: JimpitDailyReport = {
+          ...reportData,
+          id: `rep-${Date.now()}`,
+          createdAt: new Date().toISOString()
+        };
+        setSubmittedReport(simulatedSavedReport);
+      }
+    });
   };
 
   // --- STATE FOR TAB 2: LAPORAN HARIAN ---
@@ -422,18 +479,25 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     return jimpitReports.find((r) => r.date === selectedDailyReportDate) || null;
   }, [jimpitReports, selectedDailyReportDate]);
 
-  // --- STATE FOR TAB 3: LAPORAN BULANAN (REKAP 58 WARGA) ---
+  // --- STATE FOR TAB 3: LAPORAN BULANAN ---
+  // Rumah status "kosong (ada pemilik)" dan "belum ada pemilik" TIDAK dimasukkan dalam daftar wajib jimpitan
   const [selectedMonth, setSelectedMonth] = useState<string>('Oktober 2026');
   const [monthlyBlockFilter, setMonthlyBlockFilter] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
   const [monthlyStatusFilter, setMonthlyStatusFilter] = useState<'ALL' | 'LUNAS' | 'KURANG'>('ALL');
   const [monthlySearch, setMonthlySearch] = useState<string>('');
 
   const targetMonthly = 15000; // Rp 15.000 / KK / bulan
-  const totalResidentsCount = residents.length;
-  const lunasCount = residents.filter((r) => (r.jimpitanPaidMonth || 0) >= targetMonthly).length;
-  const totalJimpitanBulanIni = residents.reduce((acc, r) => acc + (r.jimpitanPaidMonth || 0), 0);
-  const totalTargetBulanan = totalResidentsCount * targetMonthly; // Rp 870.000
-  const totalDefisitBulanIni = residents.reduce((acc, r) => {
+
+  // Daftar warga WAJIB jimpitan (mengecualikan rumah kosong ada pemilik & belum ada pemilik)
+  const wajibJimpitResidents = useMemo(() => {
+    return residents.filter((r) => isStatusEligibleForJimpitan(r.statusRumah));
+  }, [residents]);
+
+  const totalResidentsCount = wajibJimpitResidents.length;
+  const lunasCount = wajibJimpitResidents.filter((r) => (r.jimpitanPaidMonth || 0) >= targetMonthly).length;
+  const totalJimpitanBulanIni = wajibJimpitResidents.reduce((acc, r) => acc + (r.jimpitanPaidMonth || 0), 0);
+  const totalTargetBulanan = totalResidentsCount * targetMonthly;
+  const totalDefisitBulanIni = wajibJimpitResidents.reduce((acc, r) => {
     const paid = r.jimpitanPaidMonth || 0;
     return acc + Math.max(0, targetMonthly - paid);
   }, 0);
@@ -441,9 +505,9 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     ? Math.min(100, Math.round((totalJimpitanBulanIni / totalTargetBulanan) * 100))
     : 0;
 
-  // Filtered residents for Monthly Report
+  // Filtered residents for Monthly Report (khusus rumah wajib jimpitan)
   const filteredMonthlyResidents = useMemo(() => {
-    return residents.filter((r) => {
+    return wajibJimpitResidents.filter((r) => {
       const matchBlock = monthlyBlockFilter === 'ALL' || r.block === monthlyBlockFilter;
       const isLunas = (r.jimpitanPaidMonth || 0) >= targetMonthly;
       const matchStatus =
@@ -455,7 +519,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
         r.houseNumber.toLowerCase().includes(monthlySearch.toLowerCase());
       return matchBlock && matchStatus && matchSearch;
     });
-  }, [residents, monthlyBlockFilter, monthlyStatusFilter, monthlySearch]);
+  }, [wajibJimpitResidents, monthlyBlockFilter, monthlyStatusFilter, monthlySearch]);
 
   // --- STATE FOR BAYAR KEKURANGAN JIMPITAN MODAL ---
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
@@ -474,12 +538,12 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const totalAkumulasiDefisit = useMemo(() => {
-    return residents.reduce((acc, r) => {
+    return wajibJimpitResidents.reduce((acc, r) => {
       const curDef = Math.max(0, targetMonthly - (r.jimpitanPaidMonth || 0));
       const prevDef = r.previousMonthsJimpitanDeficit || 0;
       return acc + curDef + prevDef;
     }, 0);
-  }, [residents]);
+  }, [wajibJimpitResidents]);
 
   const handleOpenPayModal = (resident?: Resident) => {
     const target = resident || (currentUser ? residents.find((r) => r.houseNumber === currentUser.houseNumber) : undefined) || residents[0];
@@ -507,47 +571,52 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     e.preventDefault();
     if (!selectedResidentForPay) return;
     const amt = Number(payAmountInput);
-    if (!amt || amt <= 0) {
-      alert('Nominal pembayaran harus lebih besar dari Rp 0!');
-      return;
-    }
-    if (amt % 500 !== 0) {
-      alert('Nominal jimpitan harus kelipatan Rp 500!');
+    if (!amt || amt < 500) {
+      alert('Nominal pembayaran jimpitan minimal Rp 500!');
       return;
     }
 
-    setIsProcessingPayment(true);
-    try {
-      const result = await payJimpitanDeficit(
-        selectedResidentForPay.id,
-        amt,
-        payMethod,
-        payNotes
-      );
+    confirmAction({
+      title: 'Konfirmasi Pembayaran Jimpitan',
+      message: `Proses pelunasan defisit jimpitan sebesar Rp ${amt.toLocaleString('id-ID')} untuk ${selectedResidentForPay.name} (${selectedResidentForPay.houseNumber})? Dana langsung disetorkan ke saldo kas paguyuban.`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'primary',
+      onConfirm: async () => {
+        setIsProcessingPayment(true);
+        try {
+          const result = await payJimpitanDeficit(
+            selectedResidentForPay.id,
+            amt,
+            payMethod,
+            payNotes
+          );
 
-      if (result.success) {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
+          if (result.success) {
+            confetti({
+              particleCount: 80,
+              spread: 70,
+              origin: { y: 0.6 }
+            });
 
-        setPaySuccessReceipt({
-          residentName: selectedResidentForPay.name,
-          residentHouse: selectedResidentForPay.houseNumber,
-          amount: amt,
-          method: payMethod.toUpperCase(),
-          date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-          trxId: result.transactionId
-        });
-      } else {
-        alert('Gagal: ' + result.message);
+            setPaySuccessReceipt({
+              residentName: selectedResidentForPay.name,
+              residentHouse: selectedResidentForPay.houseNumber,
+              amount: amt,
+              method: payMethod.toUpperCase(),
+              date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+              trxId: result.transactionId
+            });
+          } else {
+            alert('Gagal: ' + result.message);
+          }
+        } catch (err: any) {
+          alert('Terjadi kesalahan pembayaran: ' + err.message);
+        } finally {
+          setIsProcessingPayment(false);
+        }
       }
-    } catch (err: any) {
-      alert('Terjadi kesalahan pembayaran: ' + err.message);
-    } finally {
-      setIsProcessingPayment(false);
-    }
+    });
   };
 
   return (
@@ -566,7 +635,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
             Jimpitan Ronda Online Perum GSS
           </h2>
           <p className="mt-2 text-amber-100 text-xs sm:text-sm leading-relaxed">
-            Pencatatan jimpitan malam keliling real-time terhubung jadwal ronda. Standar jimpitan harian minimal Rp 500 (kelipatan 500), target 1 bulan Rp 15.000 per warga untuk kemaslahatan kas paguyuban.
+            Pencatatan jimpitan malam keliling real-time terhubung jadwal ronda. Standar jimpitan harian minimal Rp 500 (bebas nominal), target 1 bulan Rp 15.000 per warga wajib jimpit untuk kemaslahatan kas paguyuban.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs">
@@ -743,11 +812,18 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
         {isSuperadmin && (
           <button
             type="button"
-            onClick={async () => {
-              if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data Laporan Jimpitan Ronda? Tindakan ini akan menghapus semua catatan riwayat jimpitan.')) {
-                await resetFeatureData('jimpitan');
-                alert('Data Laporan Jimpitan berhasil direset oleh Superadmin.');
-              }
+            onClick={() => {
+              confirmAction({
+                title: 'Reset Laporan Jimpitan Ronda',
+                message: 'PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data Laporan Jimpitan Ronda? Tindakan ini akan menghapus semua catatan riwayat jimpitan permanen.',
+                confirmLabel: 'Setuju',
+                cancelLabel: 'Batal',
+                variant: 'danger',
+                onConfirm: async () => {
+                  await resetFeatureData('jimpitan');
+                  alert('Data Laporan Jimpitan berhasil direset oleh Superadmin.');
+                }
+              });
             }}
             className="ml-auto my-auto px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-xl border border-red-200 transition flex items-center gap-1.5 whitespace-nowrap"
             title="Reset Data Jimpitan (Akses Khusus Superadmin)"
@@ -1015,13 +1091,9 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                   {dutyGroup.members.map((memberName) => {
                     const isChecked = rondaAttendanceMap[memberName] ?? true;
-                    const res = residents.find(
-                      (r) =>
-                        r.name.trim().toLowerCase().includes(memberName.trim().toLowerCase()) ||
-                        memberName.trim().toLowerCase().includes(r.name.trim().toLowerCase())
-                    );
+                    const res = findResidentByMemberName(memberName, residents);
                     const isCaptain = dutyGroup.captain === memberName;
-                    const isEditable = canDoRondaAttendance && !todayRondaSession;
+                    const isEditable = canDoRondaAttendance;
 
                     return (
                       <div
@@ -1035,7 +1107,6 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                             );
                             return;
                           }
-                          if (todayRondaSession) return;
                           setRondaAttendanceMap((prev) => ({
                             ...prev,
                             [memberName]: !isChecked
@@ -1111,17 +1182,19 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                   {todayRondaSession && (
                     <div className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
                       <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
-                      <span>Absensi ronda tanggal ini sudah dikirim (1 Hari 1x)</span>
+                      <span>Tercatat ({todayRondaSession.attendees.filter((a) => a.isPresent).length} Hadir) &bull; Klik kartu untuk update</span>
                     </div>
                   )}
 
                   <button
                     type="button"
-                    disabled={isSavingRondaAttendance || !!todayRondaSession || !canDoRondaAttendance}
+                    disabled={isSavingRondaAttendance || !canDoRondaAttendance}
                     onClick={handleSaveRondaAttendance}
                     className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-black rounded-xl shadow-md transition ${
-                      todayRondaSession || !canDoRondaAttendance
+                      !canDoRondaAttendance
                         ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
+                        : todayRondaSession
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-600/20'
                         : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-amber-600/20'
                     }`}
                   >
@@ -1133,11 +1206,11 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     <span>
                       {isSavingRondaAttendance
                         ? 'Menyimpan...'
-                        : todayRondaSession
-                        ? 'Absensi Ronda Sudah Tercatat Hari Ini'
                         : !canDoRondaAttendance
                         ? 'Terkunci (Khusus Petugas Hari Ini & Admin)'
-                        : `Simpan Absensi Ronda (+25 Poin / Petugas)`}
+                        : todayRondaSession
+                        ? 'Perbarui Absensi Ronda'
+                        : 'Simpan Absensi Ronda (+25 Poin / Petugas)'}
                     </span>
                   </button>
 
@@ -1145,9 +1218,16 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm('Hapus sesi absensi ronda tanggal ini?')) {
-                          deleteAttendanceSession(todayRondaSession.id);
-                        }
+                        confirmAction({
+                          title: 'Hapus Sesi Absensi Ronda',
+                          message: `Apakah Anda yakin ingin menghapus sesi absensi ronda tanggal ${selectedDate}? Poin partisipasi petugas akan disesuaikan kembali.`,
+                          confirmLabel: 'Setuju',
+                          cancelLabel: 'Batal',
+                          variant: 'danger',
+                          onConfirm: () => {
+                            deleteAttendanceSession(todayRondaSession.id);
+                          }
+                        });
                       }}
                       className="p-2.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition"
                       title="Hapus Absensi Ronda Hari Ini (Superadmin)"
@@ -1170,7 +1250,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 Rp {currentTotalRevenue.toLocaleString('id-ID')}
               </div>
               <div className="text-xs text-slate-400 mt-0.5">
-                {totalSelectedCount} dari {residents.filter((r) => isStatusEligibleForJimpitan(r.statusRumah)).length} rumah wajib jimpit (Pemilik, Kontrak &amp; Kosong Dijimpit) &bull; Kelipatan Rp 500
+                {totalSelectedCount} dari {wajibJimpitResidents.length} rumah wajib jimpit (Pemilik, Kontrak &amp; Kosong Dijimpit) &bull; Min. Rp 500 (Bebas Nominal)
               </div>
             </div>
 
@@ -1190,21 +1270,21 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
           </div>
 
           {/* Filter & Selection Bar */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <span className="text-xs font-bold text-slate-600">Filter Blok:</span>
+          <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+              <span className="text-xs font-bold text-slate-600 shrink-0">Blok:</span>
               {(['ALL', 'A', 'B', 'C'] as const).map((b) => (
                 <button
                   key={b}
                   type="button"
                   onClick={() => setBlockFilter(b)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 ${
                     blockFilter === b
                       ? 'bg-amber-600 text-white shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  {b === 'ALL' ? 'Semua Blok (58)' : `Blok ${b}`}
+                  {b === 'ALL' ? `Semua (${wajibJimpitResidents.length})` : `Blok ${b}`}
                 </button>
               ))}
             </div>
@@ -1213,32 +1293,32 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
               <button
                 type="button"
                 onClick={() => handleSelectAll(true)}
-                className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold transition border border-blue-200"
+                className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold transition border border-blue-200"
               >
                 Pilih Semua
               </button>
               <button
                 type="button"
                 onClick={() => handleSelectAll(false)}
-                className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-bold transition"
+                className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-bold transition"
               >
                 Kosongkan
               </button>
-              <div className="relative flex-1 sm:w-48">
-                <Search size={14} className="absolute left-3 top-2 text-slate-400" />
+              <div className="relative flex-1 sm:w-44">
+                <Search size={13} className="absolute left-2.5 top-2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Cari warga..."
+                  placeholder="Cari warga/rumah..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                  className="w-full pl-7 pr-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs"
                 />
               </div>
             </div>
           </div>
 
-          {/* Resident Checklist Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {/* Resident Checklist Grid - Compact card sizes (4-6 columns on large screens) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5">
             {filteredResidents.map((resident) => {
               const itemData = selectedMap[resident.houseNumber] || {
                 selected: false,
@@ -1249,14 +1329,14 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
               return (
                 <div
                   key={resident.id}
-                  className={`p-3.5 rounded-2xl border transition flex flex-col justify-between ${
+                  className={`p-2 sm:p-2.5 rounded-xl border transition flex flex-col justify-between ${
                     itemData.selected
-                      ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-300'
-                      : 'bg-white border-slate-200 opacity-75 hover:opacity-100'
+                      ? 'bg-amber-50/80 border-amber-300 ring-1 ring-amber-300 shadow-xs'
+                      : 'bg-white border-slate-200 opacity-80 hover:opacity-100'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <label className="flex items-start gap-2.5 cursor-pointer flex-1 select-none">
+                  <div>
+                    <label className="flex items-start gap-1.5 cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={itemData.selected}
@@ -1271,23 +1351,36 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                             }
                           }));
                         }}
-                        className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 h-4 w-4"
+                        className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 h-3.5 w-3.5 shrink-0"
                       />
-                      <div>
-                        <div className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2">
-                          <span>{getResidentNameByHouse(resident.houseNumber, resident.name)}</span>
-                          {dutyGroup?.members.some((m) => resident.name.toUpperCase().includes(m)) && (
-                            <span className="text-[10px] bg-amber-200 text-amber-900 font-extrabold px-1.5 py-0.2 rounded">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[11px] font-mono font-black text-slate-900 bg-slate-100 px-1 rounded">
+                            {resident.houseNumber}
+                          </span>
+                          <span
+                            className={`text-[8px] font-bold px-1 py-0.2 rounded truncate ${
+                              (resident.jimpitanPaidMonth || 0) >= targetMonthly
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            Rp {(resident.jimpitanPaidMonth || 0).toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-bold text-slate-800 truncate leading-snug mt-0.5" title={resident.name}>
+                          {getResidentNameByHouse(resident.houseNumber, resident.name)}
+                        </div>
+                        {dutyGroup?.members.some((m) => findResidentByMemberName(m, [resident])) && (
+                          <div className="mt-0.5">
+                            <span className="text-[8px] bg-amber-200 text-amber-950 font-black px-1 py-0.2 rounded inline-block">
                               Ronda Hari Ini
                             </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-500 font-mono">
-                          Rumah {resident.houseNumber} &bull; Blok {resident.block}
-                        </div>
-                        <div className="mt-1 flex items-center gap-1.5">
+                          </div>
+                        )}
+                        <div className="mt-0.5">
                           <span
-                            className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${
+                            className={`text-[8px] font-black uppercase px-1 py-0.2 rounded border inline-block ${
                               resident.statusRumah === 'DI HUNI PEMILIK'
                                 ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                                 : resident.statusRumah === 'DI HUNI KONTRAK'
@@ -1300,49 +1393,35 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                         </div>
                       </div>
                     </label>
-
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        (resident.jimpitanPaidMonth || 0) >= targetMonthly
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      Bulan ini: Rp {(resident.jimpitanPaidMonth || 0).toLocaleString('id-ID')}
-                    </span>
                   </div>
 
                   {itemData.selected && (
-                    <div className="mt-3 pt-3 border-t border-amber-200/60 flex items-center justify-between gap-2">
-                      <div className="flex-1">
-                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
-                          Nominal Jimpit (Min. 500, kelipatan 500):
-                        </label>
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            min="500"
-                            step="500"
-                            value={itemData.nominal}
-                            onChange={(e) => {
-                              const val = Math.max(0, Number(e.target.value));
-                              setSelectedMap((prev) => ({
-                                ...prev,
-                                [resident.houseNumber]: {
-                                  ...itemData,
-                                  nominal: val
-                                }
-                              }));
-                            }}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                          />
+                    <div className="mt-2 pt-1.5 border-t border-amber-200/70 space-y-1">
+                      <div>
+                        <div className="flex items-center justify-between text-[9px] font-bold text-slate-600 mb-0.5">
+                          <span>Nominal (Min 500):</span>
                         </div>
+                        <input
+                          type="number"
+                          min="500"
+                          step="1"
+                          value={itemData.nominal}
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value));
+                            setSelectedMap((prev) => ({
+                              ...prev,
+                              [resident.houseNumber]: {
+                                ...itemData,
+                                nominal: val
+                              }
+                            }));
+                          }}
+                          className="w-full px-1.5 py-1 bg-white border border-slate-300 rounded-md text-[11px] font-black text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                          placeholder="Min 500"
+                        />
                       </div>
 
-                      <div className="w-24">
-                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
-                          Metode:
-                        </label>
+                      <div>
                         <select
                           value={itemData.method}
                           onChange={(e) => {
@@ -1355,10 +1434,10 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                               }
                             }));
                           }}
-                          className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none"
+                          className="w-full px-1 py-0.5 bg-white border border-slate-300 rounded-md text-[9px] font-semibold text-slate-700 focus:outline-none"
                         >
                           <option value="cash">Tunai (Koin)</option>
-                          <option value="transfer">Transfer Bank BRI</option>
+                          <option value="transfer">Transfer BRI</option>
                         </select>
                       </div>
                     </div>
@@ -1369,7 +1448,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
           </div>
 
           {/* Notes & Submit Button */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Catatan Petugas Ronda Malam (Kondisi Lingkungan, Kebersihan Pendopo, dll.):
@@ -1385,24 +1464,41 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-slate-100">
               <div className="text-xs text-slate-500">
-                Menekan tombol <strong>Kirim Jimpit</strong> akan menyimpan data real-time ke Firebase Cloud, menambah kas paguyuban, serta memberikan +10 poin loyalitas kepada warga yang menjimpit.
+                Tombol <strong>Kirim Jimpit</strong> hanya aktif untuk <strong>Petugas Ronda Hari Ini</strong> dan <strong>Superadmin</strong>. Hasil jimpitan langsung masuk ke Saldo Kas Paguyuban.
               </div>
 
               <button
                 type="submit"
-                disabled={isAlreadySubmittedToday}
-                className={`w-full sm:w-auto px-8 py-3.5 text-white font-black rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 transition ${
-                  isAlreadySubmittedToday
+                disabled={!canSubmitJimpit || isAlreadySubmittedToday}
+                className={`w-full sm:w-auto px-6 py-3 text-white font-black rounded-xl text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 transition ${
+                  !canSubmitJimpit || isAlreadySubmittedToday
                     ? 'bg-slate-400 cursor-not-allowed shadow-none'
                     : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-amber-600/30 active:scale-95'
                 }`}
+                title={
+                  !canSubmitJimpit
+                    ? 'Tombol kirim jimpit hanya aktif di akun petugas ronda hari ini dan Superadmin'
+                    : isAlreadySubmittedToday
+                    ? 'Jimpitan hari ini sudah di-input'
+                    : 'Kirim Jimpit'
+                }
               >
-                <Send size={16} />
-                <span>
-                  {isAlreadySubmittedToday
-                    ? 'Jimpitan Hari Ini Sudah Di-input (Maks. 1x / Hari)'
-                    : `Kirim Jimpit & Cetak Laporan (Rp ${currentTotalRevenue.toLocaleString('id-ID')})`}
-                </span>
+                {!canSubmitJimpit ? (
+                  <>
+                    <Lock size={15} />
+                    <span>Akses Terkunci (Khusus Petugas Ronda Hari Ini &amp; Superadmin)</span>
+                  </>
+                ) : isAlreadySubmittedToday ? (
+                  <>
+                    <CheckCircle2 size={15} />
+                    <span>Jimpitan Hari Ini Sudah Di-input (Maks. 1x / Hari)</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={15} />
+                    <span>Kirim Jimpit &amp; Cetak Laporan (Rp {currentTotalRevenue.toLocaleString('id-ID')})</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -1487,7 +1583,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       <div className="text-2xl font-black text-blue-400 mt-0.5">
                         {activeDailyReport.entries.length} <span className="text-xs text-slate-400">Rumah</span>
                       </div>
-                      <span className="text-[10px] text-slate-400">Kelipatan Rp 500</span>
+                      <span className="text-[10px] text-slate-400">Minimal Rp 500 (Bebas)</span>
                     </div>
                   </div>
                 </div>
@@ -1524,13 +1620,16 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       </button>
                       <button
                         onClick={() => {
-                          if (
-                            confirm(
-                              `HAPUS LAPORAN JIMPITAN TANGGAL ${activeDailyReport.date} (${activeDailyReport.day})?\n\nTindakan ini permanen. Total uang jimpitan (Rp ${activeDailyReport.totalNominal.toLocaleString('id-ID')}) akan disesuaikan kembali dari akumulasi warga.`
-                            )
-                          ) {
-                            deleteJimpitReport(activeDailyReport.id);
-                          }
+                          confirmAction({
+                            title: 'Hapus Laporan Jimpitan Harian',
+                            message: `Hapus laporan jimpitan tanggal ${activeDailyReport.date} (${activeDailyReport.day})? Tindakan ini permanen. Total uang jimpitan (Rp ${activeDailyReport.totalNominal.toLocaleString('id-ID')}) akan disesuaikan kembali dari kas paguyuban.`,
+                            confirmLabel: 'Setuju',
+                            cancelLabel: 'Batal',
+                            variant: 'danger',
+                            onConfirm: () => {
+                              deleteJimpitReport(activeDailyReport.id);
+                            }
+                          });
                         }}
                         className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 border border-red-500"
                         title="Hapus Laporan Jimpitan (Hak Akses Khusus Superadmin)"
@@ -1690,7 +1789,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
               <div className="text-xl font-black text-slate-900 mt-1">
                 Rp {totalTargetBulanan.toLocaleString('id-ID')}
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">58 KK &times; Rp 15.000 / bulan</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">{totalResidentsCount} Rumah Wajib Jimpit &times; Rp 15.000 / bulan</p>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-xs">
@@ -1721,7 +1820,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 {lunasCount} <span className="text-xs font-normal text-slate-500">/ {totalResidentsCount} Rumah</span>
               </div>
               <p className="text-[11px] text-blue-700 mt-0.5">
-                {Math.round((lunasCount / totalResidentsCount) * 100)}% Warga Tertib Jimpitan
+                {totalResidentsCount > 0 ? Math.round((lunasCount / totalResidentsCount) * 100) : 0}% Warga Tertib Jimpitan
               </p>
             </div>
           </div>
@@ -1741,7 +1840,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  {b === 'ALL' ? 'Semua (58)' : `Blok ${b}`}
+                  {b === 'ALL' ? `Semua (${totalResidentsCount})` : `Blok ${b}`}
                 </button>
               ))}
 
@@ -1889,11 +1988,18 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
               {isSuperadmin && (
                 <button
                   type="button"
-                  onClick={async () => {
-                    if (confirm('Yakin ingin mereset dan mengosongkan seluruh arsip laporan jimpitan? Seluruh data jimpitan akan dihapus permanen di cloud Firebase & semua perangkat.')) {
-                      await resetFeatureData('jimpitan');
-                      alert('Seluruh arsip laporan jimpitan berhasil di-reset bersih!');
-                    }
+                  onClick={() => {
+                    confirmAction({
+                      title: 'Reset Seluruh Arsip Laporan Jimpitan',
+                      message: 'PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset dan mengosongkan seluruh arsip laporan jimpitan? Seluruh data jimpitan akan dihapus permanen di cloud Firebase & semua perangkat.',
+                      confirmLabel: 'Setuju',
+                      cancelLabel: 'Batal',
+                      variant: 'danger',
+                      onConfirm: async () => {
+                        await resetFeatureData('jimpitan');
+                        alert('Seluruh arsip laporan jimpitan berhasil di-reset bersih!');
+                      }
+                    });
                   }}
                   className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
                 >
@@ -1967,7 +2073,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
                     <div className="text-[11px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
                       <span>Partisipasi Warga ({report.entries.length} Rumah):</span>
-                      <span className="text-amber-600 font-bold">Kelipatan Rp 500</span>
+                      <span className="text-amber-600 font-bold">Min. Rp 500</span>
                     </div>
 
                     {/* Badges of houses */}
@@ -2020,13 +2126,16 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       </button>
                       <button
                         onClick={() => {
-                          if (
-                            confirm(
-                              `HAPUS LAPORAN JIMPITAN TANGGAL ${report.date} (${report.day})?\n\nTindakan permanen ini hanya diizinkan untuk Superadmin (Bpk. Beni B24). Saldo kas dan catatan warga akan disesuaikan kembali.`
-                            )
-                          ) {
-                            deleteJimpitReport(report.id);
-                          }
+                          confirmAction({
+                            title: 'Hapus Laporan Jimpitan',
+                            message: `Hapus permanen laporan jimpitan tanggal ${report.date} (${report.day})? Tindakan ini hanya diizinkan untuk Superadmin (Bpk. Beni B24). Saldo kas dan catatan warga akan disesuaikan kembali.`,
+                            confirmLabel: 'Setuju',
+                            cancelLabel: 'Batal',
+                            variant: 'danger',
+                            onConfirm: () => {
+                              deleteJimpitReport(report.id);
+                            }
+                          });
                         }}
                         className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                         title="Hapus Laporan Jimpitan (Hak Akses Superadmin)"
@@ -2121,7 +2230,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                   }}
                   className="flex-1 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition"
                 >
-                  Lihat Rekap Bulanan 58 Warga
+                  Lihat Rekap Bulanan ({totalResidentsCount} Rumah)
                 </button>
                 <button
                   type="button"
@@ -2243,7 +2352,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       onChange={(e) => handleSelectResidentForPay(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
-                      {residents.map((r) => {
+                      {wajibJimpitResidents.map((r) => {
                         const cur = Math.max(0, targetMonthly - (r.jimpitanPaidMonth || 0));
                         const prev = r.previousMonthsJimpitanDeficit || 0;
                         const tot = cur + prev;
@@ -2266,7 +2375,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     return (
                       <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
                         <div className="flex justify-between items-center">
-                          <span className="text-slate-500">Target Bulanan (58 KK):</span>
+                          <span className="text-slate-500">Target Bulanan ({totalResidentsCount} Rumah Wajib Jimpit):</span>
                           <span className="font-semibold text-slate-700">Rp 15.000 / bulan</span>
                         </div>
                         <div className="flex justify-between items-center">
@@ -2294,14 +2403,14 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                   {/* Nominal Input & Preset buttons */}
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
-                      Nominal Pembayaran (Kelipatan Rp 500):
+                      Nominal Pembayaran (Min. Rp 500, Bebas Nominal):
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 font-bold text-slate-400">Rp</span>
                       <input
                         type="number"
                         min={500}
-                        step={500}
+                        step={1}
                         value={payAmountInput}
                         onChange={(e) => setPayAmountInput(e.target.value === '' ? '' : Number(e.target.value))}
                         required
@@ -2465,11 +2574,19 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
             </div>
 
             <form
-              onSubmit={async (e) => {
+              onSubmit={(e) => {
                 e.preventDefault();
-                await updateJimpitReport(editingDailyReport);
-                setEditingDailyReport(null);
-                alert('Laporan jimpitan harian berhasil diperbarui dan disinkronkan ke Firebase!');
+                confirmAction({
+                  title: 'Konfirmasi Perubahan Laporan Jimpitan',
+                  message: `Simpan pembaruan laporan jimpitan tanggal ${editingDailyReport.date} (${editingDailyReport.day}) dengan total Rp ${editingDailyReport.totalNominal.toLocaleString('id-ID')}? Data kas paguyuban dan catatan warga otomatis akan disinkronkan.`,
+                  confirmLabel: 'Setuju',
+                  cancelLabel: 'Batal',
+                  variant: 'primary',
+                  onConfirm: async () => {
+                    await updateJimpitReport(editingDailyReport);
+                    setEditingDailyReport(null);
+                  }
+                });
               }}
               className="p-6 space-y-4 text-xs overflow-y-auto flex-1"
             >

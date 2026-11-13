@@ -6,17 +6,30 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.7.1';
-export const APP_BUILD_DATE = '11 November 2026';
-export const APP_BUILD_CODE = '2026.11.11-v1.7.1';
-export const APP_RELEASE_NAME = 'Edisi Otorisasi Khusus Absensi Ronda & Sinkronisasi Kas Masuk Multi-Device';
+export const APP_VERSION = 'v1.8.0';
+export const APP_BUILD_DATE = '12 November 2026';
+export const APP_BUILD_CODE = '2026.11.12-v1.8.0';
+export const APP_RELEASE_NAME = 'Edisi Pembaruan Absensi Ronda, Jimpitan Fleksibel & Konfirmasi Keamanan Global';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.8.0',
+    releaseDate: '12 November 2026',
+    releaseTitle: 'Perbaikan Absensi Ronda, Aturan Baru Jimpitan & Konfirmasi Keamanan Global',
+    badge: 'Terbaru',
+    highlights: [
+      'Perbaikan Absensi Ronda Real-Time: Absensi ronda kini selalu tersinkronisasi dari database cloud, mendukung pembaruan ulang pada hari yang sama, dan memperbaiki pencocokan nama petugas.',
+      'Integrasi Pemasukan Jimpitan Langsung ke Kas & History Jimpitan: Pemasukan jimpitan harian maupun pelunasan tidak lagi masuk ke Riwayat Pembayaran Kas, bebas duplikasi kwitansi, namun langsung menambah Total Pemasukan dan Saldo Kas Paguyuban.',
+      'Nominal Jimpitan Fleksibel & Kartu Ringkas: Minimal jimpitan tetap Rp 500 tanpa aturan kelipatan (input bebas minimal 500) dengan tampilan kartu Jimpit Online yang lebih ringkas.',
+      'Otorisasi Ketat Tombol Kirim Jimpit: Tombol Kirim Jimpit hanya aktif di akun petugas ronda hari tersebut dan Superadmin.',
+      'Filter Rumah Wajib Jimpitan: Rumah berstatus "KOSONG (ADA PEMILIK)" dan "BELUM ADA PEMILIK" otomatis dikecualikan dari daftar wajib jimpitan dan perhitungan target bulanan.',
+      'Konfirmasi Keamanan Global (Batal / Setuju): Setiap aksi ubah dan hapus data di seluruh modul aplikasi kini menampilkan modal konfirmasi untuk mencegah kesalahan input.'
+    ]
+  },
   {
     version: 'v1.7.1',
     releaseDate: '11 November 2026',
     releaseTitle: 'Otorisasi Khusus Absensi Ronda & Sinkronisasi Real-Time Kas Masuk',
-    badge: 'Terbaru',
     highlights: [
       'Otorisasi Ketat Absensi Ronda: Khusus hanya petugas ronda yang bertugas pada hari tersebut dan Pengurus/Admin yang memiliki wewenang melakukan checklist dan menyimpan absensi ronda.',
       'Perbaikan Bug Sinkronisasi Kas Masuk Multi-Device: Setiap pencatatan kas masuk oleh admin/bendahara dari perangkat berbeda (baik via Loket Kas maupun Catat Transaksi Keuangan) langsung otomatis tersinkronisasi secara real-time ke Riwayat Pembayaran Kas, Buku Kas, dan database cloud.',

@@ -49,7 +49,8 @@ export const NotulenDanAbsensiView: React.FC = () => {
     deleteAttendanceSession,
     residents,
     resetFeatureData,
-    getResidentNameByHouse
+    getResidentNameByHouse,
+    confirmAction
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
 
@@ -122,36 +123,59 @@ export const NotulenDanAbsensiView: React.FC = () => {
       return;
     }
 
+    const executeSave = async () => {
+      if (editingNote) {
+        await updateMeetingNote({
+          ...editingNote,
+          meetingDate: noteFormDate,
+          title: noteFormTitle.trim(),
+          content: noteFormContent.trim(),
+          status: noteFormStatus,
+          personInCharge: noteFormPic.trim()
+        });
+      } else {
+        await addMeetingNote({
+          meetingDate: noteFormDate,
+          title: noteFormTitle.trim(),
+          content: noteFormContent.trim(),
+          status: noteFormStatus,
+          personInCharge: noteFormPic.trim(),
+          recordedBy: `${currentUser.name} (${currentUser.houseNumber})`
+        });
+      }
+
+      try {
+        confetti({ particleCount: 50, spread: 60 });
+      } catch {}
+
+      setIsAddNotulenOpen(false);
+    };
+
     if (editingNote) {
-      await updateMeetingNote({
-        ...editingNote,
-        meetingDate: noteFormDate,
-        title: noteFormTitle.trim(),
-        content: noteFormContent.trim(),
-        status: noteFormStatus,
-        personInCharge: noteFormPic.trim()
+      confirmAction({
+        title: 'Konfirmasi Perubahan Notulen',
+        message: `Simpan perubahan notulen rapat "${noteFormTitle.trim()}"?`,
+        confirmLabel: 'Setuju',
+        cancelLabel: 'Batal',
+        variant: 'primary',
+        onConfirm: executeSave
       });
     } else {
-      await addMeetingNote({
-        meetingDate: noteFormDate,
-        title: noteFormTitle.trim(),
-        content: noteFormContent.trim(),
-        status: noteFormStatus,
-        personInCharge: noteFormPic.trim(),
-        recordedBy: `${currentUser.name} (${currentUser.houseNumber})`
-      });
+      await executeSave();
     }
-
-    try {
-      confetti({ particleCount: 50, spread: 60 });
-    } catch {}
-
-    setIsAddNotulenOpen(false);
   };
 
   const handleDeleteNotulen = async (id: string, title: string) => {
-    if (!window.confirm(`Yakin ingin menghapus notulen "${title}"?`)) return;
-    await deleteMeetingNote(id);
+    confirmAction({
+      title: 'Hapus Notulen Rapat',
+      message: `Yakin ingin menghapus notulen "${title}"? Tindakan ini permanen.`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'danger',
+      onConfirm: async () => {
+        await deleteMeetingNote(id);
+      }
+    });
   };
 
   // --- ABSENSI STATE (KERJABAKTI & RAPAT BULANAN) ---
@@ -298,19 +322,26 @@ export const NotulenDanAbsensiView: React.FC = () => {
             {isSuperadmin && (
               <button
                 type="button"
-                onClick={async () => {
-                  if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh notulen rapat dan riwayat sesi absensi?')) {
-                    setIsResetting(true);
-                    try {
-                      await resetFeatureData('notulen');
-                      await resetFeatureData('absensi');
-                      alert('Data notulen dan absensi berhasil direset oleh Superadmin.');
-                    } catch (err: any) {
-                      alert('Gagal mereset: ' + err.message);
-                    } finally {
-                      setIsResetting(false);
+                onClick={() => {
+                  confirmAction({
+                    title: 'Reset Notulen & Absensi',
+                    message: 'PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh notulen rapat dan riwayat sesi absensi?',
+                    confirmLabel: 'Setuju',
+                    cancelLabel: 'Batal',
+                    variant: 'danger',
+                    onConfirm: async () => {
+                      setIsResetting(true);
+                      try {
+                        await resetFeatureData('notulen');
+                        await resetFeatureData('absensi');
+                        alert('Data notulen dan absensi berhasil direset oleh Superadmin.');
+                      } catch (err: any) {
+                        alert('Gagal mereset: ' + err.message);
+                      } finally {
+                        setIsResetting(false);
+                      }
                     }
-                  }
+                  });
                 }}
                 disabled={isResetting}
                 className="px-3.5 py-1.5 rounded-xl bg-red-600/80 hover:bg-red-600 text-white font-bold flex items-center gap-1.5 transition border border-red-500 shadow-md"
@@ -903,9 +934,16 @@ export const NotulenDanAbsensiView: React.FC = () => {
                           </button>
                           <button
                             onClick={() => {
-                              if (window.confirm(`Hapus sesi absensi "${session.title}"?`)) {
-                                deleteAttendanceSession(session.id);
-                              }
+                              confirmAction({
+                                title: 'Hapus Sesi Absensi',
+                                message: `Hapus sesi absensi "${session.title}"? Tindakan ini permanen.`,
+                                confirmLabel: 'Setuju',
+                                cancelLabel: 'Batal',
+                                variant: 'danger',
+                                onConfirm: () => {
+                                  deleteAttendanceSession(session.id);
+                                }
+                              });
                             }}
                             className="text-red-500 hover:text-red-700 text-xs font-bold p-2 hover:bg-red-50 rounded-xl transition flex items-center gap-1"
                             title="Hapus Sesi Absensi (Superadmin)"
@@ -1113,9 +1151,16 @@ export const NotulenDanAbsensiView: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            if (window.confirm(`Hapus sesi absensi "${session.title}" (${session.date})? Tindakan ini permanen.`)) {
-                              deleteAttendanceSession(session.id);
-                            }
+                            confirmAction({
+                              title: 'Hapus Sesi Absensi',
+                              message: `Hapus sesi absensi "${session.title}" (${session.date})? Tindakan ini permanen.`,
+                              confirmLabel: 'Setuju',
+                              cancelLabel: 'Batal',
+                              variant: 'danger',
+                              onConfirm: () => {
+                                deleteAttendanceSession(session.id);
+                              }
+                            });
                           }}
                           className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-rose-200"
                           title="Hapus Sesi Absensi (Superadmin)"
@@ -1165,11 +1210,19 @@ export const NotulenDanAbsensiView: React.FC = () => {
             </div>
 
             <form
-              onSubmit={async (e) => {
+              onSubmit={(e) => {
                 e.preventDefault();
-                await updateAttendanceSession(editingAttendanceSession);
-                setEditingAttendanceSession(null);
-                alert('Data sesi absensi berhasil diperbarui!');
+                confirmAction({
+                  title: 'Konfirmasi Perubahan Sesi Absensi',
+                  message: `Simpan pembaruan sesi absensi "${editingAttendanceSession.title}" (${editingAttendanceSession.date})? Poin warga yang diubah kehadirannya akan otomatis disesuaikan.`,
+                  confirmLabel: 'Setuju',
+                  cancelLabel: 'Batal',
+                  variant: 'primary',
+                  onConfirm: async () => {
+                    await updateAttendanceSession(editingAttendanceSession);
+                    setEditingAttendanceSession(null);
+                  }
+                });
               }}
               className="p-6 space-y-4 text-xs"
             >
@@ -1224,23 +1277,43 @@ export const NotulenDanAbsensiView: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Warga Tercatat Hadir ({editingAttendanceSession.attendees.filter((a) => a.isPresent).length} Warga)
+                  Klik Warga untuk Ubah Status Kehadiran ({editingAttendanceSession.attendees.filter((a) => a.isPresent).length} Hadir)
                 </label>
-                <div className="max-h-40 overflow-y-auto space-y-1 p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="max-h-48 overflow-y-auto space-y-1 p-2 bg-slate-50 border border-slate-200 rounded-xl">
                   {editingAttendanceSession.attendees.map((att, idx) => (
-                    <div
+                    <button
+                      type="button"
                       key={att.residentId || idx}
-                      className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-100 text-[11px]"
+                      onClick={() => {
+                        const updatedAttendees = editingAttendanceSession.attendees.map((item, i) =>
+                          i === idx
+                            ? {
+                                ...item,
+                                isPresent: !item.isPresent,
+                                checkedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
+                              }
+                            : item
+                        );
+                        setEditingAttendanceSession({
+                          ...editingAttendanceSession,
+                          attendees: updatedAttendees
+                        });
+                      }}
+                      className={`w-full flex items-center justify-between p-2 rounded-lg border text-[11px] transition text-left ${
+                        att.isPresent
+                          ? 'bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100/70'
+                          : 'bg-white border-slate-200 hover:bg-slate-100'
+                      }`}
                     >
                       <span className="font-semibold text-slate-800">
                         {att.residentHouse} - {getResidentNameByHouse(att.residentHouse, att.residentName)}
                       </span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        att.isPresent ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                        att.isPresent ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
                       }`}>
                         {att.isPresent ? 'HADIR' : 'ABSEN'}
                       </span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>

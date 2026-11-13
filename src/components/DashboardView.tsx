@@ -70,7 +70,8 @@ export const DashboardView: React.FC = () => {
     sendReceiptNotificationEmail,
     resetFeatureData,
     getResidentNameByHouse,
-    toggleBerkasKependudukan
+    toggleBerkasKependudukan,
+    confirmAction
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
 
@@ -210,17 +211,28 @@ export const DashboardView: React.FC = () => {
   }, [residents, berkasBlockFilter, berkasStatusFilter, berkasSearch]);
 
   const handleToggleBerkasStatus = async (residentId: string, currentStatus?: boolean) => {
-    setIsUpdatingBerkasId(residentId);
-    try {
-      const res = await toggleBerkasKependudukan(residentId, !currentStatus);
-      if (res.success && !currentStatus) {
-        confetti({ particleCount: 50, spread: 60 });
+    const resItem = residents.find((r) => r.id === residentId);
+    const nextStatusText = !currentStatus ? 'Lengkap (Sudah Serah)' : 'Belum Diserahkan';
+    confirmAction({
+      title: 'Ubah Status Berkas Kependudukan',
+      message: `Ubah status berkas kependudukan untuk ${resItem?.name || 'warga'} (${resItem?.houseNumber || ''}) menjadi "${nextStatusText}"?`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'primary',
+      onConfirm: async () => {
+        setIsUpdatingBerkasId(residentId);
+        try {
+          const res = await toggleBerkasKependudukan(residentId, !currentStatus);
+          if (res.success && !currentStatus) {
+            confetti({ particleCount: 50, spread: 60 });
+          }
+        } catch (err: any) {
+          alert('Gagal mengubah status berkas: ' + err.message);
+        } finally {
+          setIsUpdatingBerkasId(null);
+        }
       }
-    } catch (err: any) {
-      alert('Gagal mengubah status berkas: ' + err.message);
-    } finally {
-      setIsUpdatingBerkasId(null);
-    }
+    });
   };
 
   const handleSendBerkasReminderWA = (r: Resident) => {
@@ -275,46 +287,55 @@ _Pengurus Paguyuban Griya Sedayu Selaras 1_`;
       return;
     }
 
-    setIsSubmittingPayment(true);
-    try {
-      const typeLabels: Record<PaymentReceiptType, string> = {
-        iuran_bulanan: 'Iuran Bulanan Rutin (Rp 25.000)',
-        iuran_sampah: 'Iuran Sampah (Rp 25.000)',
-        iuran_bulanan_sampah: 'Iuran Bulanan + Sampah (Rp 50.000)',
-        sewa_fasum: 'Sewa Fasum Paguyuban GSS',
-        sumbangan_sukarela: 'Sumbangan Sukarela Warga',
-        pemasukan_lain: 'Pemasukan Kas Lain-lain'
-      };
+    const typeLabels: Record<PaymentReceiptType, string> = {
+      iuran_bulanan: 'Iuran Bulanan Rutin (Rp 25.000)',
+      iuran_sampah: 'Iuran Sampah (Rp 25.000)',
+      iuran_bulanan_sampah: 'Iuran Bulanan + Sampah (Rp 50.000)',
+      sewa_fasum: 'Sewa Fasum Paguyuban GSS',
+      sumbangan_sukarela: 'Sumbangan Sukarela Warga',
+      pemasukan_lain: 'Pemasukan Kas Lain-lain'
+    };
 
-      const newReceipt = await recordCashierPayment({
-        residentId: selectedResident.id,
-        residentName: selectedResident.name,
-        residentHouse: selectedResident.houseNumber,
-        residentPhone: selectedResident.phone || '0812-3456-7800',
-        paymentType: selectedPaymentType,
-        paymentTypeName: typeLabels[selectedPaymentType],
-        amount: Number(formAmount),
-        periodMonth: formPeriod,
-        paymentMethod: formPaymentMethod,
-        date: formDate,
-        notes: formNotes || undefined
-      });
+    confirmAction({
+      title: 'Konfirmasi Pembayaran Kas',
+      message: `Catat transaksi pembayaran kas ${typeLabels[selectedPaymentType]} sebesar Rp ${Number(formAmount).toLocaleString('id-ID')} untuk ${selectedResident.name} (${selectedResident.houseNumber}) tanggal ${formDate}?`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'primary',
+      onConfirm: async () => {
+        setIsSubmittingPayment(true);
+        try {
+          const newReceipt = await recordCashierPayment({
+            residentId: selectedResident.id,
+            residentName: selectedResident.name,
+            residentHouse: selectedResident.houseNumber,
+            residentPhone: selectedResident.phone || '0812-3456-7800',
+            paymentType: selectedPaymentType,
+            paymentTypeName: typeLabels[selectedPaymentType],
+            amount: Number(formAmount),
+            periodMonth: formPeriod,
+            paymentMethod: formPaymentMethod,
+            date: formDate,
+            notes: formNotes || undefined
+          });
 
-      confetti({
-        particleCount: 90,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
+          confetti({
+            particleCount: 90,
+            spread: 70,
+            origin: { y: 0.6 }
+          });
 
-      // Reset form notes
-      setFormNotes('');
-      // Open digital receipt modal immediately for sharing
-      setActiveReceiptModal(newReceipt);
-    } catch (err: any) {
-      alert('Gagal memproses transaksi kas: ' + err.message);
-    } finally {
-      setIsSubmittingPayment(false);
-    }
+          // Reset form notes
+          setFormNotes('');
+          // Open digital receipt modal immediately for sharing
+          setActiveReceiptModal(newReceipt);
+        } catch (err: any) {
+          alert('Gagal memproses transaksi kas: ' + err.message);
+        } finally {
+          setIsSubmittingPayment(false);
+        }
+      }
+    });
   };
 
   // WhatsApp share generator
@@ -377,31 +398,70 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
   };
 
   // Filtered receipts for History Tab (Real-Time across all devices and input methods)
+  // NOTE: Excludes any daily or monthly jimpitan (jimpitan directly increments saldo/total pemasukan, not riwayat pembayaran kas),
+  // and strictly eliminates duplicate records.
   const allReceipts = useMemo(() => {
-    const list: PaymentReceipt[] = [...paymentReceipts];
-    const existingTrxIds = new Set(paymentReceipts.map((r) => r.transactionId).filter(Boolean));
-    const existingReceiptIds = new Set(paymentReceipts.map((r) => r.id));
+    // 1. Exclude any jimpitan receipts
+    const list: PaymentReceipt[] = paymentReceipts.filter((r) => {
+      const pType = (r.paymentType || '').toLowerCase();
+      const pName = (r.paymentTypeName || '').toLowerCase();
+      const notes = (r.notes || '').toLowerCase();
+      return pType !== 'jimpitan' && !pName.includes('jimpit') && !notes.includes('jimpit');
+    });
 
-    // Combine any incoming transactions that don't yet have an explicit receipt
+    const existingTrxIds = new Set<string>();
+    const existingReceiptIds = new Set<string>();
+    const existingCompositeKeys = new Set<string>();
+
+    for (const r of list) {
+      if (r.transactionId) existingTrxIds.add(r.transactionId);
+      if (r.id) existingReceiptIds.add(r.id);
+      if (r.receiptNumber) existingReceiptIds.add(r.receiptNumber);
+      const houseClean = (r.residentHouse || '').replace(/\s+/g, '').toUpperCase();
+      const compKey = `${r.date || ''}_${houseClean}_${r.amount}_${r.paymentType}`;
+      existingCompositeKeys.add(compKey);
+    }
+
+    // Combine incoming transactions that don't yet have an explicit receipt
     for (const trx of transactions) {
       const typeClean = String(trx.type || '').trim().toLowerCase();
       if (typeClean !== 'pemasukan' && typeClean !== 'income') continue;
-      if (existingTrxIds.has(trx.id) || existingReceiptIds.has(`receipt-${trx.id}`) || existingReceiptIds.has(trx.id)) {
+
+      const catL = (trx.category || '').toLowerCase();
+      const descL = (trx.description || '').toLowerCase();
+
+      // Exclude ANY daily or monthly jimpitan transactions from receipts history!
+      if (catL.includes('jimpit') || descL.includes('jimpit')) {
         continue;
       }
 
+      if (
+        existingTrxIds.has(trx.id) ||
+        existingReceiptIds.has(`receipt-${trx.id}`) ||
+        existingReceiptIds.has(trx.id)
+      ) {
+        continue;
+      }
+
+      const house = trx.sourceHouse || '';
+      const houseClean = house.replace(/\s+/g, '').toUpperCase();
       const dateStr = trx.date || new Date(trx.timestamp || Date.now()).toISOString().slice(0, 10);
+
       let pType: PaymentReceiptType = 'pemasukan_lain';
-      const catL = (trx.category || '').toLowerCase();
       if (catL.includes('sampah') && catL.includes('bulanan')) pType = 'iuran_bulanan_sampah';
       else if (catL.includes('sampah')) pType = 'iuran_sampah';
       else if (catL.includes('bulanan') || catL.includes('iuran')) pType = 'iuran_bulanan';
       else if (catL.includes('fasum')) pType = 'sewa_fasum';
       else if (catL.includes('sumbangan')) pType = 'sumbangan_sukarela';
 
-      const house = trx.sourceHouse || '';
+      const compKey = `${dateStr}_${houseClean}_${Number(trx.amount) || 0}_${pType}`;
+      if (existingCompositeKeys.has(compKey)) {
+        continue;
+      }
+      existingCompositeKeys.add(compKey);
+
       const matchedRes = residents.find(
-        (r) => house && r.houseNumber.replace(/\s+/g, '').toUpperCase() === house.replace(/\s+/g, '').toUpperCase()
+        (r) => house && r.houseNumber.replace(/\s+/g, '').toUpperCase() === houseClean
       );
 
       list.push({
@@ -425,7 +485,29 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
       });
     }
 
-    return list.sort((a, b) => {
+    // Final deduplication pass to guarantee NO duplicate transactions in Riwayat Pembayaran Kas
+    const uniqueList: PaymentReceipt[] = [];
+    const seenIds = new Set<string>();
+    const seenReceiptNums = new Set<string>();
+    const seenTrxIds = new Set<string>();
+    const seenComposites = new Set<string>();
+
+    for (const item of list) {
+      if (seenIds.has(item.id)) continue;
+      if (item.receiptNumber && seenReceiptNums.has(item.receiptNumber)) continue;
+      if (item.transactionId && seenTrxIds.has(item.transactionId)) continue;
+
+      const comp = `${item.date || ''}_${(item.residentHouse || '').replace(/\s+/g, '').toUpperCase()}_${item.amount}_${item.paymentType}`;
+      if (seenComposites.has(comp)) continue;
+
+      seenIds.add(item.id);
+      if (item.receiptNumber) seenReceiptNums.add(item.receiptNumber);
+      if (item.transactionId) seenTrxIds.add(item.transactionId);
+      seenComposites.add(comp);
+      uniqueList.push(item);
+    }
+
+    return uniqueList.sort((a, b) => {
       const dateA = a.date || a.createdAt?.slice(0, 10) || '';
       const dateB = b.date || b.createdAt?.slice(0, 10) || '';
       if (dateB !== dateA) return dateB.localeCompare(dateA);
@@ -624,18 +706,25 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               {isSuperadmin && (
                 <button
                   type="button"
-                  onClick={async () => {
-                    if (confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data riwayat pembayaran kas & kwitansi ke kondisi awal?')) {
-                      setIsResettingReceipts(true);
-                      try {
-                        await resetFeatureData('pembayaran');
-                        alert('Data kwitansi pembayaran berhasil di-reset oleh Superadmin!');
-                      } catch (err: any) {
-                        alert('Gagal mereset: ' + err.message);
-                      } finally {
-                        setIsResettingReceipts(false);
+                  onClick={() => {
+                    confirmAction({
+                      title: 'Reset Seluruh Data Pembayaran Kas',
+                      message: 'PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data riwayat pembayaran kas & kwitansi ke kondisi awal? Tindakan ini tidak dapat dibatalkan.',
+                      confirmLabel: 'Setuju',
+                      cancelLabel: 'Batal',
+                      variant: 'danger',
+                      onConfirm: async () => {
+                        setIsResettingReceipts(true);
+                        try {
+                          await resetFeatureData('pembayaran');
+                          alert('Data kwitansi pembayaran berhasil di-reset oleh Superadmin!');
+                        } catch (err: any) {
+                          alert('Gagal mereset: ' + err.message);
+                        } finally {
+                          setIsResettingReceipts(false);
+                        }
                       }
-                    }
+                    });
                   }}
                   disabled={isResettingReceipts}
                   className="px-3.5 py-2 bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs"
@@ -1164,9 +1253,16 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (confirm(`Hapus kwitansi pembayaran #${rc.receiptNumber} (${rc.residentName})? Saldo kas akan disesuaikan. (Khusus Superadmin)`)) {
-                                    deletePaymentReceipt(rc.id);
-                                  }
+                                  confirmAction({
+                                    title: 'Hapus Kwitansi Pembayaran',
+                                    message: `Apakah Anda yakin ingin menghapus permanen kwitansi #${rc.receiptNumber} (${rc.residentName})? Saldo kas paguyuban otomatis akan disesuaikan.`,
+                                    confirmLabel: 'Setuju',
+                                    cancelLabel: 'Batal',
+                                    variant: 'danger',
+                                    onConfirm: () => {
+                                      deletePaymentReceipt(rc.id);
+                                    }
+                                  });
                                 }}
                                 className="p-1 text-rose-600 hover:bg-rose-50 rounded-lg transition"
                                 title="Hapus Pembayaran (Khusus Superadmin)"
@@ -2195,11 +2291,19 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
             </div>
 
             <form
-              onSubmit={async (e) => {
+              onSubmit={(e) => {
                 e.preventDefault();
-                await updatePaymentReceipt(editingReceipt);
-                setEditingReceipt(null);
-                alert('Data kwitansi & transaksi kas berhasil diperbarui!');
+                confirmAction({
+                  title: 'Konfirmasi Perubahan Kwitansi',
+                  message: `Simpan perubahan data kwitansi #${editingReceipt.receiptNumber} (${editingReceipt.residentName})? Saldo dan transaksi kas terkait otomatis akan disesuaikan.`,
+                  confirmLabel: 'Setuju',
+                  cancelLabel: 'Batal',
+                  variant: 'primary',
+                  onConfirm: async () => {
+                    await updatePaymentReceipt(editingReceipt);
+                    setEditingReceipt(null);
+                  }
+                });
               }}
               className="p-6 space-y-4 text-xs"
             >
@@ -2298,12 +2402,18 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 {isSuperadmin ? (
                   <button
                     type="button"
-                    onClick={async () => {
-                      if (confirm(`Hapus permanen kwitansi #${editingReceipt.receiptNumber} (${editingReceipt.residentName})? Saldo kas paguyuban otomatis akan disesuaikan. (Khusus Superadmin)`)) {
-                        await deletePaymentReceipt(editingReceipt.id);
-                        setEditingReceipt(null);
-                        alert('Kwitansi dan transaksi kas terkait berhasil dihapus!');
-                      }
+                    onClick={() => {
+                      confirmAction({
+                        title: 'Hapus Kwitansi Pembayaran',
+                        message: `Hapus permanen kwitansi #${editingReceipt.receiptNumber} (${editingReceipt.residentName})? Saldo kas paguyuban otomatis akan disesuaikan. (Khusus Superadmin)`,
+                        confirmLabel: 'Setuju',
+                        cancelLabel: 'Batal',
+                        variant: 'danger',
+                        onConfirm: async () => {
+                          await deletePaymentReceipt(editingReceipt.id);
+                          setEditingReceipt(null);
+                        }
+                      });
                     }}
                     className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl flex items-center gap-1.5 transition text-xs"
                     title="Hapus Pembayaran Ini (Hanya Superadmin)"

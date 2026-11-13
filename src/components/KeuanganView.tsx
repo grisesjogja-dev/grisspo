@@ -41,7 +41,8 @@ export const KeuanganView: React.FC = () => {
     updateTransaction,
     currentUser: authUser,
     emailAlerts,
-    resetFeatureData
+    resetFeatureData,
+    confirmAction
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
 
@@ -220,21 +221,29 @@ export const KeuanganView: React.FC = () => {
       return;
     }
 
-    try {
-      await updateTransaction({
-        ...editingTrx,
-        type: editType,
-        category: editCategory,
-        amount: Number(editAmount),
-        date: editDate,
-        description: editDesc,
-        sourceHouse: editHouse || undefined
-      });
-      setEditingTrx(null);
-      alert('Transaksi kas berhasil diperbarui & hash SHA-256 telah disinkronkan!');
-    } catch (err: any) {
-      alert('Gagal menyimpan perubahan transaksi: ' + err.message);
-    }
+    confirmAction({
+      title: 'Konfirmasi Perubahan Transaksi Kas',
+      message: `Simpan perubahan transaksi "${editCategory}" sebesar Rp ${Number(editAmount).toLocaleString('id-ID')} (${editDate})? Hash SHA-256 akan otomatis disinkronkan.`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'primary',
+      onConfirm: async () => {
+        try {
+          await updateTransaction({
+            ...editingTrx,
+            type: editType,
+            category: editCategory,
+            amount: Number(editAmount),
+            date: editDate,
+            description: editDesc,
+            sourceHouse: editHouse || undefined
+          });
+          setEditingTrx(null);
+        } catch (err: any) {
+          alert('Gagal menyimpan perubahan transaksi: ' + err.message);
+        }
+      }
+    });
   };
 
   // End-to-end encryption verification inspection modal
@@ -384,11 +393,18 @@ export const KeuanganView: React.FC = () => {
 
             {currentUser?.role === 'superadmin' && (
               <button
-                onClick={async () => {
-                  if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh Transaksi Keuangan Kas? Tindakan ini akan menghapus semua catatan transaksi kas.')) {
-                    await resetFeatureData('keuangan');
-                    alert('Data Keuangan Kas berhasil direset oleh Superadmin.');
-                  }
+                onClick={() => {
+                  confirmAction({
+                    title: 'Reset Seluruh Transaksi Keuangan Kas',
+                    message: 'PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh Transaksi Keuangan Kas? Tindakan ini akan menghapus semua catatan transaksi kas.',
+                    confirmLabel: 'Setuju',
+                    cancelLabel: 'Batal',
+                    variant: 'danger',
+                    onConfirm: async () => {
+                      await resetFeatureData('keuangan');
+                      alert('Data Keuangan Kas berhasil direset oleh Superadmin.');
+                    }
+                  });
                 }}
                 className="px-4 py-2.5 bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold rounded-xl border border-red-500 shadow-md flex items-center gap-1.5 transition"
                 title="Reset Transaksi Kas (Akses Khusus Superadmin)"
@@ -964,9 +980,16 @@ export const KeuanganView: React.FC = () => {
                         {canDelete && (
                           <button
                             onClick={() => {
-                              if (confirm(`Hapus transaksi "${trx.description}"? Aksi ini hanya dapat dilakukan oleh Superadmin.`)) {
-                                deleteTransaction(trx.id);
-                              }
+                              confirmAction({
+                                title: 'Hapus Transaksi Kas',
+                                message: `Hapus transaksi "${trx.description}" sebesar Rp ${trx.amount.toLocaleString('id-ID')}? Aksi ini permanen.`,
+                                confirmLabel: 'Setuju',
+                                cancelLabel: 'Batal',
+                                variant: 'danger',
+                                onConfirm: () => {
+                                  deleteTransaction(trx.id);
+                                }
+                              });
                             }}
                             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                             title="Hapus Transaksi (Hanya Superadmin)"
@@ -1290,7 +1313,7 @@ export const KeuanganView: React.FC = () => {
                   <input
                     type="number"
                     min="1"
-                    step="500"
+                    step="1"
                     value={editAmount}
                     onChange={(e) => setEditAmount(e.target.value === '' ? '' : Number(e.target.value))}
                     required

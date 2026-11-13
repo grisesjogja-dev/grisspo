@@ -22,7 +22,7 @@ interface ActiveSessionsModalProps {
 }
 
 export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({ isOpen, onClose }) => {
-  const { currentUser, activeSessions, kickSession } = useApp();
+  const { currentUser, activeSessions, kickSession, confirmAction } = useApp();
   const [filterRole, setFilterRole] = useState<'all' | 'pengurus' | 'warga'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [kickingId, setKickingId] = useState<string | null>(null);
@@ -72,21 +72,26 @@ export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({ isOpen
     }
   };
 
-  const handleKick = async (sessionUserId: string, residentName: string, houseNumber: string) => {
-    if (!window.confirm(`Konfirmasi Putuskan Sesi:\nApakah Anda yakin ingin memutuskan akses login paksa untuk akun ${residentName} (Rumah ${houseNumber})?`)) {
-      return;
-    }
-
-    setKickingId(sessionUserId);
-    try {
-      await kickSession(sessionUserId);
-      setFeedback(`Sesi ${residentName} (${houseNumber}) berhasil diputuskan.`);
-      setTimeout(() => setFeedback(null), 3500);
-    } catch (e) {
-      alert('Gagal memutuskan sesi: ' + (e instanceof Error ? e.message : 'Terjadi kesalahan'));
-    } finally {
-      setKickingId(null);
-    }
+  const handleKick = (sessionUserId: string, residentName: string, houseNumber: string) => {
+    confirmAction({
+      title: 'Konfirmasi Putuskan Sesi',
+      message: `Apakah Anda yakin ingin memutuskan akses login paksa untuk akun ${residentName} (Rumah ${houseNumber})?`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'danger',
+      onConfirm: async () => {
+        setKickingId(sessionUserId);
+        try {
+          await kickSession(sessionUserId);
+          setFeedback(`Sesi ${residentName} (${houseNumber}) berhasil diputuskan.`);
+          setTimeout(() => setFeedback(null), 3500);
+        } catch (e) {
+          alert('Gagal memutuskan sesi: ' + (e instanceof Error ? e.message : 'Terjadi kesalahan'));
+        } finally {
+          setKickingId(null);
+        }
+      }
+    });
   };
 
   const filteredSessions = activeSessions.filter((s) => {

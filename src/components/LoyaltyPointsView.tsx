@@ -31,7 +31,8 @@ export const LoyaltyPointsView: React.FC = () => {
     deleteReward,
     residents,
     deletePointLog,
-    resetFeatureData
+    resetFeatureData,
+    confirmAction
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
   const isSuperadmin = currentUser.role === 'superadmin';
@@ -59,17 +60,29 @@ export const LoyaltyPointsView: React.FC = () => {
   const leaderboard = [...residents].sort((a, b) => (b.points || 0) - (a.points || 0)).slice(0, 10);
 
   const handleRedeem = (rewardId: string) => {
-    const res = redeemReward(rewardId);
-    if (res.success) {
-      try {
-        confetti({ particleCount: 70, spread: 60 });
-      } catch {
-        // ignore
+    const targetReward = rewards.find((r) => r.id === rewardId);
+    confirmAction({
+      title: 'Konfirmasi Penukaran Poin',
+      message: targetReward
+        ? `Tukarkan ${targetReward.pointsCost} GRISS-Poin Anda dengan benefit "${targetReward.title}"?`
+        : 'Tukarkan GRISS-Poin Anda dengan benefit ini?',
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'primary',
+      onConfirm: () => {
+        const res = redeemReward(rewardId);
+        if (res.success) {
+          try {
+            confetti({ particleCount: 70, spread: 60 });
+          } catch {
+            // ignore
+          }
+          alert(res.message);
+        } else {
+          alert(res.message);
+        }
       }
-      alert(res.message);
-    } else {
-      alert(res.message);
-    }
+    });
   };
 
   const getRewardIcon = (iconName: string) => {
@@ -218,11 +231,18 @@ export const LoyaltyPointsView: React.FC = () => {
         {currentUser.role === 'superadmin' && (
           <button
             type="button"
-            onClick={async () => {
-              if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh GRISS-Poin warga dan log riwayat perolehan poin?')) {
-                await resetFeatureData('poin');
-                alert('Data Poin Warga berhasil direset oleh Superadmin.');
-              }
+            onClick={() => {
+              confirmAction({
+                title: 'Reset Data GRISS-Poin',
+                message: 'PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh GRISS-Poin warga dan log riwayat perolehan poin?',
+                confirmLabel: 'Setuju',
+                cancelLabel: 'Batal',
+                variant: 'danger',
+                onConfirm: async () => {
+                  await resetFeatureData('poin');
+                  alert('Data Poin Warga berhasil direset oleh Superadmin.');
+                }
+              });
             }}
             className="ml-auto my-auto px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-xl border border-red-200 transition flex items-center gap-1.5 whitespace-nowrap"
             title="Reset Poin Warga (Superadmin)"
@@ -297,10 +317,17 @@ export const LoyaltyPointsView: React.FC = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={async () => {
-                              if (confirm(`Hapus benefit "${reward.title}" dari katalog?`)) {
-                                await deleteReward(reward.id);
-                              }
+                            onClick={() => {
+                              confirmAction({
+                                title: 'Hapus Benefit Katalog',
+                                message: `Apakah Anda yakin ingin menghapus benefit "${reward.title}" dari katalog?`,
+                                confirmLabel: 'Setuju',
+                                cancelLabel: 'Batal',
+                                variant: 'danger',
+                                onConfirm: async () => {
+                                  await deleteReward(reward.id);
+                                }
+                              });
                             }}
                             className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
                             title="Hapus Benefit Ini (Superadmin)"
@@ -373,9 +400,14 @@ export const LoyaltyPointsView: React.FC = () => {
                   {currentUser.role === 'superadmin' && (
                     <button
                       onClick={() => {
-                        if (confirm(`Hapus catatan mutasi poin "${log.reason}"?`)) {
-                          deletePointLog(log.id);
-                        }
+                        confirmAction({
+                          title: 'Hapus Mutasi Poin',
+                          message: `Hapus catatan mutasi poin "${log.reason}"?`,
+                          confirmLabel: 'Setuju',
+                          cancelLabel: 'Batal',
+                          variant: 'danger',
+                          onConfirm: () => deletePointLog(log.id)
+                        });
                       }}
                       className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition"
                       title="Hapus Log Poin (Superadmin)"
@@ -486,9 +518,19 @@ export const LoyaltyPointsView: React.FC = () => {
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingReward) {
-                  await updateReward(editingReward);
-                  setEditingReward(null);
-                  alert('Katalog benefit berhasil diperbarui dan disinkronkan ke Firebase!');
+                  const targetReward = editingReward;
+                  confirmAction({
+                    title: 'Konfirmasi Perubahan Benefit',
+                    message: `Simpan perubahan pada benefit "${targetReward.title}"?`,
+                    confirmLabel: 'Setuju',
+                    cancelLabel: 'Batal',
+                    variant: 'primary',
+                    onConfirm: async () => {
+                      await updateReward(targetReward);
+                      setEditingReward(null);
+                      alert('Katalog benefit berhasil diperbarui dan disinkronkan ke Firebase!');
+                    }
+                  });
                 } else if (isAddingReward) {
                   await addReward({
                     title: rewardForm.title || 'Benefit Baru',

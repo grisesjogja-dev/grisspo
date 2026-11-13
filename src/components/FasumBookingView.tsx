@@ -58,7 +58,8 @@ export const FasumBookingView: React.FC = () => {
     currentUser: authUser,
     residents,
     totalIncome,
-    getResidentNameByHouse
+    getResidentNameByHouse,
+    confirmAction
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
   const [editingBooking, setEditingBooking] = useState<FasumBooking | null>(null);
@@ -217,18 +218,30 @@ export const FasumBookingView: React.FC = () => {
       .filter(Boolean);
 
     if (editingFacility) {
-      await updateFasumFacility({
-        ...editingFacility,
-        name: facName,
-        category: facCategory,
-        defaultFee: Number(facFee),
-        unit: facUnit,
-        capacity: facCapacity,
-        description: facDescription,
-        facilitiesIncluded: includedArr,
-        rules: rulesArr
+      const targetFac = editingFacility;
+      confirmAction({
+        title: 'Konfirmasi Perubahan Fasilitas',
+        message: `Simpan perubahan tarif & detail fasilitas "${facName}"?`,
+        confirmLabel: 'Setuju',
+        cancelLabel: 'Batal',
+        variant: 'primary',
+        onConfirm: async () => {
+          await updateFasumFacility({
+            ...targetFac,
+            name: facName,
+            category: facCategory,
+            defaultFee: Number(facFee),
+            unit: facUnit,
+            capacity: facCapacity,
+            description: facDescription,
+            facilitiesIncluded: includedArr,
+            rules: rulesArr
+          });
+          setShowFacilityModal(false);
+          alert(`Fasilitas "${facName}" berhasil diperbarui!`);
+        }
       });
-      alert(`Fasilitas "${facName}" berhasil diperbarui!`);
+      return;
     } else {
       const newId = 'fasum_' + Date.now();
       await addFasumFacility({
@@ -250,11 +263,18 @@ export const FasumBookingView: React.FC = () => {
   };
 
   // Superadmin: Delete Facility
-  const handleDeleteFacility = async (facility: FasumFacilityConfig) => {
-    if (confirm(`Apakah Anda yakin ingin menghapus jenis fasilitas "${facility.name}"?`)) {
-      await deleteFasumFacility(facility.id);
-      alert(`Fasilitas "${facility.name}" berhasil dihapus.`);
-    }
+  const handleDeleteFacility = (facility: FasumFacilityConfig) => {
+    confirmAction({
+      title: 'Hapus Jenis Fasilitas',
+      message: `Apakah Anda yakin ingin menghapus jenis fasilitas "${facility.name}"?`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'danger',
+      onConfirm: async () => {
+        await deleteFasumFacility(facility.id);
+        alert(`Fasilitas "${facility.name}" berhasil dihapus.`);
+      }
+    });
   };
 
   // Submit new booking
@@ -379,18 +399,25 @@ export const FasumBookingView: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={async () => {
-                    if (confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data fasilitas & reservasi fasum ke data default awal? Seluruh perubahan tarif dan riwayat akan dikembalikan.')) {
-                      setIsResettingFasum(true);
-                      try {
-                        await resetFeatureData('fasum');
-                        alert('Data Fasum berhasil direset ke standar awal oleh Superadmin!');
-                      } catch (err: any) {
-                        alert('Gagal mereset: ' + err.message);
-                      } finally {
-                        setIsResettingFasum(false);
+                  onClick={() => {
+                    confirmAction({
+                      title: 'Reset Data Fasum',
+                      message: 'PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data fasilitas & reservasi fasum ke data default awal? Seluruh perubahan tarif dan riwayat akan dikembalikan.',
+                      confirmLabel: 'Setuju',
+                      cancelLabel: 'Batal',
+                      variant: 'danger',
+                      onConfirm: async () => {
+                        setIsResettingFasum(true);
+                        try {
+                          await resetFeatureData('fasum');
+                          alert('Data Fasum berhasil direset ke standar awal oleh Superadmin!');
+                        } catch (err: any) {
+                          alert('Gagal mereset: ' + err.message);
+                        } finally {
+                          setIsResettingFasum(false);
+                        }
                       }
-                    }
+                    });
                   }}
                   disabled={isResettingFasum}
                   className="flex items-center justify-center gap-1.5 px-3.5 py-3 bg-rose-600/80 hover:bg-rose-600 text-white border border-rose-500/40 font-bold rounded-2xl transition text-xs shadow-md shadow-rose-900/40"
@@ -996,7 +1023,16 @@ export const FasumBookingView: React.FC = () => {
 
                         {isBendaharaOrAdmin && !isPaid && (
                           <button
-                            onClick={() => confirmFasumPayment(booking.id, `${currentUser.name} (${currentUser.role})`)}
+                            onClick={() => {
+                              confirmAction({
+                                title: 'Konfirmasi Pelunasan Sewa Fasum',
+                                message: `Setujui pembayaran sewa "${booking.facilityName}" oleh ${getResidentNameByHouse(booking.residentHouse, booking.residentName)} sebesar Rp ${booking.rentalFee.toLocaleString('id-ID')} dan masukkan ke Kas Paguyuban?`,
+                                confirmLabel: 'Setuju',
+                                cancelLabel: 'Batal',
+                                variant: 'primary',
+                                onConfirm: () => confirmFasumPayment(booking.id, `${currentUser.name} (${currentUser.role})`)
+                              });
+                            }}
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition"
                             title="Konfirmasi Pembayaran dan Masukkan ke Kas Paguyuban"
                           >
@@ -1016,9 +1052,14 @@ export const FasumBookingView: React.FC = () => {
                             </button>
                             <button
                               onClick={() => {
-                                if (confirm('Apakah Anda yakin ingin menghapus reservasi fasum ini?')) {
-                                  deleteFasumBooking(booking.id);
-                                }
+                                confirmAction({
+                                  title: 'Hapus Reservasi Fasum',
+                                  message: `Apakah Anda yakin ingin menghapus reservasi "${booking.facilityName}" tanggal ${booking.date}?`,
+                                  confirmLabel: 'Setuju',
+                                  cancelLabel: 'Batal',
+                                  variant: 'danger',
+                                  onConfirm: () => deleteFasumBooking(booking.id)
+                                });
                               }}
                               className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition"
                               title="Hapus Pemesanan (Superadmin)"
@@ -1667,11 +1708,21 @@ export const FasumBookingView: React.FC = () => {
             </div>
 
             <form
-              onSubmit={async (e) => {
+              onSubmit={(e) => {
                 e.preventDefault();
-                await updateFasumBooking(editingBooking);
-                setEditingBooking(null);
-                alert('Data reservasi fasum berhasil diperbarui!');
+                const targetBooking = editingBooking;
+                confirmAction({
+                  title: 'Konfirmasi Perubahan Reservasi',
+                  message: `Simpan perubahan data reservasi "${targetBooking.facilityName}" tanggal ${targetBooking.date}?`,
+                  confirmLabel: 'Setuju',
+                  cancelLabel: 'Batal',
+                  variant: 'primary',
+                  onConfirm: async () => {
+                    await updateFasumBooking(targetBooking);
+                    setEditingBooking(null);
+                    alert('Data reservasi fasum berhasil diperbarui!');
+                  }
+                });
               }}
               className="p-6 space-y-4 text-xs"
             >

@@ -29,7 +29,8 @@ export const KontakPentingView: React.FC = () => {
     importantContacts,
     addImportantContact,
     updateImportantContact,
-    deleteImportantContact
+    deleteImportantContact,
+    confirmAction
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
   const isSuperadmin = currentUser.role === 'superadmin';
@@ -107,33 +108,52 @@ export const KontakPentingView: React.FC = () => {
       return;
     }
 
+    if (editingContact) {
+      const targetContact = editingContact;
+      confirmAction({
+        title: 'Konfirmasi Perubahan Kontak',
+        message: `Simpan perubahan nomor kontak penting "${formName.trim()}"?`,
+        confirmLabel: 'Setuju',
+        cancelLabel: 'Batal',
+        variant: 'primary',
+        onConfirm: async () => {
+          setIsSubmitting(true);
+          try {
+            await updateImportantContact({
+              ...targetContact,
+              name: formName.trim(),
+              category: formCategory,
+              phoneNumber: formPhone.trim(),
+              whatsappNumber: formWhatsapp.trim() || undefined,
+              address: formAddress.trim() || undefined,
+              description: formDescription.trim() || undefined,
+              isEmergency: formIsEmergency
+            });
+            alert('Nomor kontak penting berhasil diperbarui!');
+            setIsModalOpen(false);
+          } catch (err: any) {
+            alert('Gagal menyimpan kontak: ' + err.message);
+          } finally {
+            setIsSubmitting(false);
+          }
+        }
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      if (editingContact) {
-        await updateImportantContact({
-          ...editingContact,
-          name: formName.trim(),
-          category: formCategory,
-          phoneNumber: formPhone.trim(),
-          whatsappNumber: formWhatsapp.trim() || undefined,
-          address: formAddress.trim() || undefined,
-          description: formDescription.trim() || undefined,
-          isEmergency: formIsEmergency
-        });
-        alert('Nomor kontak penting berhasil diperbarui!');
-      } else {
-        await addImportantContact({
-          name: formName.trim(),
-          category: formCategory,
-          phoneNumber: formPhone.trim(),
-          whatsappNumber: formWhatsapp.trim() || undefined,
-          address: formAddress.trim() || undefined,
-          description: formDescription.trim() || undefined,
-          isEmergency: formIsEmergency,
-          order: importantContacts.length + 1
-        });
-        alert('Nomor kontak penting berhasil ditambahkan dan disinkronkan ke cloud!');
-      }
+      await addImportantContact({
+        name: formName.trim(),
+        category: formCategory,
+        phoneNumber: formPhone.trim(),
+        whatsappNumber: formWhatsapp.trim() || undefined,
+        address: formAddress.trim() || undefined,
+        description: formDescription.trim() || undefined,
+        isEmergency: formIsEmergency,
+        order: importantContacts.length + 1
+      });
+      alert('Nomor kontak penting berhasil ditambahkan dan disinkronkan ke cloud!');
       setIsModalOpen(false);
     } catch (err: any) {
       alert('Gagal menyimpan kontak: ' + err.message);
@@ -143,18 +163,25 @@ export const KontakPentingView: React.FC = () => {
   };
 
   // Delete Contact
-  const handleDelete = async (contact: ImportantContact) => {
+  const handleDelete = (contact: ImportantContact) => {
     if (!isSuperadmin) {
       alert('Akses Ditolak: Hanya Superadmin yang memiliki hak menghapus kontak penting!');
       return;
     }
-    if (confirm(`Apakah Anda yakin ingin menghapus "${contact.name}" dari direktori nomor penting?`)) {
-      try {
-        await deleteImportantContact(contact.id);
-      } catch (err: any) {
-        alert('Gagal menghapus kontak: ' + err.message);
+    confirmAction({
+      title: 'Hapus Kontak Penting',
+      message: `Apakah Anda yakin ingin menghapus "${contact.name}" dari direktori nomor penting?`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteImportantContact(contact.id);
+        } catch (err: any) {
+          alert('Gagal menghapus kontak: ' + err.message);
+        }
       }
-    }
+    });
   };
 
   // Category Icon & Badge Colors

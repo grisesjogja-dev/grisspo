@@ -40,7 +40,8 @@ export const DataWargaView: React.FC = () => {
     addResident,
     currentUser,
     sendWhatsAppIuranWarning,
-    resetFeatureData
+    resetFeatureData,
+    confirmAction
   } = useApp();
 
   // Active Tab: 'semua' | 'tunggakan'
@@ -153,18 +154,27 @@ export const DataWargaView: React.FC = () => {
   };
 
   // Quick toggle checklist berkas kependudukan (Khusus Superadmin & Sekretaris)
-  const handleToggleBerkas = async (r: Resident) => {
+  const handleToggleBerkas = (r: Resident) => {
     if (!canManageBerkas) {
       alert('Akses Ditolak: Hak akses checklist berkas kependudukan hanya dimiliki oleh Superadmin dan Sekretaris.');
       return;
     }
-    setIsTogglingBerkas(r.id);
     const newStatus = !r.berkasKependudukan;
-    const res = await toggleBerkasKependudukan(r.id, newStatus);
-    setIsTogglingBerkas(null);
-    if (!res.success) {
-      alert(res.message);
-    }
+    confirmAction({
+      title: 'Ubah Status Berkas Kependudukan',
+      message: `Ubah status berkas kependudukan ${r.name} (${r.houseNumber}) menjadi ${newStatus ? 'LENGKAP (Sudah Menyerahkan)' : 'BELUM MENYERAHKAN'}?`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'primary',
+      onConfirm: async () => {
+        setIsTogglingBerkas(r.id);
+        const res = await toggleBerkasKependudukan(r.id, newStatus);
+        setIsTogglingBerkas(null);
+        if (!res.success) {
+          alert(res.message);
+        }
+      }
+    });
   };
 
   const handleOpenEdit = (r: Resident) => {
@@ -192,25 +202,33 @@ export const DataWargaView: React.FC = () => {
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingResident) return;
-    updateResident({
-      ...editingResident,
-      name: formName.toUpperCase(),
-      houseNumber: formHouse.toUpperCase(),
-      block: formBlock,
-      statusRumah: formStatus,
-      berkasKependudukan: formBerkasKependudukan,
-      phone: formPhone,
-      role: formRole,
-      familyMembers: Number(formFamily),
-      iuranUnpaidMonths: Number(formUnpaidMonths),
-      unpaidMonthNames: formUnpaidMonthNames.split(',').map((s) => s.trim()).filter(Boolean),
-      previousMonthsJimpitanDeficit: Number(formPrevJimpitanDeficit),
-      jimpitanPaidMonth: Number(formJimpitanPaid),
-      points: Number(formPoints),
-      password: formPassword || undefined
+    confirmAction({
+      title: 'Konfirmasi Perubahan Data Warga',
+      message: `Simpan pembaruan data warga ${formName.toUpperCase()} (${formHouse.toUpperCase()}) dengan status ${formStatus}?`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'primary',
+      onConfirm: () => {
+        updateResident({
+          ...editingResident,
+          name: formName.toUpperCase(),
+          houseNumber: formHouse.toUpperCase(),
+          block: formBlock,
+          statusRumah: formStatus,
+          berkasKependudukan: formBerkasKependudukan,
+          phone: formPhone,
+          role: formRole,
+          familyMembers: Number(formFamily),
+          iuranUnpaidMonths: Number(formUnpaidMonths),
+          unpaidMonthNames: formUnpaidMonthNames.split(',').map((s) => s.trim()).filter(Boolean),
+          previousMonthsJimpitanDeficit: Number(formPrevJimpitanDeficit),
+          jimpitanPaidMonth: Number(formJimpitanPaid),
+          points: Number(formPoints),
+          password: formPassword || undefined
+        });
+        setEditingResident(null);
+      }
     });
-    setEditingResident(null);
-    alert('Master data warga berhasil diperbarui oleh Superadmin!');
   };
 
   const handleAddResident = (e: React.FormEvent) => {
@@ -275,18 +293,25 @@ export const DataWargaView: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={async () => {
-                    if (confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh Data Warga ke data standar awal (58 warga asli Griya Sedayu Selaras 1)? Seluruh riwayat dan perubahan akan dikembalikan.')) {
-                      setIsResetting(true);
-                      try {
-                        await resetFeatureData('warga');
-                        alert('Data 58 warga berhasil di-reset ke kondisi awal oleh Superadmin!');
-                      } catch (err: any) {
-                        alert('Gagal mereset: ' + err.message);
-                      } finally {
-                        setIsResetting(false);
+                  onClick={() => {
+                    confirmAction({
+                      title: 'Reset Seluruh Data Warga',
+                      message: 'PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh Data Warga ke data standar awal (58 warga asli Griya Sedayu Selaras 1)? Seluruh riwayat dan perubahan akan dikembalikan.',
+                      confirmLabel: 'Setuju',
+                      cancelLabel: 'Batal',
+                      variant: 'danger',
+                      onConfirm: async () => {
+                        setIsResetting(true);
+                        try {
+                          await resetFeatureData('warga');
+                          alert('Data 58 warga berhasil di-reset ke kondisi awal oleh Superadmin!');
+                        } catch (err: any) {
+                          alert('Gagal mereset: ' + err.message);
+                        } finally {
+                          setIsResetting(false);
+                        }
                       }
-                    }
+                    });
                   }}
                   disabled={isResetting}
                   className="px-3.5 py-2.5 bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-rose-600/30 flex items-center gap-1.5 transition border border-rose-500/50"
@@ -738,9 +763,16 @@ export const DataWargaView: React.FC = () => {
                         </button>
                         <button
                           onClick={() => {
-                            if (confirm(`Hapus data warga ${r.name} (${r.houseNumber})? Tindakan ini permanen.`)) {
-                              deleteResident(r.id);
-                            }
+                            confirmAction({
+                              title: 'Hapus Data Warga',
+                              message: `Hapus data warga ${r.name} (${r.houseNumber})? Tindakan ini permanen.`,
+                              confirmLabel: 'Setuju',
+                              cancelLabel: 'Batal',
+                              variant: 'danger',
+                              onConfirm: () => {
+                                deleteResident(r.id);
+                              }
+                            });
                           }}
                           className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
                           title="Hapus Warga (Superadmin)"

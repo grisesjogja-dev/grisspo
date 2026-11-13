@@ -31,7 +31,8 @@ export const ForumView: React.FC = () => {
     togglePinPost,
     currentUser: authUser,
     resetFeatureData,
-    getResidentNameByHouse
+    getResidentNameByHouse,
+    confirmAction
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
   const isSuperadmin = currentUser.role === 'superadmin';
@@ -125,11 +126,18 @@ export const ForumView: React.FC = () => {
 
             {currentUser?.role === 'superadmin' && (
               <button
-                onClick={async () => {
-                  if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh postingan dan komentar di Forum Diskusi?')) {
-                    await resetFeatureData('forum');
-                    alert('Data Forum Diskusi berhasil direset oleh Superadmin.');
-                  }
+                onClick={() => {
+                  confirmAction({
+                    title: 'Reset Data Forum Diskusi',
+                    message: 'PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh postingan dan komentar di Forum Diskusi?',
+                    confirmLabel: 'Setuju',
+                    cancelLabel: 'Batal',
+                    variant: 'danger',
+                    onConfirm: async () => {
+                      await resetFeatureData('forum');
+                      alert('Data Forum Diskusi berhasil direset oleh Superadmin.');
+                    }
+                  });
                 }}
                 className="px-3.5 py-2.5 bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold rounded-xl border border-red-500 shadow-md flex items-center gap-1.5 transition"
                 title="Reset Diskusi Forum (Superadmin)"
@@ -220,7 +228,16 @@ export const ForumView: React.FC = () => {
                   {canModerate && (
                     <div className="flex items-center gap-1 ml-2 border-l pl-2 border-slate-200">
                       <button
-                        onClick={() => togglePinPost(post.id)}
+                        onClick={() => {
+                          confirmAction({
+                            title: post.isPinned ? 'Lepas Sematan Topik' : 'Sematkan Topik Diskusi',
+                            message: `${post.isPinned ? 'Lepas sematan' : 'Sematkan'} topik "${post.title}"?`,
+                            confirmLabel: 'Setuju',
+                            cancelLabel: 'Batal',
+                            variant: 'primary',
+                            onConfirm: () => togglePinPost(post.id)
+                          });
+                        }}
                         className={`p-1.5 rounded-lg text-xs transition ${
                           post.isPinned ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-600'
                         }`}
@@ -242,9 +259,14 @@ export const ForumView: React.FC = () => {
 
                       <button
                         onClick={() => {
-                          if (confirm(`Hapus topik "${post.title}"?`)) {
-                            deleteForumPost(post.id);
-                          }
+                          confirmAction({
+                            title: 'Hapus Topik Diskusi',
+                            message: `Apakah Anda yakin ingin menghapus topik "${post.title}"?`,
+                            confirmLabel: 'Setuju',
+                            cancelLabel: 'Batal',
+                            variant: 'danger',
+                            onConfirm: () => deleteForumPost(post.id)
+                          });
                         }}
                         className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                         title="Hapus Topik (Moderasi)"
@@ -309,9 +331,14 @@ export const ForumView: React.FC = () => {
                           {currentUser.role === 'superadmin' && (
                             <button
                               onClick={() => {
-                                if (confirm('Hapus komentar ini?')) {
-                                  deleteForumComment(post.id, comm.id);
-                                }
+                                confirmAction({
+                                  title: 'Hapus Komentar',
+                                  message: 'Apakah Anda yakin ingin menghapus komentar ini?',
+                                  confirmLabel: 'Setuju',
+                                  cancelLabel: 'Batal',
+                                  variant: 'danger',
+                                  onConfirm: () => deleteForumComment(post.id, comm.id)
+                                });
                               }}
                               className="p-0.5 text-slate-400 hover:text-red-600 rounded transition"
                               title="Hapus Komentar (Superadmin)"
@@ -460,11 +487,21 @@ export const ForumView: React.FC = () => {
             </div>
 
             <form
-              onSubmit={async (e) => {
+              onSubmit={(e) => {
                 e.preventDefault();
-                await updateForumPost(editingPost);
-                setEditingPost(null);
-                alert('Topik diskusi berhasil diperbarui!');
+                const targetPost = editingPost;
+                confirmAction({
+                  title: 'Konfirmasi Perubahan Topik',
+                  message: `Simpan perubahan pada topik diskusi "${targetPost.title}"?`,
+                  confirmLabel: 'Setuju',
+                  cancelLabel: 'Batal',
+                  variant: 'primary',
+                  onConfirm: async () => {
+                    await updateForumPost(targetPost);
+                    setEditingPost(null);
+                    alert('Topik diskusi berhasil diperbarui!');
+                  }
+                });
               }}
               className="p-6 space-y-4 text-xs"
             >

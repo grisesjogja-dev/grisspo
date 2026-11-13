@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 export const JadwalRondaView: React.FC = () => {
-  const { rondaSchedule, setActiveView, currentUser: authUser, removeRondaMember, addRondaMember, residents, resetFeatureData } = useApp();
+  const { rondaSchedule, setActiveView, currentUser: authUser, removeRondaMember, addRondaMember, residents, resetFeatureData, confirmAction } = useApp();
   const currentUser = authUser || defaultGuestUser;
   const isSuperadmin = currentUser.role === 'superadmin';
 
@@ -70,11 +70,18 @@ export const JadwalRondaView: React.FC = () => {
             {isSuperadmin && (
               <button
                 type="button"
-                onClick={async () => {
-                  if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data riwayat absensi dan jadwal ronda?')) {
-                    await resetFeatureData('absensi');
-                    alert('Data Absensi & Jadwal Ronda berhasil direset oleh Superadmin.');
-                  }
+                onClick={() => {
+                  confirmAction({
+                    title: 'Reset Data Absensi & Ronda',
+                    message: 'PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data riwayat absensi dan jadwal ronda?',
+                    confirmLabel: 'Setuju',
+                    cancelLabel: 'Batal',
+                    variant: 'danger',
+                    onConfirm: async () => {
+                      await resetFeatureData('absensi');
+                      alert('Data Absensi & Jadwal Ronda berhasil direset oleh Superadmin.');
+                    }
+                  });
                 }}
                 className="px-3.5 py-2.5 bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold rounded-xl border border-red-500 shadow-md flex items-center gap-1.5 transition"
                 title="Reset Data Absensi & Ronda (Superadmin)"
@@ -194,9 +201,16 @@ export const JadwalRondaView: React.FC = () => {
                           {isSuperadmin && (
                             <button
                               onClick={() => {
-                                if (confirm(`Hapus Bpk. ${member} dari jadwal ronda hari ${group.day}?`)) {
-                                  removeRondaMember(group.day, member);
-                                }
+                                confirmAction({
+                                  title: 'Hapus Petugas Ronda',
+                                  message: `Hapus Bpk. ${member} dari jadwal ronda hari ${group.day}?`,
+                                  confirmLabel: 'Setuju',
+                                  cancelLabel: 'Batal',
+                                  variant: 'danger',
+                                  onConfirm: () => {
+                                    removeRondaMember(group.day, member);
+                                  }
+                                });
                               }}
                               className="p-1 hover:bg-red-500 hover:text-white rounded-md text-slate-400 transition"
                               title="Hapus Petugas Ronda (Superadmin)"

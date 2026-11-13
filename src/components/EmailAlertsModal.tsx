@@ -8,7 +8,7 @@ interface EmailAlertsModalProps {
 }
 
 export const EmailAlertsModal: React.FC<EmailAlertsModalProps> = ({ isOpen, onClose }) => {
-  const { emailAlerts, clearEmailAlerts, currentUser } = useApp();
+  const { emailAlerts, clearEmailAlerts, currentUser, confirmAction } = useApp();
 
   if (!isOpen) return null;
 
@@ -73,9 +73,14 @@ export const EmailAlertsModal: React.FC<EmailAlertsModalProps> = ({ isOpen, onCl
           {currentUser?.role === 'superadmin' && emailAlerts.length > 0 && (
             <button
               onClick={() => {
-                if (confirm('Bersihkan seluruh log anomali email ini?')) {
-                  clearEmailAlerts();
-                }
+                confirmAction({
+                  title: 'Hapus Log Anomali Email',
+                  message: 'Bersihkan seluruh log anomali email ini?',
+                  confirmLabel: 'Setuju',
+                  cancelLabel: 'Batal',
+                  variant: 'danger',
+                  onConfirm: () => clearEmailAlerts()
+                });
               }}
               className="py-2.5 px-4 bg-red-100 hover:bg-red-200 text-red-700 font-bold rounded-xl text-xs transition"
             >

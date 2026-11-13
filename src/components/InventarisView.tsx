@@ -29,7 +29,8 @@ export const InventarisView: React.FC = () => {
     borrowInventoryItem,
     returnInventoryItem,
     currentUser: authUser,
-    resetFeatureData
+    resetFeatureData,
+    confirmAction
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
 
@@ -108,17 +109,27 @@ export const InventarisView: React.FC = () => {
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
-    updateInventoryItem({
-      ...editingItem,
-      namaBarang: formName.toUpperCase(),
-      jumlah: formQty,
-      satuan: formSatuan,
-      tahunPerolehan: formYear,
-      kondisi: formCondition,
-      catatan: formNotes
+    const itemSnapshot = editingItem;
+    confirmAction({
+      title: 'Konfirmasi Perubahan Inventaris',
+      message: `Simpan perubahan data barang "${itemSnapshot.namaBarang}"?`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'primary',
+      onConfirm: () => {
+        updateInventoryItem({
+          ...itemSnapshot,
+          namaBarang: formName.toUpperCase(),
+          jumlah: formQty,
+          satuan: formSatuan,
+          tahunPerolehan: formYear,
+          kondisi: formCondition,
+          catatan: formNotes
+        });
+        setEditingItem(null);
+        alert('Data barang inventaris berhasil diperbarui!');
+      }
     });
-    setEditingItem(null);
-    alert('Data barang inventaris berhasil diperbarui!');
   };
 
   const handleAddItem = (e: React.FormEvent) => {
@@ -140,9 +151,20 @@ export const InventarisView: React.FC = () => {
   const handleConfirmBorrow = (e: React.FormEvent) => {
     e.preventDefault();
     if (!borrowingItem) return;
-    borrowInventoryItem(borrowingItem.id, borrowerName);
-    setBorrowingItem(null);
-    alert(`Barang ${borrowingItem.namaBarang} berhasil dipinjam oleh ${borrowerName}!`);
+    const targetItem = borrowingItem;
+    const borrower = borrowerName;
+    confirmAction({
+      title: 'Konfirmasi Peminjaman Barang',
+      message: `Catat peminjaman "${targetItem.namaBarang}" oleh ${borrower}?`,
+      confirmLabel: 'Setuju',
+      cancelLabel: 'Batal',
+      variant: 'primary',
+      onConfirm: () => {
+        borrowInventoryItem(targetItem.id, borrower);
+        setBorrowingItem(null);
+        alert(`Barang ${targetItem.namaBarang} berhasil dipinjam oleh ${borrower}!`);
+      }
+    });
   };
 
   return (
@@ -184,11 +206,18 @@ export const InventarisView: React.FC = () => {
 
             {currentUser?.role === 'superadmin' && (
               <button
-                onClick={async () => {
-                  if (window.confirm('PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data inventaris barang?')) {
-                    await resetFeatureData('inventaris');
-                    alert('Data Inventaris berhasil direset oleh Superadmin.');
-                  }
+                onClick={() => {
+                  confirmAction({
+                    title: 'Reset Data Inventaris',
+                    message: 'PERINGATAN SUPERADMIN: Apakah Anda yakin ingin mereset seluruh data inventaris barang?',
+                    confirmLabel: 'Setuju',
+                    cancelLabel: 'Batal',
+                    variant: 'danger',
+                    onConfirm: async () => {
+                      await resetFeatureData('inventaris');
+                      alert('Data Inventaris berhasil direset oleh Superadmin.');
+                    }
+                  });
                 }}
                 className="px-3.5 py-2.5 bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold rounded-xl border border-red-500 shadow-md flex items-center gap-1.5 transition"
                 title="Reset Data Inventaris (Superadmin)"
@@ -343,7 +372,16 @@ export const InventarisView: React.FC = () => {
 
                       {item.statusPinjam === 'Dipinjam' && (
                         <button
-                          onClick={() => returnInventoryItem(item.id)}
+                          onClick={() => {
+                            confirmAction({
+                              title: 'Konfirmasi Pengembalian Barang',
+                              message: `Tandai barang inventaris "${item.namaBarang}" sudah dikembalikan?`,
+                              confirmLabel: 'Setuju',
+                              cancelLabel: 'Batal',
+                              variant: 'primary',
+                              onConfirm: () => returnInventoryItem(item.id)
+                            });
+                          }}
                           className="px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-[10px] font-bold transition border border-emerald-200"
                           title="Kembalikan Barang"
                         >
@@ -366,9 +404,14 @@ export const InventarisView: React.FC = () => {
                       {canDelete && (
                         <button
                           onClick={() => {
-                            if (confirm(`Hapus barang inventaris ${item.namaBarang}?`)) {
-                              deleteInventoryItem(item.id);
-                            }
+                            confirmAction({
+                              title: 'Hapus Barang Inventaris',
+                              message: `Apakah Anda yakin ingin menghapus barang inventaris "${item.namaBarang}"?`,
+                              confirmLabel: 'Setuju',
+                              cancelLabel: 'Batal',
+                              variant: 'danger',
+                              onConfirm: () => deleteInventoryItem(item.id)
+                            });
                           }}
                           className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
                           title="Hapus Barang (Superadmin)"

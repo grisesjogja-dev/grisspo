@@ -83,6 +83,8 @@ export interface JimpitDailyReport {
   totalNominal: number;
   notes?: string;
   createdAt: string;
+  reportType?: 'harian' | 'pelunasan';
+  transactionId?: string;
 }
 
 export type IncomeCategory =

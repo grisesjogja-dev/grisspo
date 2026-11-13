@@ -51,11 +51,68 @@ import {
   collection,
   onSnapshot,
   doc,
-  setDoc,
-  deleteDoc,
+  setDoc as rawSetDoc,
+  deleteDoc as rawDeleteDoc,
   getDocs,
-  getDoc
+  getDoc,
+  disableNetwork
 } from 'firebase/firestore';
+import { ConfirmModal } from '../components/ConfirmModal';
+
+// Helper to recursively remove undefined values before writing to Firestore
+function sanitizeForFirestore<T>(obj: T): T {
+  if (Array.isArray(obj)) {
+    return obj.map((item) => sanitizeForFirestore(item)) as unknown as T;
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const cleaned: Record<string, any> = {};
+    Object.entries(obj as Record<string, any>).forEach(([key, val]) => {
+      if (val !== undefined) {
+        cleaned[key] = sanitizeForFirestore(val);
+      }
+    });
+    return cleaned as T;
+  }
+  return obj;
+}
+
+const MEMBER_NAME_ALIASES: Record<string, string[]> = {
+  dewa: ['dewo', 'dewa'],
+  dewo: ['dewa', 'dewo'],
+  robi: ['roby', 'robi'],
+  roby: ['robi', 'roby']
+};
+
+export function normalizeCleanName(name: string): string {
+  return (name || '')
+    .replace(/^(bapak|bpk\.?|ibu|mas|mbak)\s+/i, '')
+    .replace(/[^a-zA-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+export function findResidentByMemberName(memberName: string, residentsList: Resident[]): Resident | undefined {
+  const cleanTarget = normalizeCleanName(memberName);
+  if (!cleanTarget) return undefined;
+  const aliases = MEMBER_NAME_ALIASES[cleanTarget] || [cleanTarget];
+
+  return residentsList.find((r) => {
+    const resClean = normalizeCleanName(r.name);
+    if (!resClean) return false;
+    return aliases.some((alias) => resClean === alias || resClean.includes(alias) || alias.includes(resClean));
+  });
+}
+
+export interface ConfirmActionOptions {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: 'danger' | 'warning' | 'primary';
+  onConfirm: () => void | Promise<void>;
+  onCancel?: () => void;
+}
 
 interface AppContextType {
   currentUser: User | null;
@@ -209,6 +266,9 @@ interface AppContextType {
   isCloudSynced: boolean;
   activeView: string;
   setActiveView: (view: string) => void;
+
+  // Global Confirmation Dialog for all user actions
+  confirmAction: (options: ConfirmActionOptions) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -270,7 +330,94 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentUser]);
 
   const lastActivityTimeRef = useRef<number>(Date.now());
+  const lastCloudHeartbeatRef = useRef<number>(0);
   const hasRegisteredSessionRef = useRef<boolean>(false);
+  const firestoreQuotaExceededRef = useRef<boolean>(false);
+  const cleanedDeletedIdsRef = useRef<Set<string>>(new Set());
+  const hasAlertedQuotaRef = useRef<boolean>(false);
+
+  const getUtcDateKey = () => new Date().toISOString().slice(0, 10);
+
+  const isQuotaExhaustedToday = (): boolean => {
+    if (firestoreQuotaExceededRef.current) return true;
+    try {
+      const savedDay = localStorage.getItem('grisspo_quota_exhausted_utc');
+      if (savedDay && savedDay === getUtcDateKey()) {
+        firestoreQuotaExceededRef.current = true;
+        return true;
+      }
+      if (savedDay && savedDay !== getUtcDateKey()) {
+        localStorage.removeItem('grisspo_quota_exhausted_utc');
+      }
+    } catch {
+      // ignore storage errors
+    }
+    return false;
+  };
+
+  const isQuotaExceededError = (err: unknown): boolean => {
+    const code = (err as any)?.code;
+    const msg = String((err as any)?.message || err || '').toLowerCase();
+    return code === 'resource-exhausted' || msg.includes('resource-exhausted') || msg.includes('quota');
+  };
+
+  const handleFirestoreWriteFailure = (err: unknown, contextLabel: string, notifyUser = false) => {
+    if (isQuotaExceededError(err)) {
+      firestoreQuotaExceededRef.current = true;
+      try {
+        localStorage.setItem('grisspo_quota_exhausted_utc', getUtcDateKey());
+      } catch {
+        // ignore
+      }
+      // Halt Firestore SDK internal backoff write retries immediately for this tab
+      disableNetwork(db).catch(() => {});
+      console.warn(`Firestore daily write quota exceeded during ${contextLabel}. Cloud writes paused until tomorrow.`);
+      if (notifyUser && !hasAlertedQuotaRef.current) {
+        hasAlertedQuotaRef.current = true;
+        alert(
+          'Kuota penulisan harian database cloud (Firestore Free Tier) telah mencapai batas maksimum hari ini dan akan direset otomatis keesokan harinya. Data tetap disimpan secara lokal di perangkat ini.'
+        );
+      }
+      return;
+    }
+    console.warn(`Firestore ${contextLabel} error:`, err);
+  };
+
+  // Safe Firestore write wrappers that respect daily quota exhaustion across all operations
+  const setDoc = async (reference: any, data: any, options?: any): Promise<void> => {
+    if (isQuotaExhaustedToday()) return;
+    try {
+      if (options) {
+        await rawSetDoc(reference, data, options);
+      } else {
+        await rawSetDoc(reference, data);
+      }
+    } catch (err) {
+      handleFirestoreWriteFailure(err, 'setDoc', true);
+      if (!isQuotaExceededError(err)) {
+        throw err;
+      }
+    }
+  };
+
+  const deleteDoc = async (reference: any): Promise<void> => {
+    if (isQuotaExhaustedToday()) return;
+    try {
+      await rawDeleteDoc(reference);
+    } catch (err) {
+      handleFirestoreWriteFailure(err, 'deleteDoc', true);
+      if (!isQuotaExceededError(err)) {
+        throw err;
+      }
+    }
+  };
+
+  // Global Confirmation Dialog for all user actions (Hapus & Ubah data apapun)
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmActionOptions | null>(null);
+
+  const confirmAction = (options: ConfirmActionOptions) => {
+    setConfirmDialog(options);
+  };
 
   const getClientDeviceInfo = (): string => {
     if (typeof navigator === 'undefined') return 'Desktop Browser';
@@ -284,8 +431,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return 'Web Browser';
   };
 
-  const syncActiveSessionToCloud = async (user: User) => {
+  const syncActiveSessionToCloud = async (user: User, force = false) => {
+    if (isQuotaExhaustedToday()) return;
     try {
+      const lastSync = Number(localStorage.getItem('grisspo_last_session_sync') || '0');
+      const lastUserId = localStorage.getItem('grisspo_last_session_uid') || '';
+      if (!force && lastUserId === user.id && Date.now() - lastSync < 300000) {
+        hasRegisteredSessionRef.current = true;
+        return;
+      }
       const nowStr = new Date().toISOString();
       const sessionRef = doc(db, 'active_sessions', user.id);
       await setDoc(
@@ -302,15 +456,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
         { merge: true }
       );
+      localStorage.setItem('grisspo_last_session_sync', String(Date.now()));
+      localStorage.setItem('grisspo_last_session_uid', user.id);
       hasRegisteredSessionRef.current = true;
     } catch (e) {
-      console.warn('Firestore active_sessions sync error:', e);
+      handleFirestoreWriteFailure(e, 'active_sessions sync');
     }
   };
 
   const removeActiveSessionFromCloud = async (userId: string) => {
     try {
       hasRegisteredSessionRef.current = false;
+      localStorage.removeItem('grisspo_last_session_sync');
+      localStorage.removeItem('grisspo_last_session_uid');
       await deleteDoc(doc(db, 'active_sessions', userId));
     } catch (e) {
       console.warn('Firestore active_sessions remove error:', e);
@@ -379,12 +537,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (elapsed >= INACTIVITY_TIMEOUT_MS) {
         triggerInactivityLogout();
-      } else if (currentUserRef.current && elapsed < 30000) {
-        // Send heartbeat every check interval if user has been active recently
+      } else if (
+        currentUserRef.current &&
+        !firestoreQuotaExceededRef.current &&
+        elapsed < 60000 &&
+        now - lastCloudHeartbeatRef.current > 300000
+      ) {
+        // Send heartbeat to Firestore at most once every 5 minutes to conserve daily write quota
+        lastCloudHeartbeatRef.current = now;
         const sessionRef = doc(db, 'active_sessions', currentUserRef.current.id);
-        setDoc(sessionRef, { lastActive: new Date().toISOString() }, { merge: true }).catch(() => {});
+        setDoc(sessionRef, { lastActive: new Date().toISOString() }, { merge: true }).catch((e) => {
+          handleFirestoreWriteFailure(e, 'session heartbeat');
+        });
       }
-    }, 3000);
+    }, 5000);
 
     return () => {
       activityEvents.forEach((ev) => window.removeEventListener(ev, handleUserActivity));
@@ -566,15 +732,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setImportantContacts((prev) => prev.filter((c) => c.id !== id));
 
     // Save to Firestore system_deleted_ids so ALL devices receive this deletion in real-time
-    try {
-      await setDoc(doc(db, 'system_deleted_ids', id), {
-        id,
-        collection: collectionName || 'general',
-        deletedAt: new Date().toISOString(),
-        deletedBy: currentUser?.name || 'Superadmin'
-      });
-    } catch (err) {
-      console.warn('Firestore system_deleted_ids sync notice:', err);
+    if (!firestoreQuotaExceededRef.current) {
+      try {
+        await setDoc(doc(db, 'system_deleted_ids', id), {
+          id,
+          collection: collectionName || 'general',
+          deletedAt: new Date().toISOString(),
+          deletedBy: currentUser?.name || 'Superadmin'
+        });
+      } catch (err) {
+        handleFirestoreWriteFailure(err, 'system_deleted_ids sync');
+      }
     }
   };
 
@@ -625,8 +793,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let unsubRewards: (() => void) | undefined;
     let unsubImportantContacts: (() => void) | undefined;
 
-    // Check Cloud Seed Status so other devices NEVER resurrect deleted documents
+    // Check Cloud Seed Status once so other devices NEVER resurrect deleted documents or burn write quota
     const checkCloudSeedStatus = async () => {
+      if (isQuotaExhaustedToday()) return;
+      if (
+        localStorage.getItem('grisspo_seeded_v1') === 'true' &&
+        localStorage.getItem('grisspo_contacts_seeded_v1') === 'true'
+      ) {
+        return;
+      }
       try {
         const seedRef = doc(db, 'system_settings', 'seed_status');
         const seedSnap = await getDoc(seedRef);
@@ -636,86 +811,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (wargaSnap.empty) {
             initialResidents.forEach((res) => {
               if (!deletedIdsRef.current.includes(res.id)) {
-                setDoc(doc(db, 'warga', res.id), res).catch(() => {});
+                setDoc(doc(db, 'warga', res.id), res).catch((e) => handleFirestoreWriteFailure(e, 'seed warga'));
               }
             });
             initialTransactions.forEach((trx) => {
               if (!deletedIdsRef.current.includes(trx.id)) {
-                setDoc(doc(db, 'keuangan_transaksi', trx.id), trx).catch(() => {});
+                setDoc(doc(db, 'keuangan_transaksi', trx.id), trx).catch((e) => handleFirestoreWriteFailure(e, 'seed trx'));
               }
             });
             initialInventory.forEach((inv) => {
               if (!deletedIdsRef.current.includes(inv.id)) {
-                setDoc(doc(db, 'inventaris', inv.id), inv).catch(() => {});
+                setDoc(doc(db, 'inventaris', inv.id), inv).catch((e) => handleFirestoreWriteFailure(e, 'seed inv'));
               }
             });
             initialForumPosts.forEach((p) => {
               if (!deletedIdsRef.current.includes(p.id)) {
-                setDoc(doc(db, 'forum_posts', p.id), p).catch(() => {});
+                setDoc(doc(db, 'forum_posts', p.id), p).catch((e) => handleFirestoreWriteFailure(e, 'seed forum'));
               }
             });
             initialAnnouncements.forEach((ann) => {
               if (!deletedIdsRef.current.includes(ann.id)) {
-                setDoc(doc(db, 'pengumuman', ann.id), ann).catch(() => {});
+                setDoc(doc(db, 'pengumuman', ann.id), ann).catch((e) => handleFirestoreWriteFailure(e, 'seed ann'));
               }
             });
             initialFasumBookings.forEach((b) => {
               if (!deletedIdsRef.current.includes(b.id)) {
-                setDoc(doc(db, 'fasum_bookings', b.id), b).catch(() => {});
+                setDoc(doc(db, 'fasum_bookings', b.id), b).catch((e) => handleFirestoreWriteFailure(e, 'seed fasum'));
               }
             });
             initialMeetingNotes.forEach((n) => {
               if (!deletedIdsRef.current.includes(n.id)) {
-                setDoc(doc(db, 'notulen_rapat', n.id), n).catch(() => {});
+                setDoc(doc(db, 'notulen_rapat', n.id), n).catch((e) => handleFirestoreWriteFailure(e, 'seed notulen'));
               }
             });
             initialAttendanceSessions.forEach((s) => {
               if (!deletedIdsRef.current.includes(s.id)) {
-                setDoc(doc(db, 'absensi_records', s.id), s).catch(() => {});
+                setDoc(doc(db, 'absensi_records', s.id), s).catch((e) => handleFirestoreWriteFailure(e, 'seed absensi'));
               }
             });
             initialRewards.forEach((rw) => {
               if (!deletedIdsRef.current.includes(rw.id)) {
-                setDoc(doc(db, 'katalog_benefit', rw.id), rw).catch(() => {});
+                setDoc(doc(db, 'katalog_benefit', rw.id), rw).catch((e) => handleFirestoreWriteFailure(e, 'seed rewards'));
+              }
+            });
+            initialImportantContacts.forEach((ct) => {
+              if (!deletedIdsRef.current.includes(ct.id)) {
+                setDoc(doc(db, 'kontak_penting', ct.id), ct).catch((e) => handleFirestoreWriteFailure(e, 'seed kontak'));
               }
             });
           }
           await setDoc(seedRef, { isSeeded: true, seededAt: new Date().toISOString() });
           localStorage.setItem('grisspo_seeded_v1', 'true');
+        } else {
+          localStorage.setItem('grisspo_seeded_v1', 'true');
         }
 
-        // Check if kontak_penting is brand new, seed if empty without overwriting existing data
-        try {
-          const kontakSnap = await getDocs(collection(db, 'kontak_penting'));
-          if (kontakSnap.empty) {
-            initialImportantContacts.forEach((ct) => {
-              if (!deletedIdsRef.current.includes(ct.id)) {
-                setDoc(doc(db, 'kontak_penting', ct.id), ct).catch(() => {});
-              }
-            });
-          }
-        } catch (e) {
-          console.warn('Sync initial important contacts notice:', e);
-        }
-
-        // Realtime sync: Push any local payment receipts to Firestore so all other devices see them
-        try {
-          const receiptsSnap = await getDocs(collection(db, 'pembayaran_kwitansi'));
-          const cloudIds = new Set(receiptsSnap.docs.map((d) => d.id));
-          const localSaved = localStorage.getItem('grisspo_payment_receipts');
-          if (localSaved) {
-            const list: PaymentReceipt[] = JSON.parse(localSaved);
-            for (const r of list) {
-              if (!cloudIds.has(r.id) && !deletedIdsRef.current.includes(r.id)) {
-                await setDoc(doc(db, 'pembayaran_kwitansi', r.id), r);
-              }
+        // One-time check for kontak_penting only if not yet marked seeded locally
+        if (localStorage.getItem('grisspo_contacts_seeded_v1') !== 'true' && !firestoreQuotaExceededRef.current) {
+          try {
+            const kontakSnap = await getDocs(collection(db, 'kontak_penting'));
+            if (kontakSnap.empty) {
+              initialImportantContacts.forEach((ct) => {
+                if (!deletedIdsRef.current.includes(ct.id)) {
+                  setDoc(doc(db, 'kontak_penting', ct.id), ct).catch((e) => handleFirestoreWriteFailure(e, 'seed kontak'));
+                }
+              });
             }
+            localStorage.setItem('grisspo_contacts_seeded_v1', 'true');
+          } catch (e) {
+            handleFirestoreWriteFailure(e, 'sync initial important contacts');
           }
-        } catch (e) {
-          console.warn('Sync local receipts to cloud notice:', e);
         }
       } catch (err) {
-        console.warn('Firestore cloud seed status check notice:', err);
+        handleFirestoreWriteFailure(err, 'cloud seed status check');
       }
     };
     checkCloudSeedStatus();
@@ -737,14 +905,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.warn('Firestore system_deleted_ids listener notice:', err.message);
       });
 
+      // Helper to safely purge lingering deleted doc at most once per superadmin session
+      const cleanupDeletedDocOnce = (colName: string, docId: string) => {
+        if (
+          currentUserRef.current?.role === 'superadmin' &&
+          !firestoreQuotaExceededRef.current &&
+          !cleanedDeletedIdsRef.current.has(`${colName}:${docId}`)
+        ) {
+          cleanedDeletedIdsRef.current.add(`${colName}:${docId}`);
+          deleteDoc(doc(db, colName, docId)).catch((e) => handleFirestoreWriteFailure(e, `cleanup ${colName}`));
+        }
+      };
+
       // 1. Warga listener
       unsubWarga = onSnapshot(collection(db, 'warga'), (snapshot) => {
         if (!snapshot.empty) {
           const cloudData: Resident[] = [];
           snapshot.forEach((d) => {
             if (deletedIdsRef.current.includes(d.id)) {
-              // Proactively clean up any lingering deleted doc from Firestore
-              deleteDoc(doc(db, 'warga', d.id)).catch(() => {});
+              cleanupDeletedDocOnce('warga', d.id);
             } else {
               cloudData.push(d.data() as Resident);
             }
@@ -764,7 +943,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const cloudTrx: Transaction[] = [];
           snapshot.forEach((d) => {
             if (deletedIdsRef.current.includes(d.id)) {
-              deleteDoc(doc(db, 'keuangan_transaksi', d.id)).catch(() => {});
+              cleanupDeletedDocOnce('keuangan_transaksi', d.id);
             } else {
               const rawData = d.data() as any;
               cloudTrx.push({
@@ -789,11 +968,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // 3. Jimpitan listener
       unsubJimpitan = onSnapshot(collection(db, 'jimpitan_records'), (snapshot) => {
-        if (!snapshot.empty) {
+        const isAlreadySeeded = localStorage.getItem('grisspo_seeded_v1') === 'true';
+        if (!snapshot.empty || isAlreadySeeded) {
           const cloudJimpit: JimpitDailyReport[] = [];
           snapshot.forEach((d) => {
             if (deletedIdsRef.current.includes(d.id)) {
-              deleteDoc(doc(db, 'jimpitan_records', d.id)).catch(() => {});
+              cleanupDeletedDocOnce('jimpitan_records', d.id);
             } else {
               cloudJimpit.push(d.data() as JimpitDailyReport);
             }
@@ -812,7 +992,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const cloudInv: InventoryItem[] = [];
           snapshot.forEach((d) => {
             if (deletedIdsRef.current.includes(d.id)) {
-              deleteDoc(doc(db, 'inventaris', d.id)).catch(() => {});
+              cleanupDeletedDocOnce('inventaris', d.id);
             } else {
               cloudInv.push(d.data() as InventoryItem);
             }
@@ -831,7 +1011,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const cloudForum: ForumPost[] = [];
           snapshot.forEach((d) => {
             if (deletedIdsRef.current.includes(d.id)) {
-              deleteDoc(doc(db, 'forum_posts', d.id)).catch(() => {});
+              cleanupDeletedDocOnce('forum_posts', d.id);
             } else {
               cloudForum.push(d.data() as ForumPost);
             }
@@ -849,7 +1029,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const cloudAnn: Announcement[] = [];
           snapshot.forEach((d) => {
             if (deletedIdsRef.current.includes(d.id)) {
-              deleteDoc(doc(db, 'pengumuman', d.id)).catch(() => {});
+              cleanupDeletedDocOnce('pengumuman', d.id);
             } else {
               cloudAnn.push(d.data() as Announcement);
             }
@@ -867,7 +1047,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const cloudFasum: FasumBooking[] = [];
           snapshot.forEach((d) => {
             if (deletedIdsRef.current.includes(d.id)) {
-              deleteDoc(doc(db, 'fasum_bookings', d.id)).catch(() => {});
+              cleanupDeletedDocOnce('fasum_bookings', d.id);
             } else {
               cloudFasum.push(d.data() as FasumBooking);
             }
@@ -882,16 +1062,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // 8. Absensi Records listener
       unsubAbsensi = onSnapshot(collection(db, 'absensi_records'), (snapshot) => {
-        if (!snapshot.empty) {
+        const isAlreadySeeded = localStorage.getItem('grisspo_seeded_v1') === 'true';
+        if (!snapshot.empty || isAlreadySeeded) {
           const cloudAbs: AttendanceSession[] = [];
           snapshot.forEach((d) => {
             if (deletedIdsRef.current.includes(d.id)) {
-              deleteDoc(doc(db, 'absensi_records', d.id)).catch(() => {});
+              cleanupDeletedDocOnce('absensi_records', d.id);
             } else {
               cloudAbs.push(d.data() as AttendanceSession);
             }
           });
-          cloudAbs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          cloudAbs.sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
           setAttendanceSessions(cloudAbs);
           localStorage.setItem('grisspo_attendance_sessions', JSON.stringify(cloudAbs));
         }
@@ -905,7 +1086,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const cloudNotes: MeetingNote[] = [];
           snapshot.forEach((d) => {
             if (deletedIdsRef.current.includes(d.id)) {
-              deleteDoc(doc(db, 'notulen_rapat', d.id)).catch(() => {});
+              cleanupDeletedDocOnce('notulen_rapat', d.id);
             } else {
               cloudNotes.push(d.data() as MeetingNote);
             }
@@ -929,8 +1110,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (now - lastActiveTime <= 30 * 60 * 1000) {
             sessions.push(s);
           } else {
-            // Proactively clean up expired session
-            deleteDoc(doc(db, 'active_sessions', d.id)).catch(() => {});
+            cleanupDeletedDocOnce('active_sessions', d.id);
           }
         });
 
@@ -976,7 +1156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (!deletedIdsRef.current.includes(d.id)) {
             cloudReceipts.push(d.data() as PaymentReceipt);
           } else {
-            deleteDoc(doc(db, 'pembayaran_kwitansi', d.id)).catch(() => {});
+            cleanupDeletedDocOnce('pembayaran_kwitansi', d.id);
           }
         });
         cloudReceipts.sort((a, b) => {
@@ -1152,9 +1332,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const currentBalance = totalIncome - totalExpense;
 
-  // Auto-synchronize payment receipts <-> transactions bidirectionally so they always match in realtime
+  // In-memory synchronization between payment receipts and transactions (safe without recursive Firestore writes)
   useEffect(() => {
-    // 1. PaymentReceipts -> Transactions synchronization
+    // 1. PaymentReceipts -> Transactions local reconciliation
     const currentTrxIds = new Set(transactions.map((t) => t.id));
     const missingReceipts = paymentReceipts.filter(
       (r) => !r.transactionId || !currentTrxIds.has(r.transactionId)
@@ -1208,9 +1388,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           localStorage.setItem('grisspo_transactions', JSON.stringify(nextTrx));
           return nextTrx;
         });
-        newTrxList.forEach((t) => {
-          setDoc(doc(db, 'keuangan_transaksi', t.id), t).catch(() => {});
-        });
       }
 
       if (updatedReceiptsList.length > 0) {
@@ -1222,78 +1399,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           localStorage.setItem('grisspo_payment_receipts', JSON.stringify(nextR));
           return nextR;
         });
-        updatedReceiptsList.forEach((r) => {
-          setDoc(doc(db, 'pembayaran_kwitansi', r.id), r).catch(() => {});
-        });
       }
     }
-
-    // 2. Transactions (Pemasukan) -> PaymentReceipts synchronization
-    const currentReceiptTrxIds = new Set(paymentReceipts.map((r) => r.transactionId).filter(Boolean));
-    const currentReceiptIds = new Set(paymentReceipts.map((r) => r.id));
-    const missingTrxForReceipts = transactions.filter((t) => {
-      const typeClean = String(t.type || '').trim().toLowerCase();
-      const isIncome = typeClean === 'pemasukan' || typeClean === 'income';
-      if (!isIncome) return false;
-      return (
-        !currentReceiptTrxIds.has(t.id) &&
-        !currentReceiptIds.has(`receipt-${t.id}`) &&
-        !currentReceiptIds.has(t.id)
-      );
-    });
-
-    if (missingTrxForReceipts.length > 0) {
-      const newReceiptsList: PaymentReceipt[] = [];
-      for (const trx of missingTrxForReceipts) {
-        const dateStr = trx.date || new Date(trx.timestamp || Date.now()).toISOString().slice(0, 10);
-        let pType: PaymentReceiptType = 'pemasukan_lain';
-        const catL = (trx.category || '').toLowerCase();
-        if (catL.includes('sampah') && catL.includes('bulanan')) pType = 'iuran_bulanan_sampah';
-        else if (catL.includes('sampah')) pType = 'iuran_sampah';
-        else if (catL.includes('bulanan') || catL.includes('iuran')) pType = 'iuran_bulanan';
-        else if (catL.includes('fasum')) pType = 'sewa_fasum';
-        else if (catL.includes('sumbangan')) pType = 'sumbangan_sukarela';
-
-        const house = trx.sourceHouse || '';
-        const matchedRes = residents.find(
-          (r) => house && r.houseNumber.replace(/\s+/g, '').toUpperCase() === house.replace(/\s+/g, '').toUpperCase()
-        );
-
-        const rId = `receipt-${trx.id}`;
-        const newR: PaymentReceipt = {
-          id: rId,
-          receiptNumber: `KWT-GSS-${dateStr.replace(/-/g, '')}-${trx.id.slice(-4).toUpperCase()}`,
-          date: dateStr,
-          residentId: matchedRes ? matchedRes.id : (house ? `w-${house.replace(/\s+/g, '').toLowerCase()}` : 'gss-paguyuban'),
-          residentName: matchedRes ? matchedRes.name : (house ? `Warga ${house}` : trx.recordedBy || 'Warga GSS'),
-          residentHouse: house || 'Paguyuban GSS',
-          residentPhone: matchedRes?.phone || '0812-3456-7800',
-          paymentType: pType,
-          paymentTypeName: trx.category,
-          amount: Number(trx.amount) || 0,
-          periodMonth: dateStr.slice(0, 7),
-          paymentMethod: (trx.description || '').toLowerCase().includes('transfer') ? 'transfer_bank' : 'tunai',
-          notes: trx.description,
-          recordedBy: trx.recordedBy || 'Bendahara Kas',
-          recorderRole: trx.userRole || 'bendahara1',
-          transactionId: trx.id,
-          createdAt: new Date(trx.timestamp || `${dateStr}T12:00:00`).toISOString()
-        };
-        newReceiptsList.push(newR);
-      }
-
-      if (newReceiptsList.length > 0) {
-        setPaymentReceipts((prev) => {
-          const next = [...newReceiptsList, ...prev];
-          localStorage.setItem('grisspo_payment_receipts', JSON.stringify(next));
-          return next;
-        });
-        newReceiptsList.forEach((r) => {
-          setDoc(doc(db, 'pembayaran_kwitansi', r.id), r).catch(() => {});
-        });
-      }
-    }
-  }, [paymentReceipts, transactions, residents]);
+  }, [paymentReceipts]);
 
   // Strict Password Validator
   // Rule: Setiap memilih role atau login wajib memasukkan password masing-masing
@@ -1380,7 +1488,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lastActivityTimeRef.current = Date.now();
     setCurrentUser(loggedUser);
     localStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
-    syncActiveSessionToCloud(loggedUser);
     setActiveView('dashboard');
     return {
       success: true,
@@ -1402,7 +1509,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lastActivityTimeRef.current = Date.now();
     setCurrentUser(loggedUser);
     localStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
-    syncActiveSessionToCloud(loggedUser);
     setActiveView('dashboard');
   };
 
@@ -1442,7 +1548,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lastActivityTimeRef.current = Date.now();
     setCurrentUser(newUser);
     localStorage.setItem('grisspo_user', JSON.stringify(newUser));
-    syncActiveSessionToCloud(newUser);
     return {
       success: true,
       message: `Otorisasi berhasil! Anda kini beralih sebagai ${resident.name} (${resident.role.toUpperCase()}).`
@@ -1862,13 +1967,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Jimpitan Daily Submission with Firestore Sync
   const submitDailyJimpit = async (reportData: Omit<JimpitDailyReport, 'id' | 'createdAt'>) => {
-    const newReport: JimpitDailyReport = {
+    const now = Date.now();
+    const jimpitTrxId = `trx-jimpit-${now}`;
+    const newReport: JimpitDailyReport = sanitizeForFirestore({
       ...reportData,
-      id: `jimpit-${Date.now()}`,
+      id: `jimpit-${now}`,
+      reportType: 'harian',
+      transactionId: jimpitTrxId,
       createdAt: new Date().toISOString()
-    };
+    });
 
-    setJimpitReports((prev) => [newReport, ...prev]);
+    const nextReports = [newReport, ...jimpitReports];
+    setJimpitReports(nextReports);
+    localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(nextReports));
 
     // Update residents and Firestore
     const updatedRes = [...residents];
@@ -1881,22 +1992,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           jimpitanPaidMonth: curPaid + entry.nominal,
           points: (updatedRes[idx].points || 0) + 10
         };
-        // sync to Firestore
-        setDoc(doc(db, 'warga', updatedRes[idx].id), updatedRes[idx]).catch(() => {});
+        if (!firestoreQuotaExceededRef.current) {
+          setDoc(doc(db, 'warga', updatedRes[idx].id), sanitizeForFirestore(updatedRes[idx])).catch((e) =>
+            handleFirestoreWriteFailure(e, 'update warga jimpit', true)
+          );
+        }
       }
     });
     setResidents(updatedRes);
+    localStorage.setItem('grisspo_residents', JSON.stringify(updatedRes));
 
     // Save report to Firestore
-    try {
-      await setDoc(doc(db, 'jimpitan_records', newReport.id), newReport);
-    } catch (err) {
-      console.warn('Firestore jimpitan record notice:', err);
+    if (!firestoreQuotaExceededRef.current) {
+      try {
+        await setDoc(doc(db, 'jimpitan_records', newReport.id), newReport);
+      } catch (err) {
+        handleFirestoreWriteFailure(err, 'jimpitan_records', true);
+      }
     }
 
-    // Automatically create income transaction for Paguyuban kas
+    // Automatically create income transaction for Paguyuban kas (excluded from Riwayat Pembayaran Kas)
     const dateStr = reportData.date;
-    const now = Date.now();
     const hash = await computeTransactionHash(
       'pemasukan',
       'Pemasukan Jimpitan Bulanan',
@@ -1907,7 +2023,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     const jimpitTrx: Transaction = {
-      id: `trx-jimpit-${now}`,
+      id: jimpitTrxId,
       type: 'pemasukan',
       category: 'Pemasukan Jimpitan Bulanan',
       amount: reportData.totalNominal,
@@ -1920,9 +2036,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timestamp: now
     };
 
-    setTransactions((prev) => [jimpitTrx, ...prev]);
+    const nextTrx = [jimpitTrx, ...transactions];
+    setTransactions(nextTrx);
+    localStorage.setItem('grisspo_transactions', JSON.stringify(nextTrx));
     try {
-      await setDoc(doc(db, 'keuangan_transaksi', jimpitTrx.id), jimpitTrx);
+      await setDoc(doc(db, 'keuangan_transaksi', jimpitTrx.id), sanitizeForFirestore(jimpitTrx));
     } catch (err) {
       console.warn('Firestore jimpitan trx notice:', err);
     }
@@ -1952,12 +2070,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (entry) {
             const newPaid = Math.max(0, (res.jimpitanPaidMonth || 0) - entry.nominal);
             const updated = { ...res, jimpitanPaidMonth: newPaid };
-            setDoc(doc(db, 'warga', res.id), updated).catch(() => {});
+            setDoc(doc(db, 'warga', res.id), sanitizeForFirestore(updated)).catch(() => {});
             return updated;
           }
           return res;
         })
       );
+
+      // Remove linked transaction in keuangan_transaksi if present
+      if (reportToDelete.transactionId) {
+        await markAsDeleted(reportToDelete.transactionId, 'keuangan_transaksi');
+        const updatedTrx = transactions.filter((t) => t.id !== reportToDelete.transactionId);
+        setTransactions(updatedTrx);
+        localStorage.setItem('grisspo_transactions', JSON.stringify(updatedTrx));
+        try {
+          await deleteDoc(doc(db, 'keuangan_transaksi', reportToDelete.transactionId));
+        } catch {}
+      }
     }
 
     const filtered = jimpitReports.filter((r) => r.id !== id);
@@ -2071,8 +2200,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Firestore update warga notice:', err);
     }
 
-    // 2. Automatically record income transaction in Keuangan Kas Paguyuban
-    const dateStr = new Date().toISOString().slice(0, 10);
+    // 2. Automatically record income transaction in Keuangan Kas Paguyuban (NOT in Riwayat Pembayaran Kas)
+    const nowDate = new Date();
+    const dateStr = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
+    const daysList: DayOfWeek[] = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const dayName: DayOfWeek = daysList[nowDate.getDay()] || 'Senin';
     const now = Date.now();
     const currentName = currentUser?.name || 'Petugas Jimpit';
     const userRole = currentUser?.role || 'warga';
@@ -2102,12 +2234,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timestamp: now
     };
 
-    setTransactions((prev) => [newTrx, ...prev]);
-    localStorage.setItem('grisspo_transactions', JSON.stringify([newTrx, ...transactions]));
+    const nextTrx = [newTrx, ...transactions];
+    setTransactions(nextTrx);
+    localStorage.setItem('grisspo_transactions', JSON.stringify(nextTrx));
     try {
-      await setDoc(doc(db, 'keuangan_transaksi', newTrx.id), newTrx);
+      await setDoc(doc(db, 'keuangan_transaksi', newTrx.id), sanitizeForFirestore(newTrx));
     } catch (err) {
       console.warn('Firestore pay jimpit trx notice:', err);
+    }
+
+    // 2b. Also record into History Jimpitan (jimpit_records)
+    const settlementReport: JimpitDailyReport = sanitizeForFirestore({
+      id: `jimpit-pay-${now}`,
+      date: dateStr,
+      day: dayName,
+      collectedBy: currentUser ? `${currentUser.name} (${currentUser.houseNumber})` : 'Petugas Jimpit',
+      reportType: 'pelunasan',
+      transactionId: newTrx.id,
+      entries: [
+        {
+          houseNumber: resident.houseNumber,
+          residentName: resident.name,
+          nominal: amount,
+          paymentMethod: method,
+          timestamp: nowDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+          collectedBy: currentName
+        }
+      ],
+      totalNominal: amount,
+      notes: notes || `Pelunasan jimpitan bulanan ${resident.name} (${resident.houseNumber}) via ${methodLabel}`,
+      createdAt: nowDate.toISOString()
+    });
+    const nextJimpit = [settlementReport, ...jimpitReports];
+    setJimpitReports(nextJimpit);
+    localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(nextJimpit));
+    try {
+      await setDoc(doc(db, 'jimpitan_records', settlementReport.id), settlementReport);
+    } catch (err) {
+      console.warn('Firestore pay jimpit history notice:', err);
     }
 
     // 3. Award loyalty points & push announcement
@@ -2122,7 +2286,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return {
       success: true,
-      message: `Pembayaran kekurangan jimpitan Rp ${amount.toLocaleString('id-ID')} berhasil dicatat & otomatis masuk Laporan Kas Keuangan Paguyuban!`,
+      message: `Pembayaran kekurangan jimpitan Rp ${amount.toLocaleString('id-ID')} berhasil dicatat ke History Jimpitan & Saldo Kas Paguyuban!`,
       transactionId: newTrx.id
     };
   };
@@ -2261,8 +2425,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Firestore save transaction notice:', err);
     }
 
-    // Auto-create matching payment receipt for kas masuk so that all devices immediately see it in Riwayat Pembayaran Kas
-    if (cleanType === 'pemasukan' && !options?.skipReceiptCreation) {
+    // Auto-create matching payment receipt for kas masuk (EXCLUDE JIMPITAN: pemasukan jimpit tidak masuk ke riwayat pembayaran kas)
+    const isJimpit =
+      (trxData.category || '').toLowerCase().includes('jimpit') ||
+      (trxData.description || '').toLowerCase().includes('jimpit');
+
+    if (cleanType === 'pemasukan' && !options?.skipReceiptCreation && !isJimpit) {
       const dateStr = trxData.date || new Date(effectiveTimestamp).toISOString().slice(0, 10);
       let pType: PaymentReceiptType = 'pemasukan_lain';
       const catL = (trxData.category || '').toLowerCase();
@@ -3091,30 +3259,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const submitAttendanceSession = async (
     sessionData: Omit<AttendanceSession, 'id' | 'createdAt'>
   ): Promise<void> => {
-    const id = `att-${Date.now()}`;
-    const createdAt = new Date().toISOString();
-    const newSession: AttendanceSession = {
-      ...sessionData,
-      id,
-      createdAt,
-      pointsAwarded: true
-    };
+    const isAdminRole = Boolean(
+      currentUser && ['superadmin', 'sekretaris', 'bendahara1', 'bendahara2', 'admin_inventaris'].includes(currentUser.role)
+    );
 
     // Khusus absensi ronda: hanya petugas ronda di hari tersebut dan admin/pengurus yang berwenang
     if (sessionData.type === 'ronda') {
-      const isAdminRole = currentUser && ['superadmin', 'sekretaris', 'bendahara1', 'bendahara2', 'admin_inventaris'].includes(currentUser.role);
       const isDutyToday = (() => {
         if (!currentUser) return false;
         const targetDay = sessionData.day || 'Senin';
         const group = rondaSchedule.find((g) => g.day === targetDay);
         if (!group) return false;
         const currentHouseClean = (currentUser.houseNumber || '').replace(/\s+/g, '').toUpperCase();
-        const currentNameClean = (currentUser.name || '').replace(/^(bapak|ibu|mas|mbak)\s+/i, '').trim().toLowerCase();
+        const currentNameClean = normalizeCleanName(currentUser.name || '');
         return group.members.some((m) => {
-          const mClean = m.replace(/^(bapak|ibu|mas|mbak)\s+/i, '').trim().toLowerCase();
+          const mClean = normalizeCleanName(m);
           if (currentNameClean && (mClean.includes(currentNameClean) || currentNameClean.includes(mClean))) return true;
-          const r = residents.find((res) => res.name.toLowerCase().includes(mClean));
-          return r && r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentHouseClean;
+          const r = findResidentByMemberName(m, residents);
+          return Boolean(r && r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentHouseClean);
         });
       })();
 
@@ -3124,6 +3286,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         );
       }
     }
+
+    // Jika absensi ronda untuk tanggal tersebut sudah ada, perbarui sesi yang sudah ada
+    const existingRonda = sessionData.type === 'ronda'
+      ? attendanceSessions.find((s) => s.type === 'ronda' && s.date === sessionData.date)
+      : undefined;
+
+    if (existingRonda) {
+      const updatedSession: AttendanceSession = sanitizeForFirestore({
+        ...existingRonda,
+        ...sessionData,
+        id: existingRonda.id,
+        createdAt: existingRonda.createdAt,
+        pointsAwarded: true
+      });
+      await updateAttendanceSession(updatedSession);
+      return;
+    }
+
+    const id = `att-${Date.now()}`;
+    const createdAt = new Date().toISOString();
+    const newSession: AttendanceSession = sanitizeForFirestore({
+      ...sessionData,
+      id,
+      createdAt,
+      pointsAwarded: true
+    });
 
     // Rincian GRISS-POIN Baru:
     // - Hadir ronda / jimpit: 25 poin
@@ -3142,19 +3330,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       activityLabel = 'Hadir Rapat Rutin Bulanan Paguyuban';
     }
 
-    const presentAttendees = sessionData.attendees.filter((a) => a.isPresent);
+    const presentAttendees = newSession.attendees.filter((a) => a.isPresent);
+    const updatedResidentsList = [...residents];
+    const newPointLogs: PointLog[] = [];
+
     for (const attendee of presentAttendees) {
-      const targetRes = residents.find(
-        (r) =>
-          r.id === attendee.residentId ||
-          r.name.trim().toLowerCase() === attendee.residentName.trim().toLowerCase() ||
-          r.houseNumber.trim().toLowerCase() === attendee.residentHouse.trim().toLowerCase()
-      );
+      const targetRes =
+        updatedResidentsList.find(
+          (r) =>
+            r.id === attendee.residentId ||
+            r.houseNumber.trim().toLowerCase() === attendee.residentHouse.trim().toLowerCase()
+        ) || findResidentByMemberName(attendee.residentName, updatedResidentsList);
+
       if (targetRes) {
         const nextPoints = (targetRes.points || 0) + pointsToAdd;
         const updatedRes = { ...targetRes, points: nextPoints };
-        setResidents((prev) => prev.map((r) => (r.id === targetRes.id ? updatedRes : r)));
-        setDoc(doc(db, 'warga', targetRes.id), updatedRes).catch(() => {});
+        const idx = updatedResidentsList.findIndex((r) => r.id === targetRes.id);
+        if (idx !== -1) updatedResidentsList[idx] = updatedRes;
+        if (!firestoreQuotaExceededRef.current) {
+          setDoc(doc(db, 'warga', targetRes.id), sanitizeForFirestore(updatedRes)).catch((e) =>
+            handleFirestoreWriteFailure(e, 'update warga absensi', true)
+          );
+        }
 
         if (currentUser && (currentUser.id === targetRes.id || currentUser.houseNumber === targetRes.houseNumber)) {
           setCurrentUser((prev) => (prev ? { ...prev, points: nextPoints } : null));
@@ -3169,16 +3366,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           reason: `${activityLabel} (${sessionData.date})`,
           timestamp: new Date().toISOString().slice(0, 16).replace('T', ' ')
         };
-        setPointLogs((prev) => [log, ...prev]);
-        setDoc(doc(db, 'point_logs', log.id), log).catch(() => {});
+        newPointLogs.push(log);
+        if (!firestoreQuotaExceededRef.current) {
+          setDoc(doc(db, 'point_logs', log.id), sanitizeForFirestore(log)).catch((e) =>
+            handleFirestoreWriteFailure(e, 'point_logs absensi')
+          );
+        }
       }
     }
 
-    setAttendanceSessions((prev) => [newSession, ...prev]);
-    try {
-      await setDoc(doc(db, 'absensi_records', newSession.id), newSession);
-    } catch (err) {
-      console.warn('Firestore absensi save notice:', err);
+    setResidents(updatedResidentsList);
+    localStorage.setItem('grisspo_residents', JSON.stringify(updatedResidentsList));
+    if (newPointLogs.length > 0) {
+      setPointLogs((prev) => [...newPointLogs, ...prev]);
+    }
+
+    const nextSessions = [newSession, ...attendanceSessions];
+    setAttendanceSessions(nextSessions);
+    localStorage.setItem('grisspo_attendance_sessions', JSON.stringify(nextSessions));
+
+    if (!firestoreQuotaExceededRef.current) {
+      try {
+        await setDoc(doc(db, 'absensi_records', newSession.id), newSession);
+      } catch (err) {
+        handleFirestoreWriteFailure(err, 'absensi_records', true);
+      }
     }
 
     await addAnnouncement(
@@ -3373,29 +3585,133 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert('Akses Ditolak: Hanya Superadmin yang memiliki hak akses mengedit laporan jimpitan!');
       return;
     }
-    const next = jimpitReports.map((r) => (r.id === report.id ? report : r));
+    const cleanReport = sanitizeForFirestore(report);
+    const next = jimpitReports.map((r) => (r.id === cleanReport.id ? cleanReport : r));
     setJimpitReports(next);
     localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(next));
     try {
-      await setDoc(doc(db, 'jimpitan_records', report.id), report);
+      await setDoc(doc(db, 'jimpitan_records', cleanReport.id), cleanReport);
     } catch (err) {
       console.warn('Firestore updateJimpitReport error:', err);
     }
+    if (cleanReport.transactionId) {
+      const linked = transactions.find((t) => t.id === cleanReport.transactionId);
+      if (linked) {
+        await updateTransaction({
+          ...linked,
+          amount: cleanReport.totalNominal,
+          date: cleanReport.date
+        });
+      }
+    }
   };
 
-  // Superadmin Edit Absensi Session
+  // Edit / Update Absensi Session (Superadmin, Pengurus/Admin, and Duty Officers for Ronda)
   const updateAttendanceSession = async (session: AttendanceSession) => {
-    if (currentUser?.role !== 'superadmin') {
-      alert('Akses Ditolak: Hanya Superadmin yang memiliki hak akses mengedit data absensi!');
+    const isAdminRole = Boolean(
+      currentUser && ['superadmin', 'sekretaris', 'bendahara1', 'bendahara2', 'admin_inventaris'].includes(currentUser.role)
+    );
+    const isDutyToday = (() => {
+      if (!currentUser || session.type !== 'ronda') return false;
+      const targetDay = session.day || 'Senin';
+      const group = rondaSchedule.find((g) => g.day === targetDay);
+      if (!group) return false;
+      const currentHouseClean = (currentUser.houseNumber || '').replace(/\s+/g, '').toUpperCase();
+      const currentNameClean = normalizeCleanName(currentUser.name || '');
+      return group.members.some((m) => {
+        const mClean = normalizeCleanName(m);
+        if (currentNameClean && (mClean.includes(currentNameClean) || currentNameClean.includes(mClean))) return true;
+        const r = findResidentByMemberName(m, residents);
+        return Boolean(r && r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentHouseClean);
+      });
+    })();
+
+    if (!isAdminRole && !isDutyToday) {
+      alert('Akses Ditolak: Hanya Petugas Ronda Hari Ini, Pengurus/Admin, dan Superadmin yang memiliki hak mengedit data absensi!');
       return;
     }
-    const next = attendanceSessions.map((s) => (s.id === session.id ? session : s));
+
+    const existingSession = attendanceSessions.find((s) => s.id === session.id);
+    const cleanSession = sanitizeForFirestore(session);
+
+    // Adjust GRISS-POIN when attendance presence toggles on an existing awarded session
+    if (existingSession && existingSession.pointsAwarded) {
+      const pts = cleanSession.type === 'kerjabakti' ? 40 : 25;
+      const updatedResidentsList = [...residents];
+      let resChanged = false;
+      const deltaLogs: PointLog[] = [];
+
+      cleanSession.attendees.forEach((newAtt) => {
+        const oldAtt = existingSession.attendees.find(
+          (a) =>
+            (a.residentId && a.residentId === newAtt.residentId) ||
+            normalizeCleanName(a.residentName) === normalizeCleanName(newAtt.residentName)
+        );
+        const wasPresent = oldAtt ? oldAtt.isPresent : false;
+        const isNowPresent = newAtt.isPresent;
+
+        if (wasPresent !== isNowPresent) {
+          const targetRes =
+            updatedResidentsList.find(
+              (r) =>
+                r.id === newAtt.residentId ||
+                r.houseNumber.trim().toLowerCase() === newAtt.residentHouse.trim().toLowerCase()
+            ) || findResidentByMemberName(newAtt.residentName, updatedResidentsList);
+
+          if (targetRes) {
+            const delta = isNowPresent ? pts : -pts;
+            const nextPoints = Math.max(0, (targetRes.points || 0) + delta);
+            const updatedRes = { ...targetRes, points: nextPoints };
+            const idx = updatedResidentsList.findIndex((r) => r.id === targetRes.id);
+            if (idx !== -1) updatedResidentsList[idx] = updatedRes;
+            resChanged = true;
+            if (!firestoreQuotaExceededRef.current) {
+              setDoc(doc(db, 'warga', targetRes.id), sanitizeForFirestore(updatedRes)).catch((e) =>
+                handleFirestoreWriteFailure(e, 'update warga absensi', true)
+              );
+            }
+
+            if (currentUser && (currentUser.id === targetRes.id || currentUser.houseNumber === targetRes.houseNumber)) {
+              setCurrentUser((prev) => (prev ? { ...prev, points: nextPoints } : null));
+            }
+
+            const log: PointLog = {
+              id: `pl-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              userId: targetRes.id,
+              houseNumber: targetRes.houseNumber,
+              userName: targetRes.name,
+              pointsChange: delta,
+              reason: `Pembaruan Absensi ${cleanSession.type === 'ronda' ? 'Ronda' : cleanSession.type} (${cleanSession.date})`,
+              timestamp: new Date().toISOString().slice(0, 16).replace('T', ' ')
+            };
+            deltaLogs.push(log);
+            if (!firestoreQuotaExceededRef.current) {
+              setDoc(doc(db, 'point_logs', log.id), sanitizeForFirestore(log)).catch((e) =>
+                handleFirestoreWriteFailure(e, 'point_logs update absensi')
+              );
+            }
+          }
+        }
+      });
+
+      if (resChanged) {
+        setResidents(updatedResidentsList);
+        localStorage.setItem('grisspo_residents', JSON.stringify(updatedResidentsList));
+      }
+      if (deltaLogs.length > 0) {
+        setPointLogs((prev) => [...deltaLogs, ...prev]);
+      }
+    }
+
+    const next = attendanceSessions.map((s) => (s.id === cleanSession.id ? cleanSession : s));
     setAttendanceSessions(next);
     localStorage.setItem('grisspo_attendance_sessions', JSON.stringify(next));
-    try {
-      await setDoc(doc(db, 'absensi_records', session.id), session);
-    } catch (err) {
-      console.warn('Firestore updateAttendanceSession error:', err);
+    if (!firestoreQuotaExceededRef.current) {
+      try {
+        await setDoc(doc(db, 'absensi_records', cleanSession.id), cleanSession);
+      } catch (err) {
+        handleFirestoreWriteFailure(err, 'updateAttendanceSession', true);
+      }
     }
   };
 
@@ -3612,10 +3928,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         isCloudSynced,
         activeView,
-        setActiveView
+        setActiveView,
+
+        confirmAction
       }}
     >
       {children}
+      <ConfirmModal
+        isOpen={!!confirmDialog}
+        title={confirmDialog?.title || 'Konfirmasi Tindakan'}
+        message={confirmDialog?.message || ''}
+        confirmLabel={confirmDialog?.confirmLabel || 'Setuju'}
+        cancelLabel={confirmDialog?.cancelLabel || 'Batal'}
+        variant={confirmDialog?.variant || 'warning'}
+        onConfirm={async () => {
+          if (confirmDialog?.onConfirm) {
+            await confirmDialog.onConfirm();
+          }
+          setConfirmDialog(null);
+        }}
+        onCancel={() => {
+          if (confirmDialog?.onCancel) {
+            confirmDialog.onCancel();
+          }
+          setConfirmDialog(null);
+        }}
+      />
     </AppContext.Provider>
   );
 };

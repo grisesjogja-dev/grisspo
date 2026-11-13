@@ -9,7 +9,7 @@ interface NotificationModalProps {
 }
 
 export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose }) => {
-  const { announcements, addAnnouncement, deleteAnnouncement, currentUser: authUser } = useApp();
+  const { announcements, addAnnouncement, deleteAnnouncement, currentUser: authUser, confirmAction } = useApp();
   const currentUser = authUser || defaultGuestUser;
   const isSuperadmin = currentUser.role === 'superadmin';
   const [showAddForm, setShowAddForm] = useState(false);
@@ -149,9 +149,14 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
                     {isSuperadmin && (
                       <button
                         onClick={() => {
-                          if (confirm(`Hapus pengumuman "${ann.title}"?`)) {
-                            deleteAnnouncement(ann.id);
-                          }
+                          confirmAction({
+                            title: 'Hapus Pengumuman Warga',
+                            message: `Apakah Anda yakin ingin menghapus pengumuman "${ann.title}"?`,
+                            confirmLabel: 'Setuju',
+                            cancelLabel: 'Batal',
+                            variant: 'danger',
+                            onConfirm: () => deleteAnnouncement(ann.id)
+                          });
                         }}
                         className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition"
                         title="Hapus Pengumuman (Superadmin)"
