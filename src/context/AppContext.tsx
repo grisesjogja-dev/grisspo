@@ -265,6 +265,8 @@ interface AppContextType {
 
   // Sync state
   isCloudSynced: boolean;
+  lastSyncedAt: string;
+  triggerManualSync: () => void;
   activeView: string;
   setActiveView: (view: string) => void;
 
@@ -318,6 +320,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? 'dashboard' : 'jimpitan';
   });
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(true);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string>(() => {
+    return new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  });
+
+  const triggerManualSync = () => {
+    setLastSyncedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+  };
+
   const [isPengurusOpen, setIsPengurusOpen] = useState<boolean>(false);
 
   // Active Sessions & 30-min Inactivity Tracking
@@ -936,6 +946,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setResidents(cloudData);
           localStorage.setItem('grisspo_residents', JSON.stringify(cloudData));
           setIsCloudSynced(true);
+          setLastSyncedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
         }
       }, (err) => {
         console.warn('Firestore warga listener error:', err.message);
@@ -3931,6 +3942,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearInactivityNotice,
 
         isCloudSynced,
+        lastSyncedAt,
+        triggerManualSync,
         activeView,
         setActiveView,
 

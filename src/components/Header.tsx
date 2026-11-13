@@ -39,6 +39,8 @@ export const Header: React.FC<HeaderProps> = ({
   const {
     currentUser,
     isCloudSynced,
+    lastSyncedAt,
+    triggerManualSync,
     emailAlerts,
     announcements,
     activeSessions,
@@ -149,12 +151,20 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-base sm:text-lg font-black tracking-wider text-white">GRISSPO</h1>
                 <span className="hidden sm:inline-flex items-center gap-1 text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   <Cloud size={10} className="text-emerald-400 animate-pulse" />
                   Firebase Cloud Real-Time
                 </span>
+                <button
+                  onClick={triggerManualSync}
+                  className="hidden md:inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition"
+                  title="Klik untuk menyegarkan dan memperbarui timestamp sinkronisasi data"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <span>Sinkron: {lastSyncedAt}</span>
+                </button>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block truncate max-w-xs">
                 Griya Sedayu Selaras Portal Online
