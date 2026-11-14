@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp, defaultGuestUser, getLocalDateString } from '../context/AppContext';
+import { useApp, defaultGuestUser, getLocalDateString, LEGACY_FAKE_SEED_IDS } from '../context/AppContext';
 import { DayOfWeek, PaymentReceipt, PaymentReceiptType, PaymentMethodType, Resident } from '../types';
 import { DetailToggle } from './DetailToggle';
 import {
@@ -71,6 +71,7 @@ export const DashboardView: React.FC = () => {
     resetFeatureData,
     getResidentNameByHouse,
     toggleBerkasKependudukan,
+    deletedIds,
     confirmAction
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
@@ -401,8 +402,18 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
   // NOTE: Excludes any daily or monthly jimpitan (jimpitan directly increments saldo/total pemasukan, not riwayat pembayaran kas),
   // and strictly eliminates duplicate records.
   const allReceipts = useMemo(() => {
-    // 1. Exclude any jimpitan receipts
+    const deletedSet = new Set(deletedIds || []);
+    // 1. Exclude deleted receipts, orphan receipts whose trx was deleted, and any jimpitan receipts
     const list: PaymentReceipt[] = paymentReceipts.filter((r) => {
+      const strippedId = (r.id || '').replace(/^receipt-/, '');
+      if (
+        deletedSet.has(r.id) ||
+        deletedSet.has(strippedId) ||
+        LEGACY_FAKE_SEED_IDS.has(strippedId) ||
+        (r.transactionId && (deletedSet.has(r.transactionId) || LEGACY_FAKE_SEED_IDS.has(r.transactionId)))
+      ) {
+        return false;
+      }
       const pType = (r.paymentType || '').toLowerCase();
       const pName = (r.paymentTypeName || '').toLowerCase();
       const notes = (r.notes || '').toLowerCase();
@@ -513,7 +524,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
       if (dateB !== dateA) return dateB.localeCompare(dateA);
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [paymentReceipts, transactions, residents]);
+  }, [paymentReceipts, transactions, residents, deletedIds]);
 
   const visibleReceipts = useMemo(() => {
     let list = allReceipts;
@@ -617,11 +628,17 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               <span>
                 Riwayat Pembayaran Kas {isBendaharaOrAdmin ? '(Semua Warga)' : `(Rumah ${currentUser.houseNumber})`}
               </span>
-              {paymentReceipts.length > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[10px]">
-                  {isBendaharaOrAdmin ? paymentReceipts.length : paymentReceipts.filter((p) => p.residentHouse === currentUser.houseNumber).length}
-                </span>
-              )}
+              {(() => {
+                const userHouseClean = currentUser.houseNumber.replace(/\s+/g, '').toUpperCase();
+                const badgeCount = isBendaharaOrAdmin
+                  ? allReceipts.length
+                  : allReceipts.filter((p) => (p.residentHouse || '').replace(/\s+/g, '').toUpperCase() === userHouseClean).length;
+                return badgeCount > 0 ? (
+                  <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[10px]">
+                    {badgeCount}
+                  </span>
+                ) : null;
+              })()}
             </button>
           </div>
         </div>
@@ -866,8 +883,8 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     <input
                       type="number"
                       required
-                      min="1000"
-                      step="1000"
+                      min="1"
+                      step="1"
                       value={formAmount}
                       onChange={(e) => setFormAmount(Number(e.target.value))}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-black text-slate-900 text-base focus:ring-2 focus:ring-blue-500"
@@ -1616,9 +1633,16 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               <div className="text-2xl font-black text-slate-900 mt-2">
                 Rp {currentBalance.toLocaleString('id-ID')}
               </div>
-              <div className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1 font-semibold">
-                <TrendingUp size={12} />
-                <span>Transparansi 100% Real-time</span>
+              <div className="text-[11px] text-slate-600 mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-semibold">
+                <span className="text-emerald-600 flex items-center gap-1">
+                  <TrendingUp size={12} />
+                  Masuk: Rp {totalIncome.toLocaleString('id-ID')}
+                </span>
+                {totalExpense > 0 && (
+                  <span className="text-rose-600">
+                    &bull; Keluar: Rp {totalExpense.toLocaleString('id-ID')}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -1637,7 +1661,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 Rp {totalIncome.toLocaleString('id-ID')}
               </div>
               <div className="text-[11px] text-slate-500 mt-1">
-                Iuran Rp 25k, Sampah, Jimpit & Sewa Fasum
+                Iuran, Sampah, Jimpitan, Fasum, Sumbangan & Saldo Awal
               </div>
             </div>
 
@@ -2367,8 +2391,8 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 <label className="block font-bold text-slate-700 mb-1">Nominal Pembayaran (Rp)</label>
                 <input
                   type="number"
-                  min="1000"
-                  step="500"
+                  min="1"
+                  step="1"
                   required
                   value={editingReceipt.amount}
                   onChange={(e) => setEditingReceipt({ ...editingReceipt, amount: Number(e.target.value) })}

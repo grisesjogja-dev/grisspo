@@ -328,6 +328,7 @@ export const KeuanganView: React.FC = () => {
 
       setShowAddModal(false);
       setTrxDesc('');
+      setTrxHouse('');
       setTrxAmount(25000);
       alert('Transaksi kas berhasil dicatat dan diamankan dengan enkripsi integritas SHA-256!');
     } catch (err: any) {
@@ -1158,16 +1159,28 @@ export const KeuanganView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Date */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Transaksi</label>
-                <input
-                  type="date"
-                  value={trxDate}
-                  onChange={(e) => setTrxDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold"
-                  required
-                />
+              {/* Date & House */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Transaksi</label>
+                  <input
+                    type="date"
+                    value={trxDate}
+                    onChange={(e) => setTrxDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Nomor Rumah (Opsional)</label>
+                  <input
+                    type="text"
+                    value={trxHouse}
+                    onChange={(e) => setTrxHouse(e.target.value.toUpperCase())}
+                    placeholder="Contoh: B 24, A 01"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold uppercase"
+                  />
+                </div>
               </div>
 
               {/* Description */}

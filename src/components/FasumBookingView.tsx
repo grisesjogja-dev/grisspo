@@ -434,12 +434,12 @@ export const FasumBookingView: React.FC = () => {
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-white/10">
           <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-white/10">
-            <p className="text-[11px] text-slate-300 uppercase tracking-wider font-semibold">Total Pemasukan Kas</p>
+            <p className="text-[11px] text-slate-300 uppercase tracking-wider font-semibold">Pemasukan Sewa Fasum</p>
             <p className="text-lg sm:text-2xl font-black text-amber-300 mt-1">
               Rp {stats.totalRevenue.toLocaleString('id-ID')}
             </p>
             <span className="text-[10px] text-emerald-300 flex items-center gap-1 mt-0.5">
-              <CheckCircle2 size={11} /> Masuk kas bendahara
+              <CheckCircle2 size={11} /> Otomatis masuk kas & distribusi
             </span>
           </div>
 

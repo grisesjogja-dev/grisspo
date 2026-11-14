@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp, defaultGuestUser } from '../context/AppContext';
+import { useApp, defaultGuestUser, getLocalDateString } from '../context/AppContext';
 import {
   AlertTriangle,
   X,
@@ -56,7 +56,7 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
   const handlePayNow = async () => {
     setIsProcessing(true);
     try {
-      const dateStr = new Date().toISOString().slice(0, 10);
+      const dateStr = getLocalDateString();
 
       // Record transaction into kas paguyuban
       await addTransaction({
