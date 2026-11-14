@@ -544,7 +544,7 @@ const defaultUser: User = {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // User state - start null if not logged in
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('grisspo_user');
+    const saved = sessionStorage.getItem('grisspo_user');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -560,7 +560,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [activeView, setActiveView] = useState<string>(() => {
-    const saved = localStorage.getItem('grisspo_user');
+    const saved = sessionStorage.getItem('grisspo_user');
     return saved ? 'dashboard' : 'jimpitan';
   });
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(true);
@@ -842,7 +842,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         removeActiveSessionFromCloud(userToLogout.id);
       }
       setCurrentUser(null);
-      localStorage.removeItem('grisspo_user');
+      sessionStorage.removeItem('grisspo_user');
       setActiveView('jimpitan');
       setInactivityNotice(
         'Sesi portal GRISSPO Anda telah otomatis logout karena tidak ada aktivitas selama 600 detik (10 menit) demi menjaga keamanan data warga. Silakan login kembali.'
@@ -1807,7 +1807,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const stillActive = sessions.some((s) => s.userId === currentUserRef.current?.id);
           if (!stillActive && snapshot.docs.length > 0) {
             setCurrentUser(null);
-            localStorage.removeItem('grisspo_user');
+            sessionStorage.removeItem('grisspo_user');
             setActiveView('jimpitan');
             setInactivityNotice('Sesi login Anda telah diputuskan oleh Superadmin.');
           }
@@ -1959,7 +1959,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [meetingNotes]);
 
   useEffect(() => {
-    localStorage.setItem('grisspo_user', JSON.stringify(currentUser));
+    if (currentUser) {
+      sessionStorage.setItem('grisspo_user', JSON.stringify(currentUser));
+    } else {
+      sessionStorage.removeItem('grisspo_user');
+    }
   }, [currentUser]);
 
   useEffect(() => {
@@ -2112,7 +2116,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     lastActivityTimeRef.current = Date.now();
     setCurrentUser(loggedUser);
-    localStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
+    sessionStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
     setActiveView('dashboard');
     syncActiveSessionToCloud(loggedUser);
     return {
@@ -2134,7 +2138,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     lastActivityTimeRef.current = Date.now();
     setCurrentUser(loggedUser);
-    localStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
+    sessionStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
     setActiveView('dashboard');
     syncActiveSessionToCloud(loggedUser);
   };
@@ -2174,7 +2178,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     lastActivityTimeRef.current = Date.now();
     setCurrentUser(newUser);
-    localStorage.setItem('grisspo_user', JSON.stringify(newUser));
+    sessionStorage.setItem('grisspo_user', JSON.stringify(newUser));
     syncActiveSessionToCloud(newUser);
     return {
       success: true,
@@ -2187,7 +2191,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       removeActiveSessionFromCloud(currentUser.id);
     }
     setCurrentUser(null);
-    localStorage.removeItem('grisspo_user');
+    sessionStorage.removeItem('grisspo_user');
     setActiveView('jimpitan');
   };
 
@@ -2208,7 +2212,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       phone: cleanPhone
     };
     setCurrentUser(updatedUser);
-    localStorage.setItem('grisspo_user', JSON.stringify(updatedUser));
+    sessionStorage.setItem('grisspo_user', JSON.stringify(updatedUser));
 
     const updatedResidents = residents.map((r) => {
       if (
