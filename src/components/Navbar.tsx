@@ -15,11 +15,13 @@ import {
   ChevronDown,
   X,
   Menu,
-  Sparkles
+  Sparkles,
+  Megaphone
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { activeView, setActiveView } = useApp();
+  const { activeView, setActiveView, currentUser: authUser } = useApp();
+  const currentUser = authUser || { role: 'warga' };
 
   // Dropdown states for Desktop
   const [openDropdown, setOpenDropdown] = useState<'keuangan' | 'info' | null>(null);
@@ -90,6 +92,25 @@ export const Navbar: React.FC = () => {
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
               )}
             </button>
+
+            {/* Info Blast (Superadmin only) */}
+            {currentUser.role === 'superadmin' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveView('infoblast');
+                  setOpenDropdown(null);
+                }}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                  activeView === 'infoblast'
+                    ? 'bg-rose-600 text-white shadow-sm shadow-rose-500/20'
+                    : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
+                }`}
+              >
+                <Megaphone size={15} />
+                <span>info blast</span>
+              </button>
+            )}
 
             {/* 3. keuangan (dropdown: sewa fasum dan kas) */}
             <div className="relative">
@@ -621,6 +642,27 @@ export const Navbar: React.FC = () => {
                     <div className="text-[11px] text-slate-400">Poin keaktifan & katalog reward warga</div>
                   </div>
                 </button>
+
+                {currentUser.role === 'superadmin' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveView('infoblast');
+                      setMobileSheet(null);
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
+                      activeView === 'infoblast'
+                        ? 'bg-rose-600/30 border-rose-500 text-white font-bold'
+                        : 'bg-slate-800/80 border-slate-700 text-rose-300'
+                    }`}
+                  >
+                    <Megaphone size={20} className="text-rose-400 shrink-0" />
+                    <div>
+                      <div className="text-sm font-bold">Info Blast</div>
+                      <div className="text-[11px] text-slate-400">Siaran pop-up pengumuman khusus superadmin</div>
+                    </div>
+                  </button>
+                )}
               </div>
             )}
           </div>

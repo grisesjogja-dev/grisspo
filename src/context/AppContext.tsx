@@ -24,7 +24,8 @@ import {
   PaymentReceipt,
   PaymentReceiptType,
   PaymentMethodType,
-  ImportantContact
+  ImportantContact,
+  InfoBlast
 } from '../types';
 import {
   initialResidents,
@@ -437,6 +438,12 @@ interface AppContextType {
   deleteAnnouncement: (id: string) => Promise<void>;
   emailAlerts: EmailAlertLog[];
   clearEmailAlerts: () => void;
+
+  // Info Blasts (Superadmin broadcast messages)
+  infoBlasts: InfoBlast[];
+  addInfoBlast: (blast: Omit<InfoBlast, 'id' | 'createdAt'>) => Promise<void>;
+  updateInfoBlast: (blast: InfoBlast) => Promise<void>;
+  deleteInfoBlast: (id: string) => Promise<void>;
 
   // Fasum Booking & Automatic Payment
   fasumBookings: FasumBooking[];
@@ -1045,6 +1052,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return base.filter((a) => !initialDeletedIds.includes(a.id));
   });
 
+  // Info Blasts
+  const [infoBlasts, setInfoBlasts] = useState<InfoBlast[]>(() => {
+    const saved = localStorage.getItem('grisspo_info_blasts');
+    const base: InfoBlast[] = saved ? JSON.parse(saved) : [];
+    return base.filter((b) => !initialDeletedIds.includes(b.id));
+  });
+
   // Fasum Bookings
   const [fasumBookings, setFasumBookings] = useState<FasumBooking[]>(() => {
     const saved = localStorage.getItem('grisspo_fasum_bookings');
@@ -1534,6 +1548,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let unsubRonda: (() => void) | undefined;
     let unsubRewards: (() => void) | undefined;
     let unsubImportantContacts: (() => void) | undefined;
+    let unsubInfoBlasts: (() => void) | undefined;
 
     // Check Cloud Seed Status once so other devices NEVER resurrect deleted documents or burn write quota
     const checkCloudSeedStatus = async () => {
@@ -1953,6 +1968,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }, (err) => {
         console.warn('Firestore kontak_penting listener notice:', err.message);
       });
+
+      // 16. Info Blasts Real-Time Listener
+      unsubInfoBlasts = onSnapshot(collection(db, 'info_blasts'), (snapshot) => {
+        if (!snapshot.empty) {
+          const cloudBlasts: InfoBlast[] = [];
+          snapshot.forEach((d) => {
+            if (deletedIdsRef.current.includes(d.id)) {
+              cleanupDeletedDocOnce('info_blasts', d.id);
+            } else {
+              cloudBlasts.push(d.data() as InfoBlast);
+            }
+          });
+          cloudBlasts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setInfoBlasts(cloudBlasts);
+          localStorage.setItem('grisspo_info_blasts', JSON.stringify(cloudBlasts));
+        }
+      }, (err) => {
+        console.warn('Firestore info_blasts listener notice:', err.message);
+      });
     } catch (e) {
       console.warn('Firebase Firestore initialization notice:', e);
     }
@@ -1974,6 +2008,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubRonda?.();
       unsubRewards?.();
       unsubImportantContacts?.();
+      unsubInfoBlasts?.();
     };
   }, []);
 
@@ -4790,6 +4825,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // --- INFO BLASTS CRUD (Superadmin only) ---
+  const addInfoBlast = async (blastData: Omit<InfoBlast, 'id' | 'createdAt'>) => {
+    if (currentUser?.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin yang berhak mengirim Info Blast!');
+      return;
+    }
+    const newBlast: InfoBlast = {
+      ...blastData,
+      id: `blast-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      createdAt: new Date().toISOString()
+    };
+    const next = [newBlast, ...infoBlasts];
+    setInfoBlasts(next);
+    localStorage.setItem('grisspo_info_blasts', JSON.stringify(next));
+    await safeCloudWrite('info_blasts', newBlast.id, newBlast);
+  };
+
+  const updateInfoBlast = async (blast: InfoBlast) => {
+    if (currentUser?.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin yang berhak mengubah Info Blast!');
+      return;
+    }
+    const next = infoBlasts.map((b) => (b.id === blast.id ? blast : b));
+    setInfoBlasts(next);
+    localStorage.setItem('grisspo_info_blasts', JSON.stringify(next));
+    await safeCloudWrite('info_blasts', blast.id, blast);
+  };
+
+  const deleteInfoBlast = async (id: string) => {
+    if (currentUser?.role !== 'superadmin') {
+      alert('Akses Ditolak: Hanya Superadmin yang berhak menghapus Info Blast!');
+      return;
+    }
+    await markAsDeleted(id, 'info_blasts');
+    const next = infoBlasts.filter((b) => b.id !== id);
+    setInfoBlasts(next);
+    localStorage.setItem('grisspo_info_blasts', JSON.stringify(next));
+    try {
+      await deleteDoc(doc(db, 'info_blasts', id));
+    } catch (err) {
+      console.warn('Firestore delete info_blasts error:', err);
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -4897,6 +4976,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addImportantContact,
         updateImportantContact,
         deleteImportantContact,
+
+        infoBlasts,
+        addInfoBlast,
+        updateInfoBlast,
+        deleteInfoBlast,
 
         isPengurusOpen,
         setIsPengurusOpen,

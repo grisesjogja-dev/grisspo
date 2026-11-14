@@ -24,6 +24,8 @@ import { EditProfileModal } from './components/EditProfileModal';
 import { MasterResetModal } from './components/MasterResetModal';
 import { ActiveSessionsModal } from './components/ActiveSessionsModal';
 import { VersionChangelogModal } from './components/VersionChangelogModal';
+import { InfoBlastManagementView } from './components/InfoBlastManagementView';
+import { InfoBlastModal } from './components/InfoBlastModal';
 import { APP_VERSION, APP_BUILD_DATE } from './data/versionInfo';
 import { Clock } from 'lucide-react';
 
@@ -95,6 +97,8 @@ const MainApp: React.FC = () => {
         return <NotulenDanAbsensiView />;
       case 'kontak_penting':
         return <KontakPentingView />;
+      case 'infoblast':
+        return <InfoBlastManagementView />;
       default:
         return <DashboardView />;
     }
@@ -194,6 +198,9 @@ const MainApp: React.FC = () => {
         isOpen={isVersionChangelogOpen}
         onClose={() => setIsVersionChangelogOpen(false)}
       />
+
+      {/* Info Blast Popup Modal for Residents */}
+      <InfoBlastModal />
 
       {/* 30-min Inactivity Auto-logout Alert Modal */}
       {inactivityNotice && (

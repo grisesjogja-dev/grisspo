@@ -160,6 +160,16 @@ export interface ForumComment {
   createdAt: string;
 }
 
+export interface InfoBlast {
+  id: string;
+  title: string;
+  content: string;
+  category: 'Pengumuman' | 'Penting' | 'Keuangan' | 'Kegiatan' | 'Darurat';
+  targetHouses: string[]; // ['ALL'] or specific house numbers e.g. ['B 24', 'A 01']
+  createdAt: string;
+  createdBy: string;
+}
+
 export interface LoyaltyReward {
   id: string;
   title: string;
