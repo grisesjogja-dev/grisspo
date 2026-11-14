@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
 import {
   User,
   Resident,
@@ -37,7 +37,6 @@ import {
   initialFasumBookings,
   initialMeetingNotes,
   initialAttendanceSessions,
-  initialJimpitReports,
   fasumFacilities,
   initialImportantContacts
 } from '../data/seedData';
@@ -102,6 +101,189 @@ export function findResidentByMemberName(memberName: string, residentsList: Resi
     const resClean = normalizeCleanName(r.name);
     if (!resClean) return false;
     return aliases.some((alias) => resClean === alias || resClean.includes(alias) || alias.includes(resClean));
+  });
+}
+
+export function getLocalDateString(dateInput: Date = new Date()): string {
+  return `${dateInput.getFullYear()}-${String(dateInput.getMonth() + 1).padStart(2, '0')}-${String(
+    dateInput.getDate()
+  ).padStart(2, '0')}`;
+}
+
+export function mapPaymentTypeToCategory(
+  paymentType: PaymentReceiptType,
+  paymentTypeName?: string
+): Transaction['category'] {
+  switch (paymentType) {
+    case 'iuran_bulanan':
+      return 'Iuran Bulanan (Rp 25.000)';
+    case 'iuran_sampah':
+      return 'Iuran Sampah (Rp 25.000)';
+    case 'iuran_bulanan_sampah':
+      return 'Iuran Bulanan + Sampah (Rp 50.000)';
+    case 'sewa_fasum':
+      return 'Sewa Fasum';
+    case 'sumbangan_sukarela':
+      return 'Sumbangan Sukarela';
+    default: {
+      const n = (paymentTypeName || '').toLowerCase();
+      if (n.includes('sampah') && n.includes('bulanan')) return 'Iuran Bulanan + Sampah (Rp 50.000)';
+      if (n.includes('sampah')) return 'Iuran Sampah (Rp 25.000)';
+      if (n.includes('bulanan') || n.includes('iuran')) return 'Iuran Bulanan (Rp 25.000)';
+      if (n.includes('fasum')) return 'Sewa Fasum';
+      if (n.includes('sumbangan')) return 'Sumbangan Sukarela';
+      if (n.includes('jimpit')) return 'Pemasukan Jimpitan Bulanan';
+      return 'Lain-lain Pemasukan';
+    }
+  }
+}
+
+export function mapCategoryToPaymentType(category?: string): PaymentReceiptType {
+  const catL = (category || '').toLowerCase();
+  if (catL.includes('sampah') && catL.includes('bulanan')) return 'iuran_bulanan_sampah';
+  if (catL.includes('sampah')) return 'iuran_sampah';
+  if (catL.includes('bulanan') || catL.includes('iuran')) return 'iuran_bulanan';
+  if (catL.includes('fasum')) return 'sewa_fasum';
+  if (catL.includes('sumbangan')) return 'sumbangan_sukarela';
+  return 'pemasukan_lain';
+}
+
+export const LEGACY_FAKE_SEED_IDS = new Set([
+  'jimpit-2026-11-11',
+  'jimpit-2026-11-12',
+  'trx-jimpit-2026-11-11',
+  'trx-jimpit-2026-11-12'
+]);
+
+export function normalizeTransactionCategory(t: Partial<Transaction>): Transaction['category'] {
+  const cleanType = String(t.type || '').trim().toLowerCase();
+  const rawCat = String(t.category || '').trim();
+  if (cleanType === 'pengeluaran' || cleanType === 'expense') {
+    return (rawCat || 'Operasional & Lain-lain') as Transaction['category'];
+  }
+  const idL = String(t.id || '').toLowerCase();
+  const catL = rawCat.toLowerCase();
+  const descL = String(t.description || '').toLowerCase();
+  if (
+    idL.startsWith('trx-jimpit-') ||
+    catL.includes('jimpit') ||
+    (descL.includes('jimpit') && !catL.includes('fasum'))
+  ) {
+    return 'Pemasukan Jimpitan Bulanan';
+  }
+  return (rawCat || 'Lain-lain Pemasukan') as Transaction['category'];
+}
+
+export function buildReconciledTransactions(
+  baseTransactions: Transaction[],
+  receipts: PaymentReceipt[],
+  jimpitList: JimpitDailyReport[],
+  deletedIdsList: string[]
+): Transaction[] {
+  const deletedSet = new Set(deletedIdsList);
+  const result: Transaction[] = [];
+  const seenIds = new Set<string>();
+
+  for (const t of baseTransactions) {
+    if (!t || !t.id || LEGACY_FAKE_SEED_IDS.has(t.id) || deletedSet.has(t.id) || seenIds.has(t.id)) continue;
+    seenIds.add(t.id);
+    const cleanType = (
+      String(t.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan'
+    ) as 'pemasukan' | 'pengeluaran';
+    result.push({
+      ...t,
+      type: cleanType,
+      amount: Number(t.amount) || 0,
+      category: normalizeTransactionCategory({ ...t, type: cleanType })
+    });
+  }
+
+  for (const receipt of receipts) {
+    if (!receipt || !receipt.id || deletedSet.has(receipt.id)) continue;
+    if (
+      receipt.id.startsWith('receipt-trx-jimpit-') ||
+      String(receipt.paymentType || '').toLowerCase() === 'jimpitan' ||
+      (receipt.paymentTypeName || '').toLowerCase().includes('jimpit') ||
+      (receipt.notes || '').toLowerCase().includes('jimpit')
+    ) {
+      continue;
+    }
+    const candidateTrxId = receipt.transactionId || `trx-sync-${receipt.id}`;
+    if (LEGACY_FAKE_SEED_IDS.has(candidateTrxId) || deletedSet.has(candidateTrxId) || seenIds.has(candidateTrxId)) continue;
+    const amount = Number(receipt.amount) || 0;
+    if (amount <= 0) continue;
+
+    const methodLabel =
+      receipt.paymentMethod === 'transfer_bank_bri' || receipt.paymentMethod === 'transfer_bank'
+        ? 'Transfer Bank BRI'
+        : 'Tunai';
+    const dateStr = receipt.date || getLocalDateString(new Date(receipt.createdAt || Date.now()));
+    seenIds.add(candidateTrxId);
+
+    result.push({
+      id: candidateTrxId,
+      type: 'pemasukan',
+      category: mapPaymentTypeToCategory(receipt.paymentType, receipt.paymentTypeName),
+      amount,
+      date: dateStr,
+      description: `${receipt.paymentTypeName} - ${receipt.residentName} (${receipt.residentHouse}) [No. Kwitansi: ${receipt.receiptNumber}] via ${methodLabel}${
+        receipt.periodMonth ? ` - Periode: ${receipt.periodMonth}` : ''
+      }${receipt.notes ? ` (${receipt.notes})` : ''}`,
+      recordedBy: receipt.recordedBy || 'Bendahara Kas',
+      userRole: receipt.recorderRole || 'bendahara1',
+      sourceHouse: receipt.residentHouse,
+      encryptedHash: `hash-sync-${candidateTrxId}`,
+      isAnomaly: false,
+      timestamp: receipt.createdAt ? new Date(receipt.createdAt).getTime() : new Date(`${dateStr}T12:00:00`).getTime()
+    });
+  }
+
+  for (const report of jimpitList) {
+    if (!report || !report.id || LEGACY_FAKE_SEED_IDS.has(report.id) || deletedSet.has(report.id)) continue;
+    const isPelunasan = report.reportType === 'pelunasan' || report.id.startsWith('jimpit-pay-');
+    const targetTrxId = report.transactionId || `trx-${report.id}`;
+    if (LEGACY_FAKE_SEED_IDS.has(targetTrxId) || deletedSet.has(targetTrxId) || seenIds.has(targetTrxId)) continue;
+
+    const amount = Number(report.totalNominal) || 0;
+    if (amount <= 0) continue;
+
+    if (!isPelunasan) {
+      const hasDailyJimpitTrxForDate = result.some((t) => {
+        if (t.type !== 'pemasukan' || t.date !== report.date) return false;
+        const catL = String(t.category || '').toLowerCase();
+        const descL = String(t.description || '').toLowerCase();
+        return (catL.includes('jimpit') || descL.includes('jimpit')) && !descL.includes('pelunasan');
+      });
+      if (hasDailyJimpitTrxForDate) continue;
+    }
+
+    seenIds.add(targetTrxId);
+    const ts = report.createdAt
+      ? new Date(report.createdAt).getTime()
+      : new Date(`${report.date}T21:00:00+07:00`).getTime();
+
+    result.push({
+      id: targetTrxId,
+      type: 'pemasukan',
+      category: 'Pemasukan Jimpitan Bulanan',
+      amount,
+      date: report.date,
+      description: isPelunasan
+        ? report.notes || `Pelunasan Kekurangan Jimpitan (${report.date})`
+        : `Pemasukan Jimpitan Ronda Online (${report.day}, ${report.date}) oleh ${report.collectedBy}`,
+      recordedBy: report.collectedBy,
+      userRole: 'warga',
+      encryptedHash: `hash-sync-${targetTrxId}`,
+      isAnomaly: false,
+      timestamp: Number.isFinite(ts) ? ts : Date.now()
+    });
+  }
+
+  return result.sort((a, b) => {
+    const dateA = a.date || '';
+    const dateB = b.date || '';
+    if (dateB !== dateA) return dateB.localeCompare(dateA);
+    return (b.timestamp || 0) - (a.timestamp || 0);
   });
 }
 
@@ -324,8 +506,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   });
 
+  const triggerManualSyncImplRef = useRef<(() => Promise<void>) | null>(null);
+
   const triggerManualSync = () => {
     setLastSyncedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    if (triggerManualSyncImplRef.current) {
+      triggerManualSyncImplRef.current().catch((err) => {
+        console.warn('Manual sync notice:', err);
+      });
+    }
   };
 
   const [isPengurusOpen, setIsPengurusOpen] = useState<boolean>(false);
@@ -347,18 +536,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const cleanedDeletedIdsRef = useRef<Set<string>>(new Set());
   const hasAlertedQuotaRef = useRef<boolean>(false);
 
-  const getUtcDateKey = () => new Date().toISOString().slice(0, 10);
+  const getPacificDateKey = (): string => {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Los_Angeles',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(new Date());
+    } catch {
+      // Fallback: Pacific Standard Time (UTC-8)
+      return new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    }
+  };
 
   const isQuotaExhaustedToday = (): boolean => {
     if (firestoreQuotaExceededRef.current) return true;
+    const todayPt = getPacificDateKey();
     try {
-      const savedDay = localStorage.getItem('grisspo_quota_exhausted_utc');
-      if (savedDay && savedDay === getUtcDateKey()) {
+      const legacyUtc = localStorage.getItem('grisspo_quota_exhausted_utc');
+      if (legacyUtc) {
+        localStorage.removeItem('grisspo_quota_exhausted_utc');
+      }
+      const savedDay = localStorage.getItem('grisspo_quota_exhausted_pt');
+      if (savedDay && savedDay === todayPt) {
         firestoreQuotaExceededRef.current = true;
         return true;
       }
-      if (savedDay && savedDay !== getUtcDateKey()) {
-        localStorage.removeItem('grisspo_quota_exhausted_utc');
+      if (savedDay && savedDay !== todayPt) {
+        localStorage.removeItem('grisspo_quota_exhausted_pt');
       }
     } catch {
       // ignore storage errors
@@ -372,26 +578,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return code === 'resource-exhausted' || msg.includes('resource-exhausted') || msg.includes('quota');
   };
 
-  const handleFirestoreWriteFailure = (err: unknown, contextLabel: string, notifyUser = false) => {
+  const handleFirestoreWriteFailure = (err: unknown, contextLabel: string, _notifyUser = false) => {
     if (isQuotaExceededError(err)) {
       firestoreQuotaExceededRef.current = true;
       try {
-        localStorage.setItem('grisspo_quota_exhausted_utc', getUtcDateKey());
+        localStorage.setItem('grisspo_quota_exhausted_pt', getPacificDateKey());
       } catch {
         // ignore
       }
       // Halt Firestore SDK internal backoff write retries immediately for this tab
       disableNetwork(db).catch(() => {});
-      console.warn(`Firestore daily write quota exceeded during ${contextLabel}. Cloud writes paused until tomorrow.`);
-      if (notifyUser && !hasAlertedQuotaRef.current) {
+      if (!hasAlertedQuotaRef.current) {
         hasAlertedQuotaRef.current = true;
-        alert(
-          'Kuota penulisan harian database cloud (Firestore Free Tier) telah mencapai batas maksimum hari ini dan akan direset otomatis keesokan harinya. Data tetap disimpan secara lokal di perangkat ini.'
+        console.warn(
+          `Firestore daily write quota exceeded during ${contextLabel}. Cloud writes paused until next Pacific Time day reset; data remains saved locally.`
         );
       }
       return;
     }
     console.warn(`Firestore ${contextLabel} error:`, err);
+  };
+
+  // Persistent registry of local writes awaiting Firestore upload (prevents onSnapshot from wiping unsynced data)
+  const unsyncedDocsRef = useRef<Record<string, { collection: string; id: string; updatedAt: string }>>((() => {
+    try {
+      const saved = localStorage.getItem('grisspo_unsynced_docs');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  })());
+
+  const persistUnsyncedRegistry = () => {
+    try {
+      localStorage.setItem('grisspo_unsynced_docs', JSON.stringify(unsyncedDocsRef.current));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const markDocUnsynced = (collectionName: string, docId: string) => {
+    unsyncedDocsRef.current[`${collectionName}:${docId}`] = {
+      collection: collectionName,
+      id: docId,
+      updatedAt: new Date().toISOString()
+    };
+    persistUnsyncedRegistry();
+  };
+
+  const clearDocUnsynced = (collectionName: string, docId: string) => {
+    const key = `${collectionName}:${docId}`;
+    if (unsyncedDocsRef.current[key]) {
+      delete unsyncedDocsRef.current[key];
+      persistUnsyncedRegistry();
+    }
   };
 
   // Safe Firestore write wrappers that respect daily quota exhaustion across all operations
@@ -408,6 +648,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!isQuotaExceededError(err)) {
         throw err;
       }
+    }
+  };
+
+  const safeCloudWrite = async (collectionName: string, docId: string, payload: any): Promise<boolean> => {
+    if (isQuotaExhaustedToday()) {
+      markDocUnsynced(collectionName, docId);
+      return false;
+    }
+    try {
+      await rawSetDoc(doc(db, collectionName, docId), sanitizeForFirestore(payload));
+      clearDocUnsynced(collectionName, docId);
+      return true;
+    } catch (err) {
+      markDocUnsynced(collectionName, docId);
+      handleFirestoreWriteFailure(err, `safeCloudWrite ${collectionName}/${docId}`, true);
+      return false;
     }
   };
 
@@ -447,7 +703,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const lastSync = Number(localStorage.getItem('grisspo_last_session_sync') || '0');
       const lastUserId = localStorage.getItem('grisspo_last_session_uid') || '';
-      if (!force && lastUserId === user.id && Date.now() - lastSync < 300000) {
+      if (!force && lastUserId === user.id && Date.now() - lastSync < 1800000) {
         hasRegisteredSessionRef.current = true;
         return;
       }
@@ -495,10 +751,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Sync active session whenever currentUser changes
+  // Track active session flag silently when restored from localStorage without firing boot writes
   useEffect(() => {
     if (currentUser) {
-      syncActiveSessionToCloud(currentUser);
+      hasRegisteredSessionRef.current = true;
     }
   }, [currentUser?.id]);
 
@@ -550,11 +806,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         triggerInactivityLogout();
       } else if (
         currentUserRef.current &&
-        !firestoreQuotaExceededRef.current &&
+        !isQuotaExhaustedToday() &&
         elapsed < 60000 &&
-        now - lastCloudHeartbeatRef.current > 300000
+        now - lastCloudHeartbeatRef.current > 900000
       ) {
-        // Send heartbeat to Firestore at most once every 5 minutes to conserve daily write quota
+        // Send heartbeat to Firestore at most once every 15 minutes to conserve daily write quota
         lastCloudHeartbeatRef.current = now;
         const sessionRef = doc(db, 'active_sessions', currentUserRef.current.id);
         setDoc(sessionRef, { lastActive: new Date().toISOString() }, { merge: true }).catch((e) => {
@@ -625,16 +881,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : initialRondaSchedule;
   });
 
-  // Jimpitan Reports
+  // Jimpitan Reports (strip erroneous Nov 11-12 dummy seed IDs while preserving all real petugas submissions)
   const [jimpitReports, setJimpitReports] = useState<JimpitDailyReport[]>(() => {
-    const saved = localStorage.getItem('grisspo_jimpit_reports');
-    const list: JimpitDailyReport[] = saved ? JSON.parse(saved) : [];
-    const filtered = list.filter((j) => !initialDeletedIds.includes(j.id));
-    const merged = [
-      ...initialJimpitReports,
-      ...filtered.filter((j) => j.date !== '2026-11-11' && j.date !== '2026-11-12')
-    ];
-    return merged;
+    let savedList: JimpitDailyReport[] = [];
+    try {
+      const saved = localStorage.getItem('grisspo_jimpit_reports');
+      savedList = saved ? JSON.parse(saved) : [];
+    } catch {
+      savedList = [];
+    }
+    const deletedSet = new Set(initialDeletedIds);
+    const result: JimpitDailyReport[] = [];
+    const seenIds = new Set<string>();
+    for (const item of savedList) {
+      if (!item || !item.id || LEGACY_FAKE_SEED_IDS.has(item.id) || deletedSet.has(item.id) || seenIds.has(item.id)) continue;
+      seenIds.add(item.id);
+      result.push(item);
+    }
+    return result.sort((a, b) => {
+      if (b.date !== a.date) return (b.date || '').localeCompare(a.date || '');
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
   });
 
   // Transactions
@@ -642,12 +909,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem('grisspo_transactions');
     const base: Transaction[] = saved ? JSON.parse(saved) : initialTransactions;
     return base
-      .filter((t) => !initialDeletedIds.includes(t.id))
-      .map((t) => ({
-        ...t,
-        amount: Number(t.amount) || 0,
-        type: (String(t.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran'
-      }));
+      .filter((t) => t && t.id && !LEGACY_FAKE_SEED_IDS.has(t.id) && !initialDeletedIds.includes(t.id))
+      .map((t) => {
+        const cleanType = (String(t.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran';
+        return {
+          ...t,
+          amount: Number(t.amount) || 0,
+          type: cleanType,
+          category: normalizeTransactionCategory({ ...t, type: cleanType })
+        };
+      });
   });
 
   // Forum Posts
@@ -691,20 +962,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Loket Pembayaran Kas & Kwitansi Resmi
   const [paymentReceipts, setPaymentReceipts] = useState<PaymentReceipt[]>(() => {
-    const saved = localStorage.getItem('grisspo_payment_receipts');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('grisspo_payment_receipts');
+      const base: PaymentReceipt[] = saved ? JSON.parse(saved) : [];
+      return base.filter((p) => p && p.id && !initialDeletedIds.includes(p.id));
+    } catch {
+      return [];
+    }
   });
 
-  // Absensi Records (Ronda, Kerjabakti, Rapat Bulanan)
+  // Absensi Records (Ronda, Kerjabakti, Rapat Bulanan) - preserve petugas submissions first
   const [attendanceSessions, setAttendanceSessions] = useState<AttendanceSession[]>(() => {
-    const saved = localStorage.getItem('grisspo_attendance_sessions');
-    const base: AttendanceSession[] = saved ? JSON.parse(saved) : initialAttendanceSessions;
-    const filtered = base.filter((s) => !initialDeletedIds.includes(s.id));
-    const merged = [
-      ...initialAttendanceSessions,
-      ...filtered.filter((s) => s.date !== '2026-11-11' && s.date !== '2026-11-12')
-    ];
-    return merged;
+    let savedList: AttendanceSession[] = [];
+    try {
+      const saved = localStorage.getItem('grisspo_attendance_sessions');
+      savedList = saved ? JSON.parse(saved) : [];
+    } catch {
+      savedList = [];
+    }
+    const deletedSet = new Set(initialDeletedIds);
+    const result: AttendanceSession[] = [];
+    const seenIds = new Set<string>();
+    for (const item of savedList) {
+      if (!item || !item.id || deletedSet.has(item.id) || seenIds.has(item.id)) continue;
+      seenIds.add(item.id);
+      result.push(item);
+    }
+    for (const seed of initialAttendanceSessions) {
+      if (deletedSet.has(seed.id) || seenIds.has(seed.id)) continue;
+      const hasSessionForDate = result.some((s) => s.date === seed.date && s.type === seed.type);
+      if (!hasSessionForDate) {
+        seenIds.add(seed.id);
+        result.push(seed);
+      }
+    }
+    return result.sort((a, b) => {
+      if (b.date !== a.date) return (b.date || '').localeCompare(a.date || '');
+      return new Date(b.createdAt || b.date || 0).getTime() - new Date(a.createdAt || a.date || 0).getTime();
+    });
   });
 
   // Notulen Rapat Paguyuban
@@ -723,8 +1018,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [emailAlerts, setEmailAlerts] = useState<EmailAlertLog[]>([]);
 
+  const residentsRef = useRef<Resident[]>(residents);
+  const jimpitReportsRef = useRef<JimpitDailyReport[]>(jimpitReports);
+  const transactionsRef = useRef<Transaction[]>(transactions);
+  const paymentReceiptsRef = useRef<PaymentReceipt[]>(paymentReceipts);
+  const attendanceSessionsRef = useRef<AttendanceSession[]>(attendanceSessions);
+  const fasumBookingsRef = useRef<FasumBooking[]>(fasumBookings);
+
+  useEffect(() => { residentsRef.current = residents; }, [residents]);
+  useEffect(() => { jimpitReportsRef.current = jimpitReports; }, [jimpitReports]);
+  useEffect(() => { transactionsRef.current = transactions; }, [transactions]);
+  useEffect(() => { paymentReceiptsRef.current = paymentReceipts; }, [paymentReceipts]);
+  useEffect(() => { attendanceSessionsRef.current = attendanceSessions; }, [attendanceSessions]);
+  useEffect(() => { fasumBookingsRef.current = fasumBookings; }, [fasumBookings]);
+
   // Function to mark an item as deleted permanently and sync to Firestore
   const markAsDeleted = async (id: string, collectionName?: string) => {
+    if (collectionName) {
+      clearDocUnsynced(collectionName, id);
+    }
     setDeletedIds((prev) => {
       const next = Array.from(new Set([...prev, id]));
       localStorage.setItem('grisspo_deleted_ids', JSON.stringify(next));
@@ -735,6 +1047,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Immediate optimistic local purge across all arrays
     setResidents((prev) => prev.filter((r) => r.id !== id));
     setTransactions((prev) => prev.filter((t) => t.id !== id));
+    setPaymentReceipts((prev) => prev.filter((p) => p.id !== id));
     setInventory((prev) => prev.filter((i) => i.id !== id));
     setJimpitReports((prev) => prev.filter((r) => r.id !== id));
     setForumPosts((prev) => prev.filter((p) => p.id !== id));
@@ -746,7 +1059,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setImportantContacts((prev) => prev.filter((c) => c.id !== id));
 
     // Save to Firestore system_deleted_ids so ALL devices receive this deletion in real-time
-    if (!firestoreQuotaExceededRef.current) {
+    if (!isQuotaExhaustedToday()) {
       try {
         await setDoc(doc(db, 'system_deleted_ids', id), {
           id,
@@ -788,6 +1101,302 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMeetingNotes((prev) => prev.filter((m) => !deletedIds.includes(m.id)));
   }, [deletedIds]);
 
+  // Non-destructive merge helpers so Firestore listeners NEVER wipe locally saved/unsynced petugas inputs or Nov 11-12 records
+  const mergeResidentsList = (cloudList: Resident[], localList: Resident[]): Resident[] => {
+    const deletedSet = new Set(deletedIdsRef.current);
+    const map = new Map<string, Resident>();
+    for (const item of cloudList) {
+      if (item && item.id && !deletedSet.has(item.id)) map.set(item.id, item);
+    }
+    for (const localItem of localList) {
+      if (!localItem || !localItem.id || deletedSet.has(localItem.id)) continue;
+      if (unsyncedDocsRef.current[`warga:${localItem.id}`] || !map.has(localItem.id)) {
+        map.set(localItem.id, localItem);
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => (a.no || 0) - (b.no || 0));
+  };
+
+  const mergeTransactionsList = (cloudList: Transaction[], localList: Transaction[]): Transaction[] => {
+    const deletedSet = new Set(deletedIdsRef.current);
+    const map = new Map<string, Transaction>();
+    for (const item of cloudList) {
+      if (item && item.id && !LEGACY_FAKE_SEED_IDS.has(item.id) && !deletedSet.has(item.id)) {
+        const cleanType = (String(item.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran';
+        map.set(item.id, {
+          ...item,
+          amount: Number(item.amount) || 0,
+          type: cleanType,
+          category: normalizeTransactionCategory({ ...item, type: cleanType })
+        });
+      }
+    }
+    for (const localItem of localList) {
+      if (!localItem || !localItem.id || LEGACY_FAKE_SEED_IDS.has(localItem.id) || deletedSet.has(localItem.id)) continue;
+      if (unsyncedDocsRef.current[`keuangan_transaksi:${localItem.id}`] || !map.has(localItem.id)) {
+        const cleanType = (String(localItem.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran';
+        map.set(localItem.id, {
+          ...localItem,
+          amount: Number(localItem.amount) || 0,
+          type: cleanType,
+          category: normalizeTransactionCategory({ ...localItem, type: cleanType })
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      if (dateB !== dateA) return dateB.localeCompare(dateA);
+      return (b.timestamp || 0) - (a.timestamp || 0);
+    });
+  };
+
+  const mergeJimpitList = (cloudList: JimpitDailyReport[], localList: JimpitDailyReport[]): JimpitDailyReport[] => {
+    const deletedSet = new Set(deletedIdsRef.current);
+    const map = new Map<string, JimpitDailyReport>();
+    for (const item of cloudList) {
+      if (item && item.id && !LEGACY_FAKE_SEED_IDS.has(item.id) && !deletedSet.has(item.id)) map.set(item.id, item);
+    }
+    for (const localItem of localList) {
+      if (!localItem || !localItem.id || LEGACY_FAKE_SEED_IDS.has(localItem.id) || deletedSet.has(localItem.id)) continue;
+      if (unsyncedDocsRef.current[`jimpitan_records:${localItem.id}`] || !map.has(localItem.id)) {
+        map.set(localItem.id, localItem);
+      }
+    }
+    const merged = Array.from(map.values());
+    return merged.sort((a, b) => {
+      if (b.date !== a.date) return (b.date || '').localeCompare(a.date || '');
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+  };
+
+  const mergeAttendanceList = (cloudList: AttendanceSession[], localList: AttendanceSession[]): AttendanceSession[] => {
+    const deletedSet = new Set(deletedIdsRef.current);
+    const map = new Map<string, AttendanceSession>();
+    for (const item of cloudList) {
+      if (item && item.id && !deletedSet.has(item.id)) map.set(item.id, item);
+    }
+    for (const localItem of localList) {
+      if (!localItem || !localItem.id || deletedSet.has(localItem.id)) continue;
+      if (unsyncedDocsRef.current[`absensi_records:${localItem.id}`] || !map.has(localItem.id)) {
+        map.set(localItem.id, localItem);
+      }
+    }
+    const merged = Array.from(map.values());
+    for (const seed of initialAttendanceSessions) {
+      if (deletedSet.has(seed.id) || map.has(seed.id)) continue;
+      const hasForDate = merged.some((s) => s.date === seed.date && s.type === seed.type);
+      if (!hasForDate) {
+        merged.push(seed);
+      }
+    }
+    return merged.sort((a, b) => {
+      if (b.date !== a.date) return (b.date || '').localeCompare(a.date || '');
+      return new Date(b.createdAt || b.date || 0).getTime() - new Date(a.createdAt || a.date || 0).getTime();
+    });
+  };
+
+  const mergeReceiptsList = (cloudList: PaymentReceipt[], localList: PaymentReceipt[]): PaymentReceipt[] => {
+    const deletedSet = new Set(deletedIdsRef.current);
+    const map = new Map<string, PaymentReceipt>();
+    for (const item of cloudList) {
+      if (item && item.id && !deletedSet.has(item.id)) map.set(item.id, item);
+    }
+    for (const localItem of localList) {
+      if (!localItem || !localItem.id || deletedSet.has(localItem.id)) continue;
+      if (unsyncedDocsRef.current[`pembayaran_kwitansi:${localItem.id}`] || !map.has(localItem.id)) {
+        map.set(localItem.id, localItem);
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => {
+      const dateA = a.date || a.createdAt?.slice(0, 10) || '';
+      const dateB = b.date || b.createdAt?.slice(0, 10) || '';
+      if (dateB !== dateA) return dateB.localeCompare(dateA);
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+  };
+
+  const flushUnsyncedToCloud = async () => {
+    if (isQuotaExhaustedToday()) return;
+    const entries = Object.values(unsyncedDocsRef.current);
+    for (const entry of entries) {
+      if (isQuotaExhaustedToday()) break;
+      if (LEGACY_FAKE_SEED_IDS.has(entry.id) || deletedIdsRef.current.includes(entry.id)) {
+        clearDocUnsynced(entry.collection, entry.id);
+        continue;
+      }
+      let payload: any = null;
+      switch (entry.collection) {
+        case 'jimpitan_records':
+          payload = jimpitReportsRef.current.find((r) => r.id === entry.id);
+          break;
+        case 'absensi_records':
+          payload = attendanceSessionsRef.current.find((s) => s.id === entry.id);
+          break;
+        case 'keuangan_transaksi':
+          payload = transactionsRef.current.find((t) => t.id === entry.id);
+          break;
+        case 'pembayaran_kwitansi':
+          payload = paymentReceiptsRef.current.find((p) => p.id === entry.id);
+          break;
+        case 'warga':
+          payload = residentsRef.current.find((r) => r.id === entry.id);
+          break;
+        case 'fasum_bookings':
+          payload = fasumBookingsRef.current.find((b) => b.id === entry.id);
+          break;
+      }
+      if (payload) {
+        await safeCloudWrite(entry.collection, entry.id, payload);
+      } else {
+        clearDocUnsynced(entry.collection, entry.id);
+      }
+    }
+  };
+
+  const cleanedFakeSeedIdsRef = useRef<Set<string>>(new Set());
+  const cloudJimpitIdsRef = useRef<Set<string> | null>(null);
+  const cloudTrxIdsRef = useRef<Set<string> | null>(null);
+  const cloudAbsIdsRef = useRef<Set<string> | null>(null);
+
+  const purgeLegacyFakeSeedDocOnce = async (collectionName: 'jimpitan_records' | 'keuangan_transaksi', docId: string) => {
+    if (!LEGACY_FAKE_SEED_IDS.has(docId) || isQuotaExhaustedToday()) return;
+    const key = `${collectionName}:${docId}`;
+    if (cleanedFakeSeedIdsRef.current.has(key)) return;
+    cleanedFakeSeedIdsRef.current.add(key);
+    try {
+      await rawDeleteDoc(doc(db, collectionName, docId));
+    } catch (err) {
+      handleFirestoreWriteFailure(err, `cleanup ${key}`);
+    }
+  };
+
+  // Recover & upload any real local petugas submissions (including prior Nov 11-12 inputs cached before unsynced registry existed)
+  const recoverLocalPetugasReportsToCloud = async () => {
+    if (isQuotaExhaustedToday()) return;
+    if (cloudJimpitIdsRef.current) {
+      for (const report of jimpitReportsRef.current) {
+        if (isQuotaExhaustedToday()) break;
+        if (LEGACY_FAKE_SEED_IDS.has(report.id) || deletedIdsRef.current.includes(report.id)) continue;
+        if (!cloudJimpitIdsRef.current.has(report.id)) {
+          await safeCloudWrite('jimpitan_records', report.id, report);
+        }
+        const linkedTrxId = report.transactionId || `trx-${report.id}`;
+        if (
+          cloudTrxIdsRef.current &&
+          !LEGACY_FAKE_SEED_IDS.has(linkedTrxId) &&
+          !deletedIdsRef.current.includes(linkedTrxId) &&
+          !cloudTrxIdsRef.current.has(linkedTrxId)
+        ) {
+          const linkedTrx = buildReconciledTransactions(
+            transactionsRef.current,
+            paymentReceiptsRef.current,
+            [report],
+            deletedIdsRef.current
+          ).find((t) => t.id === linkedTrxId);
+          if (linkedTrx) {
+            await safeCloudWrite('keuangan_transaksi', linkedTrx.id, linkedTrx);
+          }
+        }
+      }
+    }
+    if (cloudAbsIdsRef.current) {
+      for (const sess of attendanceSessionsRef.current) {
+        if (isQuotaExhaustedToday()) break;
+        if (sess.id.startsWith('att-2026-11-') || deletedIdsRef.current.includes(sess.id)) continue;
+        if (!cloudAbsIdsRef.current.has(sess.id)) {
+          await safeCloudWrite('absensi_records', sess.id, sess);
+        }
+      }
+    }
+  };
+
+  triggerManualSyncImplRef.current = async () => {
+    try {
+      const [delSnap, wargaSnap, trxSnap, jimpitSnap, absSnap, receiptSnap] = await Promise.all([
+        getDocs(collection(db, 'system_deleted_ids')),
+        getDocs(collection(db, 'warga')),
+        getDocs(collection(db, 'keuangan_transaksi')),
+        getDocs(collection(db, 'jimpitan_records')),
+        getDocs(collection(db, 'absensi_records')),
+        getDocs(collection(db, 'pembayaran_kwitansi'))
+      ]);
+
+      const cloudDeleted: string[] = [];
+      delSnap.forEach((d) => cloudDeleted.push(d.id));
+      if (cloudDeleted.length > 0) {
+        const mergedDel = Array.from(new Set([...deletedIdsRef.current, ...cloudDeleted]));
+        deletedIdsRef.current = mergedDel;
+        setDeletedIds(mergedDel);
+        localStorage.setItem('grisspo_deleted_ids', JSON.stringify(mergedDel));
+      }
+
+      const cloudWarga: Resident[] = [];
+      wargaSnap.forEach((d) => cloudWarga.push(d.data() as Resident));
+      if (cloudWarga.length > 0) {
+        const mergedWarga = mergeResidentsList(cloudWarga, residentsRef.current);
+        setResidents(mergedWarga);
+        localStorage.setItem('grisspo_residents', JSON.stringify(mergedWarga));
+      }
+
+      const cloudTrx: Transaction[] = [];
+      const cloudTrxIds = new Set<string>();
+      trxSnap.forEach((d) => {
+        if (LEGACY_FAKE_SEED_IDS.has(d.id)) {
+          purgeLegacyFakeSeedDocOnce('keuangan_transaksi', d.id).catch(() => {});
+          return;
+        }
+        cloudTrxIds.add(d.id);
+        cloudTrx.push(d.data() as Transaction);
+      });
+      cloudTrxIdsRef.current = cloudTrxIds;
+      const mergedTrx = mergeTransactionsList(cloudTrx, transactionsRef.current);
+      transactionsRef.current = mergedTrx;
+      setTransactions(mergedTrx);
+      localStorage.setItem('grisspo_transactions', JSON.stringify(mergedTrx));
+
+      const cloudJimpit: JimpitDailyReport[] = [];
+      const cloudJimpitIds = new Set<string>();
+      jimpitSnap.forEach((d) => {
+        if (LEGACY_FAKE_SEED_IDS.has(d.id)) {
+          purgeLegacyFakeSeedDocOnce('jimpitan_records', d.id).catch(() => {});
+          return;
+        }
+        cloudJimpitIds.add(d.id);
+        cloudJimpit.push(d.data() as JimpitDailyReport);
+      });
+      cloudJimpitIdsRef.current = cloudJimpitIds;
+      const mergedJimpit = mergeJimpitList(cloudJimpit, jimpitReportsRef.current);
+      jimpitReportsRef.current = mergedJimpit;
+      setJimpitReports(mergedJimpit);
+      localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(mergedJimpit));
+
+      const cloudAbs: AttendanceSession[] = [];
+      const cloudAbsIds = new Set<string>();
+      absSnap.forEach((d) => {
+        cloudAbsIds.add(d.id);
+        cloudAbs.push(d.data() as AttendanceSession);
+      });
+      cloudAbsIdsRef.current = cloudAbsIds;
+      const mergedAbs = mergeAttendanceList(cloudAbs, attendanceSessionsRef.current);
+      setAttendanceSessions(mergedAbs);
+      localStorage.setItem('grisspo_attendance_sessions', JSON.stringify(mergedAbs));
+
+      const cloudRec: PaymentReceipt[] = [];
+      receiptSnap.forEach((d) => cloudRec.push(d.data() as PaymentReceipt));
+      const mergedRec = mergeReceiptsList(cloudRec, paymentReceiptsRef.current);
+      setPaymentReceipts(mergedRec);
+      localStorage.setItem('grisspo_payment_receipts', JSON.stringify(mergedRec));
+
+      await flushUnsyncedToCloud();
+      await recoverLocalPetugasReportsToCloud();
+      setIsCloudSynced(true);
+      setLastSyncedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    } catch (err) {
+      handleFirestoreWriteFailure(err, 'manual sync');
+    }
+  };
+
   // Real-Time Firebase Firestore Integration with Cross-Device Sync
   useEffect(() => {
     let unsubDeleted: (() => void) | undefined;
@@ -822,74 +1431,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!seedSnap.exists() || !seedSnap.data()?.isSeeded) {
           // Only seed if database is truly brand-new
           const wargaSnap = await getDocs(collection(db, 'warga'));
-          if (wargaSnap.empty) {
-            initialResidents.forEach((res) => {
-              if (!deletedIdsRef.current.includes(res.id)) {
-                setDoc(doc(db, 'warga', res.id), res).catch((e) => handleFirestoreWriteFailure(e, 'seed warga'));
+          if (wargaSnap.empty && !isQuotaExhaustedToday()) {
+            const seedCollections: Array<{ col: string; items: Array<{ id: string }> }> = [
+              { col: 'warga', items: initialResidents },
+              { col: 'keuangan_transaksi', items: initialTransactions },
+              { col: 'inventaris', items: initialInventory },
+              { col: 'forum_posts', items: initialForumPosts },
+              { col: 'pengumuman', items: initialAnnouncements },
+              { col: 'fasum_bookings', items: initialFasumBookings },
+              { col: 'notulen_rapat', items: initialMeetingNotes },
+              { col: 'absensi_records', items: initialAttendanceSessions },
+              { col: 'katalog_benefit', items: initialRewards },
+              { col: 'kontak_penting', items: initialImportantContacts }
+            ];
+            for (const group of seedCollections) {
+              if (isQuotaExhaustedToday()) break;
+              for (const item of group.items) {
+                if (isQuotaExhaustedToday()) break;
+                if (!deletedIdsRef.current.includes(item.id)) {
+                  await setDoc(doc(db, group.col, item.id), item).catch((e) =>
+                    handleFirestoreWriteFailure(e, `seed ${group.col}`)
+                  );
+                }
               }
-            });
-            initialTransactions.forEach((trx) => {
-              if (!deletedIdsRef.current.includes(trx.id)) {
-                setDoc(doc(db, 'keuangan_transaksi', trx.id), trx).catch((e) => handleFirestoreWriteFailure(e, 'seed trx'));
-              }
-            });
-            initialInventory.forEach((inv) => {
-              if (!deletedIdsRef.current.includes(inv.id)) {
-                setDoc(doc(db, 'inventaris', inv.id), inv).catch((e) => handleFirestoreWriteFailure(e, 'seed inv'));
-              }
-            });
-            initialForumPosts.forEach((p) => {
-              if (!deletedIdsRef.current.includes(p.id)) {
-                setDoc(doc(db, 'forum_posts', p.id), p).catch((e) => handleFirestoreWriteFailure(e, 'seed forum'));
-              }
-            });
-            initialAnnouncements.forEach((ann) => {
-              if (!deletedIdsRef.current.includes(ann.id)) {
-                setDoc(doc(db, 'pengumuman', ann.id), ann).catch((e) => handleFirestoreWriteFailure(e, 'seed ann'));
-              }
-            });
-            initialFasumBookings.forEach((b) => {
-              if (!deletedIdsRef.current.includes(b.id)) {
-                setDoc(doc(db, 'fasum_bookings', b.id), b).catch((e) => handleFirestoreWriteFailure(e, 'seed fasum'));
-              }
-            });
-            initialMeetingNotes.forEach((n) => {
-              if (!deletedIdsRef.current.includes(n.id)) {
-                setDoc(doc(db, 'notulen_rapat', n.id), n).catch((e) => handleFirestoreWriteFailure(e, 'seed notulen'));
-              }
-            });
-            initialAttendanceSessions.forEach((s) => {
-              if (!deletedIdsRef.current.includes(s.id)) {
-                setDoc(doc(db, 'absensi_records', s.id), s).catch((e) => handleFirestoreWriteFailure(e, 'seed absensi'));
-              }
-            });
-            initialRewards.forEach((rw) => {
-              if (!deletedIdsRef.current.includes(rw.id)) {
-                setDoc(doc(db, 'katalog_benefit', rw.id), rw).catch((e) => handleFirestoreWriteFailure(e, 'seed rewards'));
-              }
-            });
-            initialImportantContacts.forEach((ct) => {
-              if (!deletedIdsRef.current.includes(ct.id)) {
-                setDoc(doc(db, 'kontak_penting', ct.id), ct).catch((e) => handleFirestoreWriteFailure(e, 'seed kontak'));
-              }
-            });
+            }
           }
-          await setDoc(seedRef, { isSeeded: true, seededAt: new Date().toISOString() });
-          localStorage.setItem('grisspo_seeded_v1', 'true');
+          if (!isQuotaExhaustedToday()) {
+            await setDoc(seedRef, { isSeeded: true, seededAt: new Date().toISOString() });
+            localStorage.setItem('grisspo_seeded_v1', 'true');
+          }
         } else {
           localStorage.setItem('grisspo_seeded_v1', 'true');
         }
 
         // One-time check for kontak_penting only if not yet marked seeded locally
-        if (localStorage.getItem('grisspo_contacts_seeded_v1') !== 'true' && !firestoreQuotaExceededRef.current) {
+        if (localStorage.getItem('grisspo_contacts_seeded_v1') !== 'true' && !isQuotaExhaustedToday()) {
           try {
             const kontakSnap = await getDocs(collection(db, 'kontak_penting'));
             if (kontakSnap.empty) {
-              initialImportantContacts.forEach((ct) => {
+              for (const ct of initialImportantContacts) {
+                if (isQuotaExhaustedToday()) break;
                 if (!deletedIdsRef.current.includes(ct.id)) {
-                  setDoc(doc(db, 'kontak_penting', ct.id), ct).catch((e) => handleFirestoreWriteFailure(e, 'seed kontak'));
+                  await setDoc(doc(db, 'kontak_penting', ct.id), ct).catch((e) =>
+                    handleFirestoreWriteFailure(e, 'seed kontak')
+                  );
                 }
-              });
+              }
             }
             localStorage.setItem('grisspo_contacts_seeded_v1', 'true');
           } catch (e) {
@@ -919,17 +1506,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.warn('Firestore system_deleted_ids listener notice:', err.message);
       });
 
-      // Helper to safely purge lingering deleted doc at most once per superadmin session
-      const cleanupDeletedDocOnce = (colName: string, docId: string) => {
-        if (
-          currentUserRef.current?.role === 'superadmin' &&
-          !firestoreQuotaExceededRef.current &&
-          !cleanedDeletedIdsRef.current.has(`${colName}:${docId}`)
-        ) {
-          cleanedDeletedIdsRef.current.add(`${colName}:${docId}`);
-          deleteDoc(doc(db, colName, docId)).catch((e) => handleFirestoreWriteFailure(e, `cleanup ${colName}`));
-        }
-      };
+      // Keep onSnapshot listeners strictly read-only to prevent automatic delete storms
+      const cleanupDeletedDocOnce = (_colName: string, _docId: string) => {};
 
       // 1. Warga listener
       unsubWarga = onSnapshot(collection(db, 'warga'), (snapshot) => {
@@ -942,9 +1520,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               cloudData.push(d.data() as Resident);
             }
           });
-          cloudData.sort((a, b) => (a.no || 0) - (b.no || 0));
-          setResidents(cloudData);
-          localStorage.setItem('grisspo_residents', JSON.stringify(cloudData));
+          const merged = mergeResidentsList(cloudData, residentsRef.current);
+          setResidents(merged);
+          localStorage.setItem('grisspo_residents', JSON.stringify(merged));
           setIsCloudSynced(true);
           setLastSyncedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
         }
@@ -952,51 +1530,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.warn('Firestore warga listener error:', err.message);
       });
 
-      // 2. Transactions listener
+      // 2. Transactions listener (non-destructive merge + purge legacy fake seed trx)
       unsubTransactions = onSnapshot(collection(db, 'keuangan_transaksi'), (snapshot) => {
-        if (!snapshot.empty) {
-          const cloudTrx: Transaction[] = [];
-          snapshot.forEach((d) => {
-            if (deletedIdsRef.current.includes(d.id)) {
-              cleanupDeletedDocOnce('keuangan_transaksi', d.id);
-            } else {
-              const rawData = d.data() as any;
-              cloudTrx.push({
-                ...rawData,
-                amount: Number(rawData.amount) || 0,
-                type: (String(rawData.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran'
-              });
-            }
-          });
-          cloudTrx.sort((a, b) => {
-            const dateA = a.date || '';
-            const dateB = b.date || '';
-            if (dateB !== dateA) return dateB.localeCompare(dateA);
-            return (b.timestamp || 0) - (a.timestamp || 0);
-          });
-          setTransactions(cloudTrx);
-          localStorage.setItem('grisspo_transactions', JSON.stringify(cloudTrx));
-        }
+        const cloudTrx: Transaction[] = [];
+        const cloudTrxIds = new Set<string>();
+        snapshot.forEach((d) => {
+          if (LEGACY_FAKE_SEED_IDS.has(d.id)) {
+            purgeLegacyFakeSeedDocOnce('keuangan_transaksi', d.id).catch(() => {});
+            return;
+          }
+          if (deletedIdsRef.current.includes(d.id)) {
+            cleanupDeletedDocOnce('keuangan_transaksi', d.id);
+          } else {
+            cloudTrxIds.add(d.id);
+            cloudTrx.push(d.data() as Transaction);
+          }
+        });
+        cloudTrxIdsRef.current = cloudTrxIds;
+        const merged = mergeTransactionsList(cloudTrx, transactionsRef.current);
+        transactionsRef.current = merged;
+        setTransactions(merged);
+        localStorage.setItem('grisspo_transactions', JSON.stringify(merged));
+        setLastSyncedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        recoverLocalPetugasReportsToCloud().catch(() => {});
       }, (err) => {
         console.warn('Firestore transaksi listener error:', err.message);
       });
 
-      // 3. Jimpitan listener
+      // 3. Jimpitan listener (non-destructive merge, purges fake Nov 11-12 seed IDs, preserves & syncs real petugas submissions)
       unsubJimpitan = onSnapshot(collection(db, 'jimpitan_records'), (snapshot) => {
-        const isAlreadySeeded = localStorage.getItem('grisspo_seeded_v1') === 'true';
-        if (!snapshot.empty || isAlreadySeeded) {
-          const cloudJimpit: JimpitDailyReport[] = [];
-          snapshot.forEach((d) => {
-            if (deletedIdsRef.current.includes(d.id)) {
-              cleanupDeletedDocOnce('jimpitan_records', d.id);
-            } else {
-              cloudJimpit.push(d.data() as JimpitDailyReport);
-            }
-          });
-          cloudJimpit.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          setJimpitReports(cloudJimpit);
-          localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(cloudJimpit));
-        }
+        const cloudJimpit: JimpitDailyReport[] = [];
+        const cloudJimpitIds = new Set<string>();
+        snapshot.forEach((d) => {
+          if (LEGACY_FAKE_SEED_IDS.has(d.id)) {
+            purgeLegacyFakeSeedDocOnce('jimpitan_records', d.id).catch(() => {});
+            return;
+          }
+          if (deletedIdsRef.current.includes(d.id)) {
+            cleanupDeletedDocOnce('jimpitan_records', d.id);
+          } else {
+            cloudJimpitIds.add(d.id);
+            cloudJimpit.push(d.data() as JimpitDailyReport);
+          }
+        });
+        cloudJimpitIdsRef.current = cloudJimpitIds;
+        const merged = mergeJimpitList(cloudJimpit, jimpitReportsRef.current);
+        jimpitReportsRef.current = merged;
+        setJimpitReports(merged);
+        localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(merged));
+        setLastSyncedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        flushUnsyncedToCloud().catch(() => {});
+        recoverLocalPetugasReportsToCloud().catch(() => {});
       }, (err) => {
         console.warn('Firestore jimpitan listener error:', err.message);
       });
@@ -1075,22 +1659,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.warn('Firestore fasum listener error:', err.message);
       });
 
-      // 8. Absensi Records listener
+      // 8. Absensi Records listener (non-destructive merge)
       unsubAbsensi = onSnapshot(collection(db, 'absensi_records'), (snapshot) => {
-        const isAlreadySeeded = localStorage.getItem('grisspo_seeded_v1') === 'true';
-        if (!snapshot.empty || isAlreadySeeded) {
-          const cloudAbs: AttendanceSession[] = [];
-          snapshot.forEach((d) => {
-            if (deletedIdsRef.current.includes(d.id)) {
-              cleanupDeletedDocOnce('absensi_records', d.id);
-            } else {
-              cloudAbs.push(d.data() as AttendanceSession);
-            }
-          });
-          cloudAbs.sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
-          setAttendanceSessions(cloudAbs);
-          localStorage.setItem('grisspo_attendance_sessions', JSON.stringify(cloudAbs));
-        }
+        const cloudAbs: AttendanceSession[] = [];
+        const cloudAbsIds = new Set<string>();
+        snapshot.forEach((d) => {
+          if (deletedIdsRef.current.includes(d.id)) {
+            cleanupDeletedDocOnce('absensi_records', d.id);
+          } else {
+            cloudAbsIds.add(d.id);
+            cloudAbs.push(d.data() as AttendanceSession);
+          }
+        });
+        cloudAbsIdsRef.current = cloudAbsIds;
+        const merged = mergeAttendanceList(cloudAbs, attendanceSessionsRef.current);
+        attendanceSessionsRef.current = merged;
+        setAttendanceSessions(merged);
+        localStorage.setItem('grisspo_attendance_sessions', JSON.stringify(merged));
+        setLastSyncedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        recoverLocalPetugasReportsToCloud().catch(() => {});
       }, (err) => {
         console.warn('Firestore absensi listener error:', err.message);
       });
@@ -1164,7 +1751,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.warn('Firestore fasum_facilities listener notice:', err.message);
       });
 
-      // 12. Loket Pembayaran Kas & Kwitansi listener (Real-Time Cloud Sync)
+      // 12. Loket Pembayaran Kas & Kwitansi listener (Real-Time Cloud Sync, non-destructive merge)
       unsubReceipts = onSnapshot(collection(db, 'pembayaran_kwitansi'), (snapshot) => {
         const cloudReceipts: PaymentReceipt[] = [];
         snapshot.forEach((d) => {
@@ -1174,15 +1761,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             cleanupDeletedDocOnce('pembayaran_kwitansi', d.id);
           }
         });
-        cloudReceipts.sort((a, b) => {
-          const dateA = a.date || a.createdAt?.slice(0, 10) || '';
-          const dateB = b.date || b.createdAt?.slice(0, 10) || '';
-          if (dateB !== dateA) return dateB.localeCompare(dateA);
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        });
-        setPaymentReceipts(cloudReceipts);
-        localStorage.setItem('grisspo_payment_receipts', JSON.stringify(cloudReceipts));
+        const merged = mergeReceiptsList(cloudReceipts, paymentReceiptsRef.current);
+        setPaymentReceipts(merged);
+        localStorage.setItem('grisspo_payment_receipts', JSON.stringify(merged));
         setIsCloudSynced(true);
+        setLastSyncedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       }, (err) => {
         console.warn('Firestore pembayaran_kwitansi listener notice:', err.message);
       });
@@ -1322,101 +1905,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('grisspo_important_contacts', JSON.stringify(importantContacts));
   }, [importantContacts]);
 
-  // Calculations for Financial summary: Bulletproof synchronization with all transactions AND paymentReceipts
-  const transactionsIncome = transactions
-    .filter((t) => {
-      const typeStr = String(t.type || '').trim().toLowerCase();
-      return typeStr === 'pemasukan' || typeStr === 'income';
-    })
-    .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+  // Reconciled financial ledger: single source of truth across transactions, paymentReceipts, and jimpitReports
+  const reconciledTransactions = useMemo(
+    () => buildReconciledTransactions(transactions, paymentReceipts, jimpitReports, deletedIds),
+    [transactions, paymentReceipts, jimpitReports, deletedIds]
+  );
 
-  // If any payment receipt in paymentReceipts is not yet recorded in transactions, reconcile it automatically
-  const transactionIdsSet = new Set(transactions.map((t) => t.id));
-  const unlinkedReceiptsIncome = paymentReceipts
-    .filter((r) => !r.transactionId || !transactionIdsSet.has(r.transactionId))
-    .reduce((acc, r) => acc + (Number(r.amount) || 0), 0);
+  const totalIncome = useMemo(
+    () =>
+      reconciledTransactions
+        .filter((t) => String(t.type || '').trim().toLowerCase() === 'pemasukan')
+        .reduce((acc, t) => acc + (Number(t.amount) || 0), 0),
+    [reconciledTransactions]
+  );
 
-  const totalIncome = transactionsIncome + unlinkedReceiptsIncome;
-
-  const totalExpense = transactions
-    .filter((t) => {
-      const typeStr = String(t.type || '').trim().toLowerCase();
-      return typeStr === 'pengeluaran' || typeStr === 'expense';
-    })
-    .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+  const totalExpense = useMemo(
+    () =>
+      reconciledTransactions
+        .filter((t) => String(t.type || '').trim().toLowerCase() === 'pengeluaran')
+        .reduce((acc, t) => acc + (Number(t.amount) || 0), 0),
+    [reconciledTransactions]
+  );
 
   const currentBalance = totalIncome - totalExpense;
-
-  // In-memory synchronization between payment receipts and transactions (safe without recursive Firestore writes)
-  useEffect(() => {
-    // 1. PaymentReceipts -> Transactions local reconciliation
-    const currentTrxIds = new Set(transactions.map((t) => t.id));
-    const missingReceipts = paymentReceipts.filter(
-      (r) => !r.transactionId || !currentTrxIds.has(r.transactionId)
-    );
-
-    if (missingReceipts.length > 0) {
-      const newTrxList: Transaction[] = [];
-      const updatedReceiptsList: PaymentReceipt[] = [];
-
-      for (const receipt of missingReceipts) {
-        let cat: Transaction['category'] = 'Iuran Bulanan (Rp 25.000)';
-        if (receipt.paymentType === 'iuran_bulanan') cat = 'Iuran Bulanan (Rp 25.000)';
-        else if (receipt.paymentType === 'iuran_sampah') cat = 'Iuran Sampah (Rp 25.000)';
-        else if (receipt.paymentType === 'iuran_bulanan_sampah') cat = 'Iuran Bulanan + Sampah (Rp 50.000)';
-        else if (receipt.paymentType === 'sewa_fasum') cat = 'Sewa Fasum';
-        else if (receipt.paymentType === 'sumbangan_sukarela') cat = 'Sumbangan Sukarela';
-        else cat = 'Lain-lain Pemasukan';
-
-        const methodLabel =
-          receipt.paymentMethod === 'transfer_bank_bri' || receipt.paymentMethod === 'transfer_bank'
-            ? 'Transfer Bank BRI'
-            : 'Tunai';
-
-        const trxId = receipt.transactionId || `trx-sync-${receipt.id}`;
-        const newTrx: Transaction = {
-          id: trxId,
-          type: 'pemasukan',
-          category: cat,
-          amount: Number(receipt.amount) || 0,
-          date: receipt.date || new Date().toISOString().slice(0, 10),
-          description: `${receipt.paymentTypeName} - ${receipt.residentName} (${receipt.residentHouse}) [No. Kwitansi: ${receipt.receiptNumber}] via ${methodLabel}${
-            receipt.periodMonth ? ` - Periode: ${receipt.periodMonth}` : ''
-          }${receipt.notes ? ` (${receipt.notes})` : ''}`,
-          recordedBy: receipt.recordedBy || 'Bendahara Kas',
-          userRole: receipt.recorderRole || 'bendahara1',
-          sourceHouse: receipt.residentHouse,
-          encryptedHash: `hash-sync-${Date.now()}`,
-          isAnomaly: false,
-          timestamp: new Date(receipt.createdAt || Date.now()).getTime()
-        };
-
-        newTrxList.push(newTrx);
-        if (!receipt.transactionId) {
-          updatedReceiptsList.push({ ...receipt, transactionId: trxId });
-        }
-      }
-
-      if (newTrxList.length > 0) {
-        setTransactions((prev) => {
-          const nextTrx = [...newTrxList, ...prev];
-          localStorage.setItem('grisspo_transactions', JSON.stringify(nextTrx));
-          return nextTrx;
-        });
-      }
-
-      if (updatedReceiptsList.length > 0) {
-        setPaymentReceipts((prev) => {
-          const nextR = prev.map((r) => {
-            const found = updatedReceiptsList.find((u) => u.id === r.id);
-            return found ? found : r;
-          });
-          localStorage.setItem('grisspo_payment_receipts', JSON.stringify(nextR));
-          return nextR;
-        });
-      }
-    }
-  }, [paymentReceipts]);
 
   // Strict Password Validator
   // Rule: Setiap memilih role atau login wajib memasukkan password masing-masing
@@ -1504,6 +2015,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(loggedUser);
     localStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
     setActiveView('dashboard');
+    syncActiveSessionToCloud(loggedUser);
     return {
       success: true,
       message: `Login berhasil! Selamat datang Bpk/Ibu ${resident.name} (${resident.houseNumber}) - Role: ${resident.role.toUpperCase()}`
@@ -1525,6 +2037,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(loggedUser);
     localStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
     setActiveView('dashboard');
+    syncActiveSessionToCloud(loggedUser);
   };
 
   // Switch role with mandatory password validation
@@ -1563,6 +2076,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lastActivityTimeRef.current = Date.now();
     setCurrentUser(newUser);
     localStorage.setItem('grisspo_user', JSON.stringify(newUser));
+    syncActiveSessionToCloud(newUser);
     return {
       success: true,
       message: `Otorisasi berhasil! Anda kini beralih sebagai ${resident.name} (${resident.role.toUpperCase()}).`
@@ -1640,7 +2154,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     switch (feature) {
       case 'keuangan': {
-        transactions.forEach((t) => idsToMark.push(t.id));
+        transactionsRef.current.forEach((t) => {
+          idsToMark.push(t.id);
+          clearDocUnsynced('keuangan_transaksi', t.id);
+        });
+        transactionsRef.current = [];
         setTransactions([]);
         localStorage.setItem('grisspo_transactions', JSON.stringify([]));
         try {
@@ -1655,7 +2173,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       }
       case 'jimpitan': {
-        jimpitReports.forEach((j) => idsToMark.push(j.id));
+        jimpitReportsRef.current.forEach((j) => {
+          idsToMark.push(j.id);
+          clearDocUnsynced('jimpitan_records', j.id);
+          if (j.transactionId) {
+            idsToMark.push(j.transactionId);
+            clearDocUnsynced('keuangan_transaksi', j.transactionId);
+          }
+        });
+        jimpitReportsRef.current = [];
         setJimpitReports([]);
         localStorage.setItem('grisspo_jimpit_reports', JSON.stringify([]));
         try {
@@ -1670,7 +2196,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       }
       case 'absensi': {
-        attendanceSessions.forEach((s) => idsToMark.push(s.id));
+        attendanceSessionsRef.current.forEach((s) => {
+          idsToMark.push(s.id);
+          clearDocUnsynced('absensi_records', s.id);
+        });
+        attendanceSessionsRef.current = [];
         setAttendanceSessions([]);
         localStorage.setItem('grisspo_attendance_sessions', JSON.stringify([]));
         try {
@@ -1766,7 +2296,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       }
       case 'pembayaran': {
-        paymentReceipts.forEach((p) => idsToMark.push(p.id));
+        paymentReceiptsRef.current.forEach((p) => {
+          idsToMark.push(p.id);
+          clearDocUnsynced('pembayaran_kwitansi', p.id);
+          if (p.transactionId) {
+            idsToMark.push(p.transactionId);
+            clearDocUnsynced('keuangan_transaksi', p.transactionId);
+          }
+        });
+        paymentReceiptsRef.current = [];
         setPaymentReceipts([]);
         localStorage.setItem('grisspo_payment_receipts', JSON.stringify([]));
         try {
@@ -1847,12 +2385,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Resident actions with Firestore sync
   const updateResident = async (resident: Resident) => {
-    setResidents((prev) => prev.map((r) => (r.id === resident.id ? resident : r)));
-    try {
-      await setDoc(doc(db, 'warga', resident.id), resident);
-    } catch (err) {
-      console.warn('Firestore update warga sync notice:', err);
-    }
+    const cleanRes = sanitizeForFirestore(resident);
+    const next = residentsRef.current.map((r) => (r.id === cleanRes.id ? cleanRes : r));
+    residentsRef.current = next;
+    setResidents(next);
+    localStorage.setItem('grisspo_residents', JSON.stringify(next));
+    await safeCloudWrite('warga', cleanRes.id, cleanRes);
   };
 
   const toggleBerkasKependudukan = async (
@@ -1980,7 +2518,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Jimpitan Daily Submission with Firestore Sync
+  // Jimpitan Daily Submission with Firestore Sync & Quota-Safe Local Persistence
   const submitDailyJimpit = async (reportData: Omit<JimpitDailyReport, 'id' | 'createdAt'>) => {
     const now = Date.now();
     const jimpitTrxId = `trx-jimpit-${now}`;
@@ -1992,12 +2530,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString()
     });
 
-    const nextReports = [newReport, ...jimpitReports];
+    const nextReports = [newReport, ...jimpitReportsRef.current].sort((a, b) => {
+      if (b.date !== a.date) return (b.date || '').localeCompare(a.date || '');
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+    jimpitReportsRef.current = nextReports;
     setJimpitReports(nextReports);
     localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(nextReports));
 
-    // Update residents and Firestore
-    const updatedRes = [...residents];
+    // Update residents and queue/save to Firestore safely
+    const updatedRes = [...residentsRef.current];
+    const modifiedResidents: Resident[] = [];
     reportData.entries.forEach((entry) => {
       const idx = updatedRes.findIndex((r) => r.houseNumber === entry.houseNumber);
       if (idx !== -1) {
@@ -2007,63 +2550,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           jimpitanPaidMonth: curPaid + entry.nominal,
           points: (updatedRes[idx].points || 0) + 10
         };
-        if (!firestoreQuotaExceededRef.current) {
-          setDoc(doc(db, 'warga', updatedRes[idx].id), sanitizeForFirestore(updatedRes[idx])).catch((e) =>
-            handleFirestoreWriteFailure(e, 'update warga jimpit', true)
-          );
-        }
+        modifiedResidents.push(updatedRes[idx]);
       }
     });
+    residentsRef.current = updatedRes;
     setResidents(updatedRes);
     localStorage.setItem('grisspo_residents', JSON.stringify(updatedRes));
 
-    // Save report to Firestore
-    if (!firestoreQuotaExceededRef.current) {
-      try {
-        await setDoc(doc(db, 'jimpitan_records', newReport.id), newReport);
-      } catch (err) {
-        handleFirestoreWriteFailure(err, 'jimpitan_records', true);
-      }
+    for (const modRes of modifiedResidents) {
+      safeCloudWrite('warga', modRes.id, modRes).catch(() => {});
     }
+
+    // Save jimpitan report safely (marks unsynced if quota exhausted so onSnapshot never wipes it)
+    await safeCloudWrite('jimpitan_records', newReport.id, newReport);
 
     // Automatically create income transaction for Paguyuban kas (excluded from Riwayat Pembayaran Kas)
     const dateStr = reportData.date;
+    const parsedDateTs = new Date(`${dateStr}T21:00:00+07:00`).getTime();
+    const trxTs = Number.isFinite(parsedDateTs) ? parsedDateTs : now;
     const hash = await computeTransactionHash(
       'pemasukan',
       'Pemasukan Jimpitan Bulanan',
       reportData.totalNominal,
       dateStr,
       reportData.collectedBy,
-      now
+      trxTs
     );
 
     const jimpitTrx: Transaction = {
       id: jimpitTrxId,
       type: 'pemasukan',
       category: 'Pemasukan Jimpitan Bulanan',
-      amount: reportData.totalNominal,
+      amount: Number(reportData.totalNominal) || 0,
       date: dateStr,
       description: `Pemasukan Jimpitan Ronda Online (${reportData.day}, ${dateStr}) oleh ${reportData.collectedBy}`,
       recordedBy: reportData.collectedBy,
       userRole: currentUser ? currentUser.role : 'warga',
       encryptedHash: hash,
       isAnomaly: false,
-      timestamp: now
+      timestamp: trxTs
     };
 
-    const nextTrx = [jimpitTrx, ...transactions];
+    const nextTrx = [jimpitTrx, ...transactionsRef.current];
+    transactionsRef.current = nextTrx;
     setTransactions(nextTrx);
     localStorage.setItem('grisspo_transactions', JSON.stringify(nextTrx));
-    try {
-      await setDoc(doc(db, 'keuangan_transaksi', jimpitTrx.id), sanitizeForFirestore(jimpitTrx));
-    } catch (err) {
-      console.warn('Firestore jimpitan trx notice:', err);
-    }
+    await safeCloudWrite('keuangan_transaksi', jimpitTrx.id, jimpitTrx);
 
     // Add announcement
     await addAnnouncement(
       `Jimpitan Online Hari ${reportData.day} Selesai Diambil`,
-      `Total perolehan jimpitan hari ini sebesar Rp ${reportData.totalNominal.toLocaleString('id-ID')} dari ${reportData.entries.length} warga. Disimpan real-time ke Firebase Cloud.`,
+      `Total perolehan jimpitan hari ini sebesar Rp ${reportData.totalNominal.toLocaleString('id-ID')} dari ${reportData.entries.length} warga. Tersimpan aman di sistem.`,
       'Ronda',
       false
     );
@@ -2074,37 +2611,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert('Akses Ditolak: Hanya Superadmin (Bpk. Beni B 24) yang memiliki hak menghapus laporan jimpitan!');
       return;
     }
+    const reportToDelete = jimpitReportsRef.current.find((r) => r.id === id);
     await markAsDeleted(id, 'jimpitan_records');
 
-    const reportToDelete = jimpitReports.find((r) => r.id === id);
     if (reportToDelete) {
       // Revert resident paid amounts
-      setResidents((prev) =>
-        prev.map((res) => {
-          const entry = reportToDelete.entries.find((e) => e.houseNumber === res.houseNumber);
-          if (entry) {
-            const newPaid = Math.max(0, (res.jimpitanPaidMonth || 0) - entry.nominal);
-            const updated = { ...res, jimpitanPaidMonth: newPaid };
-            setDoc(doc(db, 'warga', res.id), sanitizeForFirestore(updated)).catch(() => {});
-            return updated;
-          }
-          return res;
-        })
-      );
+      const updatedResList = residentsRef.current.map((res) => {
+        const entry = reportToDelete.entries.find((e) => e.houseNumber === res.houseNumber);
+        if (entry) {
+          const newPaid = Math.max(0, (res.jimpitanPaidMonth || 0) - entry.nominal);
+          const updated = { ...res, jimpitanPaidMonth: newPaid };
+          safeCloudWrite('warga', res.id, updated).catch(() => {});
+          return updated;
+        }
+        return res;
+      });
+      residentsRef.current = updatedResList;
+      setResidents(updatedResList);
+      localStorage.setItem('grisspo_residents', JSON.stringify(updatedResList));
 
       // Remove linked transaction in keuangan_transaksi if present
-      if (reportToDelete.transactionId) {
-        await markAsDeleted(reportToDelete.transactionId, 'keuangan_transaksi');
-        const updatedTrx = transactions.filter((t) => t.id !== reportToDelete.transactionId);
-        setTransactions(updatedTrx);
-        localStorage.setItem('grisspo_transactions', JSON.stringify(updatedTrx));
-        try {
-          await deleteDoc(doc(db, 'keuangan_transaksi', reportToDelete.transactionId));
-        } catch {}
-      }
+      const linkedTrxId = reportToDelete.transactionId || `trx-${reportToDelete.id}`;
+      await markAsDeleted(linkedTrxId, 'keuangan_transaksi');
+      const updatedTrx = transactionsRef.current.filter((t) => t.id !== linkedTrxId);
+      transactionsRef.current = updatedTrx;
+      setTransactions(updatedTrx);
+      localStorage.setItem('grisspo_transactions', JSON.stringify(updatedTrx));
+      try {
+        await deleteDoc(doc(db, 'keuangan_transaksi', linkedTrxId));
+      } catch {}
     }
 
-    const filtered = jimpitReports.filter((r) => r.id !== id);
+    const filtered = jimpitReportsRef.current.filter((r) => r.id !== id);
+    jimpitReportsRef.current = filtered;
     setJimpitReports(filtered);
     localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(filtered));
 
@@ -2180,22 +2719,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     method: 'transfer' | 'cash',
     notes?: string
   ): Promise<{ success: boolean; message: string; transactionId?: string }> => {
-    const resident = residents.find((r) => r.id === residentId);
+    const resident = residentsRef.current.find((r) => r.id === residentId);
     if (!resident) {
       return { success: false, message: 'Data warga tidak ditemukan!' };
     }
-    if (amount <= 0) {
+    const cleanAmount = Number(amount) || 0;
+    if (cleanAmount <= 0) {
       return { success: false, message: 'Nominal pembayaran harus lebih besar dari Rp 0!' };
     }
 
     // 1. Deduct deficit: deduct previousMonthsJimpitanDeficit first, then surplus to jimpitanPaidMonth
-    let remaining = amount;
+    let remaining = cleanAmount;
     let prevDeficit = resident.previousMonthsJimpitanDeficit || 0;
     const deductPrev = Math.min(prevDeficit, remaining);
     prevDeficit -= deductPrev;
     remaining -= deductPrev;
 
-    let curPaid = (resident.jimpitanPaidMonth || 0) + remaining;
+    const curPaid = (resident.jimpitanPaidMonth || 0) + remaining;
 
     const updatedRes: Resident = {
       ...resident,
@@ -2204,20 +2744,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       points: (resident.points || 0) + 15
     };
 
-    setResidents((prev) => prev.map((r) => (r.id === residentId ? updatedRes : r)));
-    localStorage.setItem(
-      'grisspo_residents',
-      JSON.stringify(residents.map((r) => (r.id === residentId ? updatedRes : r)))
-    );
-    try {
-      await setDoc(doc(db, 'warga', resident.id), updatedRes);
-    } catch (err) {
-      console.warn('Firestore update warga notice:', err);
-    }
+    const nextRes = residentsRef.current.map((r) => (r.id === residentId ? updatedRes : r));
+    residentsRef.current = nextRes;
+    setResidents(nextRes);
+    localStorage.setItem('grisspo_residents', JSON.stringify(nextRes));
+    await safeCloudWrite('warga', resident.id, updatedRes);
 
     // 2. Automatically record income transaction in Keuangan Kas Paguyuban (NOT in Riwayat Pembayaran Kas)
     const nowDate = new Date();
-    const dateStr = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
+    const dateStr = getLocalDateString(nowDate);
     const daysList: DayOfWeek[] = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const dayName: DayOfWeek = daysList[nowDate.getDay()] || 'Senin';
     const now = Date.now();
@@ -2226,7 +2761,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const hash = await computeTransactionHash(
       'pemasukan',
       'Pemasukan Jimpitan Bulanan',
-      amount,
+      cleanAmount,
       dateStr,
       currentName,
       now
@@ -2238,7 +2773,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `trx-jimpit-pay-${now}`,
       type: 'pemasukan',
       category: 'Pemasukan Jimpitan Bulanan',
-      amount,
+      amount: cleanAmount,
       date: dateStr,
       description: `Pelunasan Kekurangan Jimpitan: ${resident.name} (${resident.houseNumber}) via ${methodLabel}${notes ? ` - ${notes}` : ''}`,
       recordedBy: currentUser ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : 'Petugas Jimpit',
@@ -2249,14 +2784,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timestamp: now
     };
 
-    const nextTrx = [newTrx, ...transactions];
+    const nextTrx = [newTrx, ...transactionsRef.current];
+    transactionsRef.current = nextTrx;
     setTransactions(nextTrx);
     localStorage.setItem('grisspo_transactions', JSON.stringify(nextTrx));
-    try {
-      await setDoc(doc(db, 'keuangan_transaksi', newTrx.id), sanitizeForFirestore(newTrx));
-    } catch (err) {
-      console.warn('Firestore pay jimpit trx notice:', err);
-    }
+    await safeCloudWrite('keuangan_transaksi', newTrx.id, newTrx);
 
     // 2b. Also record into History Jimpitan (jimpit_records)
     const settlementReport: JimpitDailyReport = sanitizeForFirestore({
@@ -2270,38 +2802,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         {
           houseNumber: resident.houseNumber,
           residentName: resident.name,
-          nominal: amount,
+          nominal: cleanAmount,
           paymentMethod: method,
           timestamp: nowDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
           collectedBy: currentName
         }
       ],
-      totalNominal: amount,
+      totalNominal: cleanAmount,
       notes: notes || `Pelunasan jimpitan bulanan ${resident.name} (${resident.houseNumber}) via ${methodLabel}`,
       createdAt: nowDate.toISOString()
     });
-    const nextJimpit = [settlementReport, ...jimpitReports];
+    const nextJimpit = [settlementReport, ...jimpitReportsRef.current];
+    jimpitReportsRef.current = nextJimpit;
     setJimpitReports(nextJimpit);
     localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(nextJimpit));
-    try {
-      await setDoc(doc(db, 'jimpitan_records', settlementReport.id), settlementReport);
-    } catch (err) {
-      console.warn('Firestore pay jimpit history notice:', err);
-    }
+    await safeCloudWrite('jimpitan_records', settlementReport.id, settlementReport);
 
     // 3. Award loyalty points & push announcement
     awardPoints(resident.id, 15, `Pelunasan kekurangan jimpitan via ${methodLabel}`);
 
     addAnnouncement(
       `Pelunasan Kekurangan Jimpitan: ${resident.name} (${resident.houseNumber})`,
-      `Pembayaran kekurangan jimpitan sebesar Rp ${amount.toLocaleString('id-ID')} via ${methodLabel} telah berhasil diverifikasi dan tercatat di Kas Paguyuban.`,
+      `Pembayaran kekurangan jimpitan sebesar Rp ${cleanAmount.toLocaleString('id-ID')} via ${methodLabel} telah berhasil diverifikasi dan tercatat di Kas Paguyuban.`,
       'Keuangan',
       false
     );
 
     return {
       success: true,
-      message: `Pembayaran kekurangan jimpitan Rp ${amount.toLocaleString('id-ID')} berhasil dicatat ke History Jimpitan & Saldo Kas Paguyuban!`,
+      message: `Pembayaran kekurangan jimpitan Rp ${cleanAmount.toLocaleString('id-ID')} berhasil dicatat ke History Jimpitan & Saldo Kas Paguyuban!`,
       transactionId: newTrx.id
     };
   };
@@ -2390,36 +2919,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err) {}
   };
 
-  // Finance Transactions with Firestore sync
+  // Finance Transactions with Firestore sync & full cross-ledger consistency
   const addTransaction = async (
     trxData: Omit<Transaction, 'id' | 'encryptedHash' | 'timestamp' | 'isAnomaly'>,
     options?: { skipReceiptCreation?: boolean }
   ): Promise<Transaction> => {
-    // Tanggal transaksi yang terinput dalam database adalah tanggal yang dipilih (bukan tanggal perangkat)
     const effectiveTimestamp = trxData.date
       ? new Date(`${trxData.date}T12:00:00`).getTime()
       : Date.now();
 
+    const numericAmount = Number(trxData.amount) || 0;
+    const cleanType = (String(trxData.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran';
+
     const hash = await computeTransactionHash(
-      trxData.type,
+      cleanType,
       trxData.category,
-      trxData.amount,
+      numericAmount,
       trxData.date,
       trxData.recordedBy,
       effectiveTimestamp
     );
 
     const anomalyCheck = detectFinancialAnomaly(trxData);
-    let isAnomaly = anomalyCheck.isAnomaly;
-    let anomalyReason = anomalyCheck.reason;
+    const isAnomaly = anomalyCheck.isAnomaly;
+    const anomalyReason = anomalyCheck.reason;
 
     if (isAnomaly && anomalyReason) {
       const emailLog = sendAnomalyEmailAlert(trxData, anomalyReason);
       setEmailAlerts((prev) => [emailLog, ...prev]);
     }
-
-    const numericAmount = Number(trxData.amount) || 0;
-    const cleanType = (String(trxData.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran';
 
     const newTrx: Transaction = {
       ...trxData,
@@ -2432,31 +2960,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timestamp: effectiveTimestamp
     };
 
-    setTransactions((prev) => [newTrx, ...prev]);
-    localStorage.setItem('grisspo_transactions', JSON.stringify([newTrx, ...transactions]));
-    try {
-      await setDoc(doc(db, 'keuangan_transaksi', newTrx.id), newTrx);
-    } catch (err) {
-      console.warn('Firestore save transaction notice:', err);
-    }
+    const nextTrx = [newTrx, ...transactionsRef.current];
+    transactionsRef.current = nextTrx;
+    setTransactions(nextTrx);
+    localStorage.setItem('grisspo_transactions', JSON.stringify(nextTrx));
+    await safeCloudWrite('keuangan_transaksi', newTrx.id, newTrx);
 
-    // Auto-create matching payment receipt for kas masuk (EXCLUDE JIMPITAN: pemasukan jimpit tidak masuk ke riwayat pembayaran kas)
+    // Auto-create matching payment receipt for kas masuk (EXCLUDE JIMPITAN)
     const isJimpit =
       (trxData.category || '').toLowerCase().includes('jimpit') ||
       (trxData.description || '').toLowerCase().includes('jimpit');
 
     if (cleanType === 'pemasukan' && !options?.skipReceiptCreation && !isJimpit) {
-      const dateStr = trxData.date || new Date(effectiveTimestamp).toISOString().slice(0, 10);
-      let pType: PaymentReceiptType = 'pemasukan_lain';
-      const catL = (trxData.category || '').toLowerCase();
-      if (catL.includes('sampah') && catL.includes('bulanan')) pType = 'iuran_bulanan_sampah';
-      else if (catL.includes('sampah')) pType = 'iuran_sampah';
-      else if (catL.includes('bulanan') || catL.includes('iuran')) pType = 'iuran_bulanan';
-      else if (catL.includes('fasum')) pType = 'sewa_fasum';
-      else if (catL.includes('sumbangan')) pType = 'sumbangan_sukarela';
+      const dateStr = trxData.date || getLocalDateString(new Date(effectiveTimestamp));
+      const pType = mapCategoryToPaymentType(trxData.category);
 
       const house = trxData.sourceHouse || '';
-      const matchedRes = residents.find(
+      const matchedRes = residentsRef.current.find(
         (r) => house && r.houseNumber.replace(/\s+/g, '').toUpperCase() === house.replace(/\s+/g, '').toUpperCase()
       );
 
@@ -2481,17 +3001,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createdAt: new Date(effectiveTimestamp).toISOString()
       };
 
-      setPaymentReceipts((prev) => {
-        const next = [newR, ...prev.filter((p) => p.id !== rId && p.transactionId !== newTrx.id)];
-        localStorage.setItem('grisspo_payment_receipts', JSON.stringify(next));
-        return next;
-      });
-
-      try {
-        await setDoc(doc(db, 'pembayaran_kwitansi', newR.id), newR);
-      } catch (err) {
-        console.warn('Firestore auto receipt notice:', err);
-      }
+      const nextReceipts = [newR, ...paymentReceiptsRef.current.filter((p) => p.id !== rId && p.transactionId !== newTrx.id)];
+      paymentReceiptsRef.current = nextReceipts;
+      setPaymentReceipts(nextReceipts);
+      localStorage.setItem('grisspo_payment_receipts', JSON.stringify(nextReceipts));
+      await safeCloudWrite('pembayaran_kwitansi', newR.id, newR);
 
       // Update resident payment status if iuran
       if (matchedRes && (pType === 'iuran_bulanan' || pType === 'iuran_bulanan_sampah' || pType === 'iuran_sampah')) {
@@ -2505,8 +3019,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           unpaidMonthNames: nextUnpaidNames,
           points: (matchedRes.points || 0) + 10
         };
-        setResidents((prev) => prev.map((r) => (r.id === matchedRes.id ? updatedRes : r)));
-        setDoc(doc(db, 'warga', matchedRes.id), updatedRes).catch(() => {});
+        const nextRes = residentsRef.current.map((r) => (r.id === matchedRes.id ? updatedRes : r));
+        residentsRef.current = nextRes;
+        setResidents(nextRes);
+        localStorage.setItem('grisspo_residents', JSON.stringify(nextRes));
+        safeCloudWrite('warga', matchedRes.id, updatedRes).catch(() => {});
       }
     }
 
@@ -2525,7 +3042,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
     await markAsDeleted(id, 'keuangan_transaksi');
-    const updated = transactions.filter((t) => t.id !== id);
+    const updated = transactionsRef.current.filter((t) => t.id !== id);
+    transactionsRef.current = updated;
     setTransactions(updated);
     localStorage.setItem('grisspo_transactions', JSON.stringify(updated));
     try {
@@ -2535,15 +3053,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // Also delete any linked receipt in pembayaran_kwitansi
-    const linkedReceipt = paymentReceipts.find((r) => r.transactionId === id || r.id === `receipt-${id}`);
+    const linkedReceipt = paymentReceiptsRef.current.find(
+      (r) => r.transactionId === id || r.id === `receipt-${id}` || id === `trx-sync-${r.id}`
+    );
     if (linkedReceipt) {
       await markAsDeleted(linkedReceipt.id, 'pembayaran_kwitansi');
-      const updatedReceipts = paymentReceipts.filter((r) => r.id !== linkedReceipt.id);
+      const updatedReceipts = paymentReceiptsRef.current.filter((r) => r.id !== linkedReceipt.id);
+      paymentReceiptsRef.current = updatedReceipts;
       setPaymentReceipts(updatedReceipts);
       localStorage.setItem('grisspo_payment_receipts', JSON.stringify(updatedReceipts));
       try {
         await deleteDoc(doc(db, 'pembayaran_kwitansi', linkedReceipt.id));
       } catch (err) {}
+    }
+
+    // Also mark any linked jimpitan report if it was a linked jimpitan transaction
+    const linkedJimpit = jimpitReportsRef.current.find(
+      (j) => j.transactionId === id || `trx-${j.id}` === id
+    );
+    if (linkedJimpit) {
+      await markAsDeleted(linkedJimpit.id, 'jimpitan_records');
+      const updatedJimpit = jimpitReportsRef.current.filter((j) => j.id !== linkedJimpit.id);
+      jimpitReportsRef.current = updatedJimpit;
+      setJimpitReports(updatedJimpit);
+      localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(updatedJimpit));
+      try {
+        await deleteDoc(doc(db, 'jimpitan_records', linkedJimpit.id));
+      } catch {}
     }
   };
 
@@ -2569,29 +3105,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timestamp: effectiveTimestamp,
       encryptedHash: updatedHash
     };
-    setTransactions((prev) => prev.map((t) => (t.id === trx.id ? updated : t)));
-    localStorage.setItem('grisspo_transactions', JSON.stringify(transactions.map((t) => (t.id === trx.id ? updated : t))));
-    try {
-      await setDoc(doc(db, 'keuangan_transaksi', trx.id), updated);
-    } catch (err) {
-      console.warn('Firestore update transaction notice:', err);
-    }
+    const existsInTrx = transactionsRef.current.some((t) => t.id === trx.id);
+    const nextTrx = existsInTrx
+      ? transactionsRef.current.map((t) => (t.id === trx.id ? updated : t))
+      : [updated, ...transactionsRef.current];
+    transactionsRef.current = nextTrx;
+    setTransactions(nextTrx);
+    localStorage.setItem('grisspo_transactions', JSON.stringify(nextTrx));
+    await safeCloudWrite('keuangan_transaksi', trx.id, updated);
 
-    // Also sync update to linked payment receipt if present
-    const linkedReceipt = paymentReceipts.find((r) => r.transactionId === trx.id || r.id === `receipt-${trx.id}`);
+    // Sync update back to linked payment receipt (including paymentType and house)
+    const linkedReceipt = paymentReceiptsRef.current.find(
+      (r) => r.transactionId === trx.id || r.id === `receipt-${trx.id}` || trx.id === `trx-sync-${r.id}`
+    );
     if (linkedReceipt) {
       const updatedReceipt: PaymentReceipt = {
         ...linkedReceipt,
         amount: numericAmount,
         date: trx.date || linkedReceipt.date,
+        paymentType: mapCategoryToPaymentType(trx.category),
         paymentTypeName: trx.category,
+        residentHouse: trx.sourceHouse || linkedReceipt.residentHouse,
         notes: trx.description
       };
-      setPaymentReceipts((prev) => prev.map((r) => (r.id === linkedReceipt.id ? updatedReceipt : r)));
-      localStorage.setItem('grisspo_payment_receipts', JSON.stringify(paymentReceipts.map((r) => (r.id === linkedReceipt.id ? updatedReceipt : r))));
-      try {
-        await setDoc(doc(db, 'pembayaran_kwitansi', linkedReceipt.id), updatedReceipt);
-      } catch (err) {}
+      const nextRec = paymentReceiptsRef.current.map((r) => (r.id === linkedReceipt.id ? updatedReceipt : r));
+      paymentReceiptsRef.current = nextRec;
+      setPaymentReceipts(nextRec);
+      localStorage.setItem('grisspo_payment_receipts', JSON.stringify(nextRec));
+      await safeCloudWrite('pembayaran_kwitansi', linkedReceipt.id, updatedReceipt);
+    }
+
+    // Sync update back to linked jimpitan report if applicable
+    const linkedJimpit = jimpitReportsRef.current.find(
+      (j) => j.transactionId === trx.id || `trx-${j.id}` === trx.id
+    );
+    if (linkedJimpit) {
+      const updatedJimpit: JimpitDailyReport = sanitizeForFirestore({
+        ...linkedJimpit,
+        totalNominal: numericAmount,
+        date: trx.date || linkedJimpit.date,
+        transactionId: trx.id
+      });
+      const nextJimpit = jimpitReportsRef.current.map((j) => (j.id === linkedJimpit.id ? updatedJimpit : j));
+      jimpitReportsRef.current = nextJimpit;
+      setJimpitReports(nextJimpit);
+      localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(nextJimpit));
+      await safeCloudWrite('jimpitan_records', linkedJimpit.id, updatedJimpit);
     }
   };
 
@@ -3077,18 +3636,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     date?: string;
     notes?: string;
   }): Promise<PaymentReceipt> => {
-    const dateStr = data.date || new Date().toISOString().slice(0, 10);
+    const dateStr = data.date || getLocalDateString();
     const receiptNum = `KWT-GSS-${dateStr.replace(/-/g, '')}-${String(Math.floor(1000 + Math.random() * 9000))}`;
     const receiptId = `receipt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
     // 1. Add corresponding cash transaction to Paguyuban Book
-    let cat: Transaction['category'] = 'Iuran Bulanan (Rp 25.000)';
-    if (data.paymentType === 'iuran_bulanan') cat = 'Iuran Bulanan (Rp 25.000)';
-    else if (data.paymentType === 'iuran_sampah') cat = 'Iuran Sampah (Rp 25.000)';
-    else if (data.paymentType === 'iuran_bulanan_sampah') cat = 'Iuran Bulanan + Sampah (Rp 50.000)';
-    else if (data.paymentType === 'sewa_fasum') cat = 'Sewa Fasum';
-    else if (data.paymentType === 'sumbangan_sukarela') cat = 'Sumbangan Sukarela';
-    else cat = 'Lain-lain Pemasukan';
+    const cat = mapPaymentTypeToCategory(data.paymentType, data.paymentTypeName);
 
     const methodLabel = data.paymentMethod === 'transfer_bank_bri' || data.paymentMethod === 'transfer_bank'
       ? 'Transfer Bank BRI (155801007310503 a/n Benisius Rahmat Basuki)'
@@ -3113,7 +3666,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     // 2. If iuran, update resident arrears
-    const res = residents.find(
+    const res = residentsRef.current.find(
       (r) =>
         r.id === data.residentId ||
         r.houseNumber.replace(/\s+/g, '').toUpperCase() === data.residentHouse.replace(/\s+/g, '').toUpperCase()
@@ -3131,7 +3684,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           points: (res.points || 0) + 10
         });
       } else if (data.paymentType === 'sumbangan_sukarela') {
-        const bonusPts = data.amount >= 100000 ? 50 : 20;
+        const bonusPts = numAmount >= 100000 ? 50 : 20;
         await updateResident({
           ...res,
           points: (res.points || 0) + bonusPts
@@ -3149,7 +3702,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       residentPhone: data.residentPhone,
       paymentType: data.paymentType,
       paymentTypeName: data.paymentTypeName,
-      amount: data.amount,
+      amount: numAmount,
       periodMonth: data.periodMonth,
       paymentMethod: data.paymentMethod,
       notes: data.notes,
@@ -3159,20 +3712,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date(`${dateStr}T12:00:00`).toISOString()
     };
 
-    const nextReceipts = [newReceipt, ...paymentReceipts].sort((a, b) => {
+    const nextReceipts = [newReceipt, ...paymentReceiptsRef.current].sort((a, b) => {
       const dateA = a.date || a.createdAt?.slice(0, 10) || '';
       const dateB = b.date || b.createdAt?.slice(0, 10) || '';
       if (dateB !== dateA) return dateB.localeCompare(dateA);
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
+    paymentReceiptsRef.current = nextReceipts;
     setPaymentReceipts(nextReceipts);
     localStorage.setItem('grisspo_payment_receipts', JSON.stringify(nextReceipts));
 
-    try {
-      await setDoc(doc(db, 'pembayaran_kwitansi', receiptId), newReceipt);
-    } catch (err) {
-      console.warn('Firestore recordCashierPayment error:', err);
-    }
+    await safeCloudWrite('pembayaran_kwitansi', receiptId, newReceipt);
 
     return newReceipt;
   };
@@ -3182,45 +3732,78 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert('Akses Ditolak: Hanya Bendahara dan Admin yang memiliki hak akses mengedit data pembayaran!');
       return;
     }
-    const next = paymentReceipts.map((p) => (p.id === receipt.id ? receipt : p));
+
+    const cat = mapPaymentTypeToCategory(receipt.paymentType, receipt.paymentTypeName);
+    const methodLabel =
+      receipt.paymentMethod === 'transfer_bank_bri' || receipt.paymentMethod === 'transfer_bank'
+        ? 'Transfer Bank BRI (155801007310503 a/n Benisius Rahmat Basuki)'
+        : 'Tunai ke Bendahara';
+    const desc = `${receipt.paymentTypeName} - ${receipt.residentName} (${receipt.residentHouse}) [No. Kwitansi: ${receipt.receiptNumber}] via ${methodLabel}${
+      receipt.periodMonth ? ` - Periode: ${receipt.periodMonth}` : ''
+    }${receipt.notes ? ` (${receipt.notes})` : ''}`;
+
+    const numericAmount = Number(receipt.amount) || 0;
+    const dateStr = receipt.date || getLocalDateString(new Date(receipt.createdAt || Date.now()));
+    const targetTrxId = receipt.transactionId || `trx-sync-${receipt.id}`;
+    const finalReceipt: PaymentReceipt = {
+      ...receipt,
+      amount: numericAmount,
+      date: dateStr,
+      transactionId: targetTrxId
+    };
+
+    const next = paymentReceiptsRef.current.map((p) => (p.id === finalReceipt.id ? finalReceipt : p));
+    paymentReceiptsRef.current = next;
     setPaymentReceipts(next);
     localStorage.setItem('grisspo_payment_receipts', JSON.stringify(next));
+    await safeCloudWrite('pembayaran_kwitansi', finalReceipt.id, finalReceipt);
 
     // Sinkronkan transaksi kas terkait di pembukuan keuangan paguyuban
-    if (receipt.transactionId) {
-      const relatedTrx = transactions.find((t) => t.id === receipt.transactionId);
-      if (relatedTrx) {
-        let cat: Transaction['category'] = 'Iuran Bulanan (Rp 25.000)';
-        if (receipt.paymentType === 'iuran_bulanan') cat = 'Iuran Bulanan (Rp 25.000)';
-        else if (receipt.paymentType === 'iuran_sampah') cat = 'Iuran Sampah (Rp 25.000)';
-        else if (receipt.paymentType === 'iuran_bulanan_sampah') cat = 'Iuran Bulanan + Sampah (Rp 50.000)';
-        else if (receipt.paymentType === 'sewa_fasum') cat = 'Sewa Fasum';
-        else if (receipt.paymentType === 'sumbangan_sukarela') cat = 'Sumbangan Sukarela';
-        else cat = 'Lain-lain Pemasukan';
-
-        const methodLabel =
-          receipt.paymentMethod === 'transfer_bank_bri' || receipt.paymentMethod === 'transfer_bank'
-            ? 'Transfer Bank BRI (155801007310503 a/n Benisius Rahmat Basuki)'
-            : 'Tunai ke Bendahara';
-
-        const desc = `${receipt.paymentTypeName} - ${receipt.residentName} (${receipt.residentHouse}) [No. Kwitansi: ${receipt.receiptNumber}] via ${methodLabel}${
-          receipt.periodMonth ? ` - Periode: ${receipt.periodMonth}` : ''
-        }${receipt.notes ? ` (${receipt.notes})` : ''}`;
-
-        await updateTransaction({
-          ...relatedTrx,
-          amount: receipt.amount,
-          category: cat,
-          date: receipt.date || relatedTrx.date,
-          description: desc
-        });
-      }
-    }
-
-    try {
-      await setDoc(doc(db, 'pembayaran_kwitansi', receipt.id), receipt);
-    } catch (err) {
-      console.warn('Firestore updatePaymentReceipt error:', err);
+    const relatedTrx = transactionsRef.current.find(
+      (t) =>
+        t.id === receipt.transactionId ||
+        t.id === targetTrxId ||
+        `receipt-${t.id}` === receipt.id
+    );
+    if (relatedTrx) {
+      await updateTransaction({
+        ...relatedTrx,
+        amount: numericAmount,
+        category: cat,
+        date: dateStr,
+        sourceHouse: finalReceipt.residentHouse || relatedTrx.sourceHouse,
+        description: desc
+      });
+    } else {
+      const effectiveTimestamp = new Date(`${dateStr}T12:00:00`).getTime();
+      const recordedBy = finalReceipt.recordedBy || 'Bendahara Kas';
+      const hash = await computeTransactionHash(
+        'pemasukan',
+        cat,
+        numericAmount,
+        dateStr,
+        recordedBy,
+        effectiveTimestamp
+      );
+      const newLinkedTrx: Transaction = {
+        id: targetTrxId,
+        type: 'pemasukan',
+        category: cat,
+        amount: numericAmount,
+        date: dateStr,
+        description: desc,
+        recordedBy,
+        userRole: finalReceipt.recorderRole || 'bendahara1',
+        sourceHouse: finalReceipt.residentHouse,
+        encryptedHash: hash,
+        isAnomaly: false,
+        timestamp: effectiveTimestamp
+      };
+      const nextTrx = [newLinkedTrx, ...transactionsRef.current];
+      transactionsRef.current = nextTrx;
+      setTransactions(nextTrx);
+      localStorage.setItem('grisspo_transactions', JSON.stringify(nextTrx));
+      await safeCloudWrite('keuangan_transaksi', newLinkedTrx.id, newLinkedTrx);
     }
   };
 
@@ -3229,19 +3812,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert('Akses Ditolak: Hanya Superadmin yang memiliki hak akses menghapus data pembayaran!');
       return;
     }
-    const toDelete = paymentReceipts.find((p) => p.id === id);
-    const next = paymentReceipts.filter((p) => p.id !== id);
+    const toDelete = paymentReceiptsRef.current.find((p) => p.id === id);
+    await markAsDeleted(id, 'pembayaran_kwitansi');
+    const next = paymentReceiptsRef.current.filter((p) => p.id !== id);
+    paymentReceiptsRef.current = next;
     setPaymentReceipts(next);
     localStorage.setItem('grisspo_payment_receipts', JSON.stringify(next));
 
     // Hapus transaksi kas terkait di pembukuan keuangan paguyuban
-    if (toDelete?.transactionId) {
-      await markAsDeleted(toDelete.transactionId, 'keuangan_transaksi');
-      const updatedTrx = transactions.filter((t) => t.id !== toDelete.transactionId);
+    const linkedTrxId =
+      toDelete?.transactionId ||
+      (id.startsWith('receipt-') ? id.replace(/^receipt-/, '') : `trx-sync-${id}`);
+    if (linkedTrxId) {
+      await markAsDeleted(linkedTrxId, 'keuangan_transaksi');
+      const updatedTrx = transactionsRef.current.filter((t) => t.id !== linkedTrxId);
+      transactionsRef.current = updatedTrx;
       setTransactions(updatedTrx);
       localStorage.setItem('grisspo_transactions', JSON.stringify(updatedTrx));
       try {
-        await deleteDoc(doc(db, 'keuangan_transaksi', toDelete.transactionId));
+        await deleteDoc(doc(db, 'keuangan_transaksi', linkedTrxId));
       } catch (err) {
         console.warn('Delete linked transaction error:', err);
       }
@@ -3290,7 +3879,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return group.members.some((m) => {
           const mClean = normalizeCleanName(m);
           if (currentNameClean && (mClean.includes(currentNameClean) || currentNameClean.includes(mClean))) return true;
-          const r = findResidentByMemberName(m, residents);
+          const r = findResidentByMemberName(m, residentsRef.current);
           return Boolean(r && r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentHouseClean);
         });
       })();
@@ -3304,7 +3893,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Jika absensi ronda untuk tanggal tersebut sudah ada, perbarui sesi yang sudah ada
     const existingRonda = sessionData.type === 'ronda'
-      ? attendanceSessions.find((s) => s.type === 'ronda' && s.date === sessionData.date)
+      ? attendanceSessionsRef.current.find((s) => s.type === 'ronda' && s.date === sessionData.date)
       : undefined;
 
     if (existingRonda) {
@@ -3346,7 +3935,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const presentAttendees = newSession.attendees.filter((a) => a.isPresent);
-    const updatedResidentsList = [...residents];
+    const updatedResidentsList = [...residentsRef.current];
+    const modifiedResidents: Resident[] = [];
     const newPointLogs: PointLog[] = [];
 
     for (const attendee of presentAttendees) {
@@ -3362,11 +3952,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const updatedRes = { ...targetRes, points: nextPoints };
         const idx = updatedResidentsList.findIndex((r) => r.id === targetRes.id);
         if (idx !== -1) updatedResidentsList[idx] = updatedRes;
-        if (!firestoreQuotaExceededRef.current) {
-          setDoc(doc(db, 'warga', targetRes.id), sanitizeForFirestore(updatedRes)).catch((e) =>
-            handleFirestoreWriteFailure(e, 'update warga absensi', true)
-          );
-        }
+        modifiedResidents.push(updatedRes);
 
         if (currentUser && (currentUser.id === targetRes.id || currentUser.houseNumber === targetRes.houseNumber)) {
           setCurrentUser((prev) => (prev ? { ...prev, points: nextPoints } : null));
@@ -3382,31 +3968,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           timestamp: new Date().toISOString().slice(0, 16).replace('T', ' ')
         };
         newPointLogs.push(log);
-        if (!firestoreQuotaExceededRef.current) {
-          setDoc(doc(db, 'point_logs', log.id), sanitizeForFirestore(log)).catch((e) =>
-            handleFirestoreWriteFailure(e, 'point_logs absensi')
-          );
-        }
       }
     }
 
+    residentsRef.current = updatedResidentsList;
     setResidents(updatedResidentsList);
     localStorage.setItem('grisspo_residents', JSON.stringify(updatedResidentsList));
-    if (newPointLogs.length > 0) {
-      setPointLogs((prev) => [...newPointLogs, ...prev]);
+    for (const modRes of modifiedResidents) {
+      safeCloudWrite('warga', modRes.id, modRes).catch(() => {});
     }
 
-    const nextSessions = [newSession, ...attendanceSessions];
+    if (newPointLogs.length > 0) {
+      setPointLogs((prev) => [...newPointLogs, ...prev]);
+      for (const log of newPointLogs) {
+        safeCloudWrite('point_logs', log.id, log).catch(() => {});
+      }
+    }
+
+    const nextSessions = [newSession, ...attendanceSessionsRef.current];
+    attendanceSessionsRef.current = nextSessions;
     setAttendanceSessions(nextSessions);
     localStorage.setItem('grisspo_attendance_sessions', JSON.stringify(nextSessions));
 
-    if (!firestoreQuotaExceededRef.current) {
-      try {
-        await setDoc(doc(db, 'absensi_records', newSession.id), newSession);
-      } catch (err) {
-        handleFirestoreWriteFailure(err, 'absensi_records', true);
-      }
-    }
+    await safeCloudWrite('absensi_records', newSession.id, newSession);
 
     await addAnnouncement(
       `Absensi ${activityLabel} Tercatat`,
@@ -3422,8 +4006,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
     await markAsDeleted(id, 'absensi_records');
-    const updated = attendanceSessions.filter((s) => s.id !== id);
+    const updated = attendanceSessionsRef.current.filter((s) => s.id !== id);
+    attendanceSessionsRef.current = updated;
     setAttendanceSessions(updated);
+    localStorage.setItem('grisspo_attendance_sessions', JSON.stringify(updated));
     try {
       await deleteDoc(doc(db, 'absensi_records', id));
     } catch (err) {
@@ -3600,24 +4186,117 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       alert('Akses Ditolak: Hanya Superadmin yang memiliki hak akses mengedit laporan jimpitan!');
       return;
     }
-    const cleanReport = sanitizeForFirestore(report);
-    const next = jimpitReports.map((r) => (r.id === cleanReport.id ? cleanReport : r));
+    const oldReport = jimpitReportsRef.current.find((r) => r.id === report.id);
+    const targetTrxId = report.transactionId || `trx-${report.id}`;
+    const cleanEntries = Array.isArray(report.entries)
+      ? report.entries.map((e) => ({
+          ...e,
+          nominal: Math.max(0, Number(e.nominal) || 0)
+        }))
+      : [];
+    const computedTotal =
+      cleanEntries.length > 0
+        ? cleanEntries.reduce((sum, e) => sum + e.nominal, 0)
+        : Math.max(0, Number(report.totalNominal) || 0);
+
+    const cleanReport = sanitizeForFirestore({
+      ...report,
+      entries: cleanEntries,
+      totalNominal: computedTotal,
+      transactionId: targetTrxId
+    });
+
+    if (oldReport) {
+      const normalizeHouse = (h: string) => h.replace(/\s+/g, '').toUpperCase();
+      const oldMap: Record<string, number> = {};
+      const newMap: Record<string, number> = {};
+      (oldReport.entries || []).forEach((e) => {
+        const key = normalizeHouse(e.houseNumber);
+        oldMap[key] = (oldMap[key] || 0) + (Number(e.nominal) || 0);
+      });
+      cleanEntries.forEach((e) => {
+        const key = normalizeHouse(e.houseNumber);
+        newMap[key] = (newMap[key] || 0) + (Number(e.nominal) || 0);
+      });
+
+      const modifiedResidents: Resident[] = [];
+      const updatedResList = residentsRef.current.map((res) => {
+        const key = normalizeHouse(res.houseNumber);
+        const delta = (newMap[key] || 0) - (oldMap[key] || 0);
+        if (delta !== 0) {
+          const updatedRes = {
+            ...res,
+            jimpitanPaidMonth: Math.max(0, (res.jimpitanPaidMonth || 0) + delta)
+          };
+          modifiedResidents.push(updatedRes);
+          return updatedRes;
+        }
+        return res;
+      });
+      if (modifiedResidents.length > 0) {
+        residentsRef.current = updatedResList;
+        setResidents(updatedResList);
+        localStorage.setItem('grisspo_residents', JSON.stringify(updatedResList));
+        for (const modRes of modifiedResidents) {
+          safeCloudWrite('warga', modRes.id, modRes).catch(() => {});
+        }
+      }
+    }
+
+    const next = jimpitReportsRef.current.map((r) => (r.id === cleanReport.id ? cleanReport : r));
+    jimpitReportsRef.current = next;
     setJimpitReports(next);
     localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(next));
-    try {
-      await setDoc(doc(db, 'jimpitan_records', cleanReport.id), cleanReport);
-    } catch (err) {
-      console.warn('Firestore updateJimpitReport error:', err);
-    }
-    if (cleanReport.transactionId) {
-      const linked = transactions.find((t) => t.id === cleanReport.transactionId);
-      if (linked) {
-        await updateTransaction({
-          ...linked,
-          amount: cleanReport.totalNominal,
-          date: cleanReport.date
-        });
-      }
+    await safeCloudWrite('jimpitan_records', cleanReport.id, cleanReport);
+
+    const isPelunasan = cleanReport.reportType === 'pelunasan' || cleanReport.id.startsWith('jimpit-pay-');
+    const updatedDescription = isPelunasan
+      ? cleanReport.notes || `Pelunasan Kekurangan Jimpitan (${cleanReport.date})`
+      : `Pemasukan Jimpitan Ronda Online (${cleanReport.day}, ${cleanReport.date}) oleh ${cleanReport.collectedBy}`;
+
+    const linked = transactionsRef.current.find(
+      (t) => t.id === cleanReport.transactionId || t.id === `trx-${cleanReport.id}`
+    );
+    if (linked) {
+      await updateTransaction({
+        ...linked,
+        category: 'Pemasukan Jimpitan Bulanan',
+        amount: cleanReport.totalNominal,
+        date: cleanReport.date,
+        recordedBy: cleanReport.collectedBy,
+        description: updatedDescription
+      });
+    } else {
+      const effectiveTimestamp = new Date(`${cleanReport.date}T21:00:00+07:00`).getTime();
+      const hash = await computeTransactionHash(
+        'pemasukan',
+        'Pemasukan Jimpitan Bulanan',
+        cleanReport.totalNominal,
+        cleanReport.date,
+        cleanReport.collectedBy,
+        effectiveTimestamp
+      );
+      const isPelunasan = cleanReport.reportType === 'pelunasan' || cleanReport.id.startsWith('jimpit-pay-');
+      const newJimpitTrx: Transaction = {
+        id: targetTrxId,
+        type: 'pemasukan',
+        category: 'Pemasukan Jimpitan Bulanan',
+        amount: cleanReport.totalNominal,
+        date: cleanReport.date,
+        description: isPelunasan
+          ? cleanReport.notes || `Pelunasan Kekurangan Jimpitan (${cleanReport.date})`
+          : `Pemasukan Jimpitan Ronda Online (${cleanReport.day}, ${cleanReport.date}) oleh ${cleanReport.collectedBy}`,
+        recordedBy: cleanReport.collectedBy,
+        userRole: 'warga',
+        encryptedHash: hash,
+        isAnomaly: false,
+        timestamp: Number.isFinite(effectiveTimestamp) ? effectiveTimestamp : Date.now()
+      };
+      const nextTrx = [newJimpitTrx, ...transactionsRef.current];
+      transactionsRef.current = nextTrx;
+      setTransactions(nextTrx);
+      localStorage.setItem('grisspo_transactions', JSON.stringify(nextTrx));
+      await safeCloudWrite('keuangan_transaksi', newJimpitTrx.id, newJimpitTrx);
     }
   };
 
@@ -3636,7 +4315,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return group.members.some((m) => {
         const mClean = normalizeCleanName(m);
         if (currentNameClean && (mClean.includes(currentNameClean) || currentNameClean.includes(mClean))) return true;
-        const r = findResidentByMemberName(m, residents);
+        const r = findResidentByMemberName(m, residentsRef.current);
         return Boolean(r && r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentHouseClean);
       });
     })();
@@ -3646,13 +4325,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    const existingSession = attendanceSessions.find((s) => s.id === session.id);
+    const existingSession = attendanceSessionsRef.current.find((s) => s.id === session.id);
     const cleanSession = sanitizeForFirestore(session);
 
     // Adjust GRISS-POIN when attendance presence toggles on an existing awarded session
     if (existingSession && existingSession.pointsAwarded) {
       const pts = cleanSession.type === 'kerjabakti' ? 40 : 25;
-      const updatedResidentsList = [...residents];
+      const updatedResidentsList = [...residentsRef.current];
+      const modifiedResidents: Resident[] = [];
       let resChanged = false;
       const deltaLogs: PointLog[] = [];
 
@@ -3679,12 +4359,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const updatedRes = { ...targetRes, points: nextPoints };
             const idx = updatedResidentsList.findIndex((r) => r.id === targetRes.id);
             if (idx !== -1) updatedResidentsList[idx] = updatedRes;
+            modifiedResidents.push(updatedRes);
             resChanged = true;
-            if (!firestoreQuotaExceededRef.current) {
-              setDoc(doc(db, 'warga', targetRes.id), sanitizeForFirestore(updatedRes)).catch((e) =>
-                handleFirestoreWriteFailure(e, 'update warga absensi', true)
-              );
-            }
 
             if (currentUser && (currentUser.id === targetRes.id || currentUser.houseNumber === targetRes.houseNumber)) {
               setCurrentUser((prev) => (prev ? { ...prev, points: nextPoints } : null));
@@ -3700,34 +4376,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               timestamp: new Date().toISOString().slice(0, 16).replace('T', ' ')
             };
             deltaLogs.push(log);
-            if (!firestoreQuotaExceededRef.current) {
-              setDoc(doc(db, 'point_logs', log.id), sanitizeForFirestore(log)).catch((e) =>
-                handleFirestoreWriteFailure(e, 'point_logs update absensi')
-              );
-            }
           }
         }
       });
 
       if (resChanged) {
+        residentsRef.current = updatedResidentsList;
         setResidents(updatedResidentsList);
         localStorage.setItem('grisspo_residents', JSON.stringify(updatedResidentsList));
+        for (const modRes of modifiedResidents) {
+          safeCloudWrite('warga', modRes.id, modRes).catch(() => {});
+        }
       }
       if (deltaLogs.length > 0) {
         setPointLogs((prev) => [...deltaLogs, ...prev]);
+        for (const log of deltaLogs) {
+          safeCloudWrite('point_logs', log.id, log).catch(() => {});
+        }
       }
     }
 
-    const next = attendanceSessions.map((s) => (s.id === cleanSession.id ? cleanSession : s));
+    const next = attendanceSessionsRef.current.map((s) => (s.id === cleanSession.id ? cleanSession : s));
+    attendanceSessionsRef.current = next;
     setAttendanceSessions(next);
     localStorage.setItem('grisspo_attendance_sessions', JSON.stringify(next));
-    if (!firestoreQuotaExceededRef.current) {
-      try {
-        await setDoc(doc(db, 'absensi_records', cleanSession.id), cleanSession);
-      } catch (err) {
-        handleFirestoreWriteFailure(err, 'updateAttendanceSession', true);
-      }
-    }
+    await safeCloudWrite('absensi_records', cleanSession.id, cleanSession);
   };
 
   // Superadmin Edit Fasum Booking
@@ -3866,7 +4539,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         borrowInventoryItem,
         returnInventoryItem,
 
-        transactions,
+        transactions: reconciledTransactions,
         addTransaction,
         deleteTransaction,
         updateTransaction,

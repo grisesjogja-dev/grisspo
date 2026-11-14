@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp, defaultGuestUser } from '../context/AppContext';
+import { useApp, defaultGuestUser, getLocalDateString } from '../context/AppContext';
 import {
   MeetingNote,
   MeetingNoteStatus,
@@ -78,7 +78,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
   const [editingNote, setEditingNote] = useState<MeetingNote | null>(null);
 
   // Form State for Notulen
-  const [noteFormDate, setNoteFormDate] = useState(new Date().toISOString().slice(0, 10));
+  const [noteFormDate, setNoteFormDate] = useState(() => getLocalDateString());
   const [noteFormTitle, setNoteFormTitle] = useState('');
   const [noteFormContent, setNoteFormContent] = useState('');
   const [noteFormStatus, setNoteFormStatus] = useState<MeetingNoteStatus>('belum_terlaksana');
@@ -98,7 +98,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
 
   const handleOpenAddNotulen = () => {
     setEditingNote(null);
-    setNoteFormDate(new Date().toISOString().slice(0, 10));
+    setNoteFormDate(getLocalDateString());
     setNoteFormTitle('');
     setNoteFormContent('');
     setNoteFormStatus('belum_terlaksana');
@@ -179,7 +179,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
   };
 
   // --- ABSENSI STATE (KERJABAKTI & RAPAT BULANAN) ---
-  const [sessionDate, setSessionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [sessionDate, setSessionDate] = useState(() => getLocalDateString());
   const [sessionTitle, setSessionTitle] = useState('');
   const [residentSearch, setResidentSearch] = useState('');
   const [blockFilter, setBlockFilter] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');

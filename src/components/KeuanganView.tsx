@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp, defaultGuestUser } from '../context/AppContext';
+import { useApp, defaultGuestUser, getLocalDateString } from '../context/AppContext';
 import { Transaction, IncomeCategory, ExpenseCategory } from '../types';
 import { DetailToggle } from './DetailToggle';
 import { exportFinanceToPDF, exportFinanceToExcel, exportMonthlyKasSummaryPDF } from '../utils/exportUtils';
@@ -151,17 +151,21 @@ export const KeuanganView: React.FC = () => {
       }
     });
 
-    const incomeCategories = Object.entries(incomeMap).map(([category, info]) => ({
-      category,
-      amount: info.amount,
-      count: info.count
-    }));
+    const incomeCategories = Object.entries(incomeMap)
+      .map(([category, info]) => ({
+        category,
+        amount: info.amount,
+        count: info.count
+      }))
+      .sort((a, b) => b.amount - a.amount);
 
-    const expenseCategories = Object.entries(expenseMap).map(([category, info]) => ({
-      category,
-      amount: info.amount,
-      count: info.count
-    }));
+    const expenseCategories = Object.entries(expenseMap)
+      .map(([category, info]) => ({
+        category,
+        amount: info.amount,
+        count: info.count
+      }))
+      .sort((a, b) => b.amount - a.amount);
 
     const netSurplus = mIncome - mExpense;
     const finalBalance = initialBalance + netSurplus;
@@ -186,7 +190,7 @@ export const KeuanganView: React.FC = () => {
   const [trxType, setTrxType] = useState<'pemasukan' | 'pengeluaran'>('pemasukan');
   const [trxCategory, setTrxCategory] = useState<IncomeCategory | ExpenseCategory>('Iuran Bulanan (Rp 25.000)');
   const [trxAmount, setTrxAmount] = useState<number | ''>(25000);
-  const [trxDate, setTrxDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [trxDate, setTrxDate] = useState<string>(() => getLocalDateString());
   const [trxDesc, setTrxDesc] = useState<string>('');
   const [trxHouse, setTrxHouse] = useState<string>('');
 
@@ -800,62 +804,96 @@ export const KeuanganView: React.FC = () => {
       {/* Interactive Visual Analytics (Charts) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Income Breakdown Bar Chart */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <BarChart3 size={16} className="text-emerald-600" />
-            <span>Distribusi Sumber Pemasukan Paguyuban</span>
-          </h3>
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+              <BarChart3 size={16} className="text-emerald-600" />
+              <span>Distribusi Sumber Pemasukan Paguyuban</span>
+            </h3>
 
-          <div className="space-y-3 pt-2">
-            {Object.entries(categorySummary.incomeMap).map(([cat, amount]) => {
-              const pct = auditedTotals.totalIncome > 0 ? Math.round((amount / auditedTotals.totalIncome) * 100) : 0;
-              return (
-                <div key={cat} className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold text-slate-700">
-                    <span className="truncate max-w-[240px]">{cat}</span>
-                    <span className="text-emerald-700 font-bold">
-                      Rp {amount.toLocaleString('id-ID')} ({pct}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+            <div className="space-y-3 pt-2">
+              {Object.entries(categorySummary.incomeMap).length === 0 ? (
+                <p className="text-xs text-slate-400 italic py-4 text-center">
+                  Belum ada data pemasukan kas yang tercatat.
+                </p>
+              ) : (
+                Object.entries(categorySummary.incomeMap)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([cat, amount]) => {
+                    const pctExact = auditedTotals.totalIncome > 0 ? (amount / auditedTotals.totalIncome) * 100 : 0;
+                    const pctDisplay = pctExact > 0 && pctExact < 1 ? '<1%' : `${Math.round(pctExact)}%`;
+                    const barWidth = amount > 0 ? Math.max(2, Math.min(100, pctExact)) : 0;
+                    return (
+                      <div key={cat} className="space-y-1">
+                        <div className="flex justify-between text-xs font-semibold text-slate-700 gap-2">
+                          <span className="truncate max-w-[240px]" title={cat}>{cat}</span>
+                          <span className="text-emerald-700 font-bold shrink-0">
+                            Rp {amount.toLocaleString('id-ID')} ({pctDisplay})
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                          <div
+                            className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
+            <span className="text-slate-600">Total Pemasukan Kas</span>
+            <span className="text-emerald-700">Rp {auditedTotals.totalIncome.toLocaleString('id-ID')} (100%)</span>
           </div>
         </div>
 
         {/* Expense Breakdown Bar Chart */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <PieChartIcon size={16} className="text-red-600" />
-            <span>Alokasi Pengeluaran Kas Paguyuban</span>
-          </h3>
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+              <PieChartIcon size={16} className="text-red-600" />
+              <span>Alokasi Pengeluaran Kas Paguyuban</span>
+            </h3>
 
-          <div className="space-y-3 pt-2">
-            {Object.entries(categorySummary.expenseMap).map(([cat, amount]) => {
-              const pct = auditedTotals.totalExpense > 0 ? Math.round((amount / auditedTotals.totalExpense) * 100) : 0;
-              return (
-                <div key={cat} className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold text-slate-700">
-                    <span className="truncate max-w-[240px]">{cat}</span>
-                    <span className="text-red-700 font-bold">
-                      Rp {amount.toLocaleString('id-ID')} ({pct}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      className="bg-red-500 h-full rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+            <div className="space-y-3 pt-2">
+              {Object.entries(categorySummary.expenseMap).length === 0 ? (
+                <p className="text-xs text-slate-400 italic py-4 text-center">
+                  Belum ada data pengeluaran kas yang tercatat.
+                </p>
+              ) : (
+                Object.entries(categorySummary.expenseMap)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([cat, amount]) => {
+                    const pctExact = auditedTotals.totalExpense > 0 ? (amount / auditedTotals.totalExpense) * 100 : 0;
+                    const pctDisplay = pctExact > 0 && pctExact < 1 ? '<1%' : `${Math.round(pctExact)}%`;
+                    const barWidth = amount > 0 ? Math.max(2, Math.min(100, pctExact)) : 0;
+                    return (
+                      <div key={cat} className="space-y-1">
+                        <div className="flex justify-between text-xs font-semibold text-slate-700 gap-2">
+                          <span className="truncate max-w-[240px]" title={cat}>{cat}</span>
+                          <span className="text-red-700 font-bold shrink-0">
+                            Rp {amount.toLocaleString('id-ID')} ({pctDisplay})
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                          <div
+                            className="bg-red-500 h-full rounded-full transition-all duration-500"
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
+            <span className="text-slate-600">Total Pengeluaran Kas</span>
+            <span className="text-red-700">Rp {auditedTotals.totalExpense.toLocaleString('id-ID')} (100%)</span>
           </div>
         </div>
       </div>

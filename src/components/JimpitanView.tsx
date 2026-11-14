@@ -171,6 +171,8 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   const [submittedReport, setSubmittedReport] = useState<JimpitDailyReport | null>(null);
   // Modal for Superadmin edit daily report
   const [editingDailyReport, setEditingDailyReport] = useState<JimpitDailyReport | null>(null);
+  const [editAddHouse, setEditAddHouse] = useState<string>('');
+  const [editAddNominal, setEditAddNominal] = useState<number>(500);
 
   // Synchronize selected day when date changes
   const handleDateChange = (newDate: string) => {
@@ -476,7 +478,16 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   });
 
   const activeDailyReport = useMemo(() => {
-    return jimpitReports.find((r) => r.date === selectedDailyReportDate) || null;
+    return (
+      jimpitReports.find(
+        (r) =>
+          r.date === selectedDailyReportDate &&
+          r.reportType !== 'pelunasan' &&
+          !r.id.startsWith('jimpit-pay-')
+      ) ||
+      jimpitReports.find((r) => r.date === selectedDailyReportDate) ||
+      null
+    );
   }, [jimpitReports, selectedDailyReportDate]);
 
   // --- STATE FOR TAB 3: LAPORAN BULANAN ---
@@ -791,9 +802,9 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
           }`}
         >
           <TrendingUp size={16} />
-          <span>Laporan Jimpitan Bulanan (58 Warga)</span>
+          <span>Laporan Jimpitan Bulanan ({totalResidentsCount} Warga)</span>
           <span className="ml-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-extrabold">
-            {58 - lunasCount} Kurang
+            {Math.max(0, totalResidentsCount - lunasCount)} Kurang
           </span>
         </button>
 
@@ -936,7 +947,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 <p className="text-amber-800 leading-relaxed font-medium">
                   Laporan jimpitan untuk tanggal <strong>{selectedDate} ({selectedDay})</strong> telah selesai diproses dan tercatat di kas paguyuban. Dalam satu hari hanya bisa memproses <strong>1 kali proses input jimpitan</strong> untuk menghindari penginputan jimpitan double (yang sama).
                 </p>
-                <div className="pt-1.5 flex gap-2">
+                <div className="pt-1.5 flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -947,6 +958,25 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                   >
                     <span>Lihat Laporan Jimpitan Tanggal Ini</span>
                   </button>
+                  {isSuperadmin && (() => {
+                    const existingForDate = jimpitReports.find(
+                      (r) => r.date === selectedDate && r.reportType !== 'pelunasan' && !r.id.startsWith('jimpit-pay-')
+                    );
+                    if (!existingForDate) return null;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setEditingDailyReport({
+                          ...existingForDate,
+                          entries: existingForDate.entries.map((entry) => ({ ...entry }))
+                        })}
+                        className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs transition inline-flex items-center gap-1 shadow-xs"
+                      >
+                        <Edit2 size={12} />
+                        <span>Edit Data Tanggal Ini (Superadmin)</span>
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -1611,7 +1641,10 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setEditingDailyReport(activeDailyReport)}
+                        onClick={() => setEditingDailyReport({
+                          ...activeDailyReport,
+                          entries: activeDailyReport.entries.map((entry) => ({ ...entry }))
+                        })}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm"
                         title="Edit Laporan Jimpitan (Hak Akses Khusus Superadmin)"
                       >
@@ -2118,7 +2151,10 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => setEditingDailyReport(report)}
+                        onClick={() => setEditingDailyReport({
+                          ...report,
+                          entries: report.entries.map((entry) => ({ ...entry }))
+                        })}
                         className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                         title="Edit Laporan Jimpitan (Hak Akses Superadmin)"
                       >
@@ -2553,7 +2589,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
       {/* ========================================================================= */}
       {editingDailyReport && isSuperadmin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
             <div className="bg-slate-900 text-white p-5 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
@@ -2561,7 +2597,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold">Edit Laporan Jimpitan</h3>
-                  <p className="text-[11px] text-amber-300">Hak Akses: Superadmin (Bpk. Beni B 24)</p>
+                  <p className="text-[11px] text-amber-300">Hak Akses: Superadmin (Bpk. Beni B 24) &bull; Edit Rincian Per Rumah</p>
                 </div>
               </div>
               <button
@@ -2578,7 +2614,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 e.preventDefault();
                 confirmAction({
                   title: 'Konfirmasi Perubahan Laporan Jimpitan',
-                  message: `Simpan pembaruan laporan jimpitan tanggal ${editingDailyReport.date} (${editingDailyReport.day}) dengan total Rp ${editingDailyReport.totalNominal.toLocaleString('id-ID')}? Data kas paguyuban dan catatan warga otomatis akan disinkronkan.`,
+                  message: `Simpan pembaruan laporan jimpitan tanggal ${editingDailyReport.date} (${editingDailyReport.day}) untuk ${editingDailyReport.entries.length} rumah dengan total Rp ${editingDailyReport.totalNominal.toLocaleString('id-ID')}? Data kas paguyuban dan catatan jimpitan tiap warga otomatis akan disinkronkan.`,
                   confirmLabel: 'Setuju',
                   cancelLabel: 'Batal',
                   variant: 'primary',
@@ -2592,23 +2628,26 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
             >
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Hari & Tanggal</label>
+                  <label className="block font-bold text-slate-700 mb-1">Hari &amp; Tanggal</label>
                   <div className="p-2.5 bg-slate-100 rounded-xl font-bold text-slate-800">
                     {editingDailyReport.day}, {editingDailyReport.date}
                   </div>
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Total Nominal</label>
+                  <label className="block font-bold text-slate-700 mb-1">Total Nominal (Otomatis dari Rincian)</label>
                   <input
                     type="number"
                     value={editingDailyReport.totalNominal}
+                    readOnly={editingDailyReport.entries.length > 0}
                     onChange={(e) =>
                       setEditingDailyReport({
                         ...editingDailyReport,
                         totalNominal: Number(e.target.value)
                       })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-emerald-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className={`w-full px-3 py-2 border border-slate-300 rounded-xl font-black text-emerald-600 focus:outline-none ${
+                      editingDailyReport.entries.length > 0 ? 'bg-emerald-50/70' : 'bg-slate-50 focus:ring-2 focus:ring-amber-500'
+                    }`}
                   />
                 </div>
               </div>
@@ -2647,24 +2686,149 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       notes: e.target.value
                     })
                   }
-                  rows={3}
+                  rows={2}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
+              {/* Add House to Report */}
+              <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">
+                <span className="font-bold text-amber-900 block text-[11px]">
+                  Tambah Rumah ke Daftar Jimpitan Tanggal Ini:
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={editAddHouse}
+                    onChange={(e) => setEditAddHouse(e.target.value)}
+                    className="flex-1 min-w-[160px] px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800"
+                  >
+                    <option value="">-- Pilih No. Rumah --</option>
+                    {residents
+                      .filter(
+                        (r) =>
+                          isStatusEligibleForJimpitan(r.statusRumah) &&
+                          !editingDailyReport.entries.some((ent) => ent.houseNumber === r.houseNumber)
+                      )
+                      .map((r) => (
+                        <option key={r.id} value={r.houseNumber}>
+                          {r.houseNumber} - {r.name}
+                        </option>
+                      ))}
+                  </select>
+                  <input
+                    type="number"
+                    min={500}
+                    step={500}
+                    value={editAddNominal}
+                    onChange={(e) => setEditAddNominal(Math.max(0, Number(e.target.value)))}
+                    className="w-28 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900"
+                    placeholder="Nominal"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!editAddHouse || editAddNominal < 500) return;
+                      const res = residents.find((r) => r.houseNumber === editAddHouse);
+                      if (!res) return;
+                      const updatedEntries = [
+                        ...editingDailyReport.entries,
+                        {
+                          houseNumber: res.houseNumber,
+                          residentName: res.name,
+                          nominal: editAddNominal,
+                          paymentMethod: 'cash' as const,
+                          timestamp: '21.00 WIB',
+                          collectedBy: editingDailyReport.collectedBy
+                        }
+                      ];
+                      setEditingDailyReport({
+                        ...editingDailyReport,
+                        entries: updatedEntries,
+                        totalNominal: updatedEntries.reduce((s, ent) => s + (Number(ent.nominal) || 0), 0)
+                      });
+                      setEditAddHouse('');
+                      setEditAddNominal(500);
+                    }}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition"
+                  >
+                    + Tambah
+                  </button>
+                </div>
+              </div>
+
               <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Warga Terdata Menjimpit ({editingDailyReport.entries.length} Rumah)
-                </label>
-                <div className="max-h-36 overflow-y-auto space-y-1.5 p-2 bg-slate-50 border border-slate-200 rounded-xl">
-                  {editingDailyReport.entries.map((entry, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-[11px] p-1.5 bg-white rounded border border-slate-100">
-                      <span className="font-bold text-slate-800">
-                        {entry.houseNumber} - {getResidentNameByHouse(entry.houseNumber, entry.residentName)}
-                      </span>
-                      <span className="font-semibold text-emerald-600">Rp {entry.nominal.toLocaleString('id-ID')}</span>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-slate-700">
+                    Warga Terdata Menjimpit ({editingDailyReport.entries.length} Rumah)
+                  </label>
+                  <span className="text-[11px] text-slate-500">Ubah nominal atau hapus rumah bila tidak menjimpit</span>
+                </div>
+                <div className="max-h-56 overflow-y-auto space-y-1.5 p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                  {editingDailyReport.entries.length === 0 ? (
+                    <div className="py-4 text-center text-slate-400 italic">
+                      Belum ada rumah terdata. Tambahkan rumah di atas atau hapus laporan ini jika kosong.
                     </div>
-                  ))}
+                  ) : (
+                    editingDailyReport.entries.map((entry, idx) => (
+                      <div key={`${entry.houseNumber}-${idx}`} className="flex flex-wrap items-center justify-between gap-2 text-[11px] p-2 bg-white rounded-lg border border-slate-200">
+                        <span className="font-bold text-slate-800 min-w-[140px]">
+                          {entry.houseNumber} - {getResidentNameByHouse(entry.houseNumber, entry.residentName)}
+                        </span>
+                        <div className="flex items-center gap-1.5 ml-auto">
+                          <select
+                            value={entry.paymentMethod}
+                            onChange={(e) => {
+                              const method = e.target.value as 'cash' | 'transfer';
+                              const updatedEntries = editingDailyReport.entries.map((ent, i) =>
+                                i === idx ? { ...ent, paymentMethod: method } : ent
+                              );
+                              setEditingDailyReport({
+                                ...editingDailyReport,
+                                entries: updatedEntries
+                              });
+                            }}
+                            className="px-1.5 py-1 bg-slate-50 border border-slate-300 rounded text-[10px] font-semibold text-slate-700"
+                          >
+                            <option value="cash">Tunai</option>
+                            <option value="transfer">Transfer</option>
+                          </select>
+                          <input
+                            type="number"
+                            min={0}
+                            step={500}
+                            value={entry.nominal}
+                            onChange={(e) => {
+                              const nextVal = Math.max(0, Number(e.target.value));
+                              const updatedEntries = editingDailyReport.entries.map((ent, i) =>
+                                i === idx ? { ...ent, nominal: nextVal } : ent
+                              );
+                              setEditingDailyReport({
+                                ...editingDailyReport,
+                                entries: updatedEntries,
+                                totalNominal: updatedEntries.reduce((s, ent) => s + (Number(ent.nominal) || 0), 0)
+                              });
+                            }}
+                            className="w-24 px-2 py-1 bg-slate-50 border border-slate-300 rounded font-bold text-emerald-700 text-right"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedEntries = editingDailyReport.entries.filter((_, i) => i !== idx);
+                              setEditingDailyReport({
+                                ...editingDailyReport,
+                                entries: updatedEntries,
+                                totalNominal: updatedEntries.reduce((s, ent) => s + (Number(ent.nominal) || 0), 0)
+                              });
+                            }}
+                            className="p-1 text-red-500 hover:bg-red-50 rounded transition"
+                            title="Hapus rumah ini dari laporan"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 

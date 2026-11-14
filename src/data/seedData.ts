@@ -413,70 +413,12 @@ export const initialFasumBookings: FasumBooking[] = [];
  */
 export const initialMeetingNotes: MeetingNote[] = [];
 
-export const initialJimpitReports: JimpitDailyReport[] = [
-  {
-    id: 'jimpit-2026-11-11',
-    date: '2026-11-11',
-    day: 'Rabu',
-    collectedBy: 'AHMAD (Petugas Ronda Rabu)',
-    reportType: 'harian',
-    totalNominal: 21500,
-    notes: 'Jimpitan rutin harian Rabu tgl 11 November 2026 lengkap.',
-    createdAt: '2026-11-11T22:30:00.000Z',
-    entries: initialResidents
-      .filter(r => r.statusRumah !== 'KOSONG (ADA PEMILIK)' && r.statusRumah !== 'BELUM ADA PEMILIK')
-      .map(r => ({
-        houseNumber: r.houseNumber,
-        residentName: r.name,
-        nominal: 500,
-        paymentMethod: 'cash',
-        timestamp: '2026-11-11T21:00:00.000Z',
-        collectedBy: 'AHMAD'
-      }))
-  },
-  {
-    id: 'jimpit-2026-11-12',
-    date: '2026-11-12',
-    day: 'Kamis',
-    collectedBy: 'DEWA (Petugas Ronda Kamis)',
-    reportType: 'harian',
-    totalNominal: 21500,
-    notes: 'Jimpitan rutin harian Kamis tgl 12 November 2026 lengkap.',
-    createdAt: '2026-11-12T22:30:00.000Z',
-    entries: initialResidents
-      .filter(r => r.statusRumah !== 'KOSONG (ADA PEMILIK)' && r.statusRumah !== 'BELUM ADA PEMILIK')
-      .map(r => ({
-        houseNumber: r.houseNumber,
-        residentName: r.name,
-        nominal: 500,
-        paymentMethod: 'cash',
-        timestamp: '2026-11-12T21:00:00.000Z',
-        collectedBy: 'DEWA'
-      }))
-  }
-];
+export const initialJimpitReports: JimpitDailyReport[] = [];
 
 /**
  * Data Awal Sesi Absensi Warga (Ronda, Kerjabakti, Rapat Bulanan)
  */
 export const initialAttendanceSessions: AttendanceSession[] = [
-  {
-    id: 'att-2026-11-11',
-    type: 'ronda',
-    title: 'Absensi Ronda Malam - Rabu, 11 November 2026',
-    date: '2026-11-11',
-    day: 'Rabu',
-    recordedBy: 'AHMAD',
-    userRole: 'superadmin',
-    pointsAwarded: false,
-    createdAt: '2026-11-11T23:00:00.000Z',
-    attendees: [
-      { residentId: 'w-b02', residentName: 'AHMAD', residentHouse: 'B 02', isPresent: true, notes: 'Kapten Ronda' },
-      { residentId: 'w-a04', residentName: 'DWI', residentHouse: 'A 04', isPresent: true },
-      { residentId: 'w-c01', residentName: 'GAPTA', residentHouse: 'C 01', isPresent: true },
-      { residentId: 'w-b16', residentName: 'IRWAN', residentHouse: 'B 16', isPresent: true }
-    ]
-  },
   {
     id: 'att-2026-11-12',
     type: 'ronda',
@@ -486,12 +428,29 @@ export const initialAttendanceSessions: AttendanceSession[] = [
     recordedBy: 'DEWA',
     userRole: 'superadmin',
     pointsAwarded: false,
-    createdAt: '2026-11-12T23:00:00.000Z',
+    createdAt: '2026-11-12T23:00:00+07:00',
     attendees: [
       { residentId: 'w-b25', residentName: 'DEWA', residentHouse: 'B 25', isPresent: true, notes: 'Kapten Ronda' },
       { residentId: 'w-b19', residentName: 'EKO', residentHouse: 'B 19', isPresent: true },
       { residentId: 'w-c05', residentName: 'ALID', residentHouse: 'C 05', isPresent: true },
       { residentId: 'w-a04', residentName: 'NANDO', residentHouse: 'A 04', isPresent: true }
+    ]
+  },
+  {
+    id: 'att-2026-11-11',
+    type: 'ronda',
+    title: 'Absensi Ronda Malam - Rabu, 11 November 2026',
+    date: '2026-11-11',
+    day: 'Rabu',
+    recordedBy: 'AHMAD',
+    userRole: 'superadmin',
+    pointsAwarded: false,
+    createdAt: '2026-11-11T23:00:00+07:00',
+    attendees: [
+      { residentId: 'w-b02', residentName: 'AHMAD', residentHouse: 'B 02', isPresent: true, notes: 'Kapten Ronda' },
+      { residentId: 'w-a05', residentName: 'DWI', residentHouse: 'A 05', isPresent: true },
+      { residentId: 'w-c01', residentName: 'GAPTA', residentHouse: 'C 01', isPresent: true },
+      { residentId: 'w-b16', residentName: 'IRWAN', residentHouse: 'B 16', isPresent: true }
     ]
   }
 ];

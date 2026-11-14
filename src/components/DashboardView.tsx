@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp, defaultGuestUser } from '../context/AppContext';
+import { useApp, defaultGuestUser, getLocalDateString } from '../context/AppContext';
 import { DayOfWeek, PaymentReceipt, PaymentReceiptType, PaymentMethodType, Resident } from '../types';
 import { DetailToggle } from './DetailToggle';
 import {
@@ -85,7 +85,7 @@ export const DashboardView: React.FC = () => {
   // --- LOKET PAYMENT FORM STATES ---
   const [selectedResidentId, setSelectedResidentId] = useState<string>(() => residents[0]?.id || '');
   const [selectedPaymentType, setSelectedPaymentType] = useState<PaymentReceiptType>('iuran_bulanan');
-  const [formDate, setFormDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [formDate, setFormDate] = useState<string>(() => getLocalDateString());
   const [formAmount, setFormAmount] = useState<number>(25000);
   const [formPeriod, setFormPeriod] = useState<string>(() => {
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -445,7 +445,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
 
       const house = trx.sourceHouse || '';
       const houseClean = house.replace(/\s+/g, '').toUpperCase();
-      const dateStr = trx.date || new Date(trx.timestamp || Date.now()).toISOString().slice(0, 10);
+      const dateStr = trx.date || getLocalDateString(new Date(trx.timestamp || Date.now()));
 
       let pType: PaymentReceiptType = 'pemasukan_lain';
       if (catL.includes('sampah') && catL.includes('bulanan')) pType = 'iuran_bulanan_sampah';
