@@ -269,7 +269,21 @@ export const officialTataTertib = {
 /**
  * Initial Transaksi Keuangan Paguyuban GSS
  */
-export const initialTransactions: Transaction[] = [];
+export const initialTransactions: Transaction[] = [
+  {
+    id: 'trx-saldo-awal-3123818',
+    type: 'pemasukan',
+    category: 'Saldo Kas Awal',
+    amount: 3123818,
+    date: '2026-11-01',
+    description: 'Saldo Kas Awal Paguyuban GSS 1',
+    recordedBy: 'Superadmin (Beni B 24)',
+    userRole: 'superadmin',
+    encryptedHash: 'hash-saldo-awal-3123818',
+    isAnomaly: false,
+    timestamp: new Date('2026-11-01T12:00:00').getTime()
+  }
+];
 
 /**
  * Initial Forum Posts

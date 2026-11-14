@@ -969,11 +969,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Transactions
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const saved = localStorage.getItem('grisspo_transactions');
-    const base: Transaction[] = saved ? JSON.parse(saved) : initialTransactions;
+    let base: Transaction[] = saved ? JSON.parse(saved) : initialTransactions;
+
+    let foundSaldo = false;
+    base = base.map((t) => {
+      const catL = String(t.category || '').toLowerCase();
+      const descL = String(t.description || '').toLowerCase();
+      if (catL.includes('saldo') || descL.includes('saldo kas awal')) {
+        foundSaldo = true;
+        return {
+          ...t,
+          amount: 3123818,
+          category: 'Saldo Kas Awal'
+        };
+      }
+      return t;
+    });
+
+    if (!foundSaldo) {
+      base = [
+        {
+          id: 'trx-saldo-awal-3123818',
+          type: 'pemasukan',
+          category: 'Saldo Kas Awal',
+          amount: 3123818,
+          date: '2026-11-01',
+          description: 'Saldo Kas Awal Paguyuban GSS 1',
+          recordedBy: 'Superadmin (Beni B 24)',
+          userRole: 'superadmin',
+          encryptedHash: 'hash-saldo-awal-3123818',
+          isAnomaly: false,
+          timestamp: new Date('2026-11-01T12:00:00').getTime()
+        },
+        ...base
+      ];
+    }
+
     return base
       .filter((t) => t && t.id && !LEGACY_FAKE_SEED_IDS.has(t.id) && !initialDeletedIds.includes(t.id))
       .map((t) => {
-        const cleanType = (String(t.type || '').trim().toLowerCase() === 'pengeluaran' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran';
+        const rawType = String(t.type || '').trim().toLowerCase();
+        const cleanType = (rawType === 'pengeluaran' || rawType === 'expense' ? 'pengeluaran' : 'pemasukan') as 'pemasukan' | 'pengeluaran';
         return {
           ...t,
           amount: Number(t.amount) || 0,
