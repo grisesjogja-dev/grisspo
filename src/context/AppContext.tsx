@@ -2018,6 +2018,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('grisspo_transactions', JSON.stringify(transactions));
   }, [transactions]);
 
+  // Automatic monthly Saldo Kas Awal rollover (Every month at 00:01 WIB, Saldo Kas Awal follows previous month's ending balance)
+  const hasRolloverCheckedRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (hasRolloverCheckedRef.current || transactions.length === 0) return;
+    hasRolloverCheckedRef.current = true;
+
+    const nowWib = new Date(Date.now() + 7 * 60 * 60 * 1000 + new Date().getTimezoneOffset() * 60 * 1000);
+    const year = nowWib.getFullYear();
+    const month = nowWib.getMonth() + 1;
+    const currMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+    const startDateStr = `${currMonthKey}-01`;
+
+    let prevMonthEndingBalance = 0;
+    transactions.forEach((t) => {
+      if (t.date && t.date < startDateStr) {
+        const cleanType = String(t.type || '').trim().toLowerCase();
+        const amt = Number(t.amount) || 0;
+        if (cleanType === 'pemasukan' || cleanType === 'income') {
+          prevMonthEndingBalance += amt;
+        } else if (cleanType === 'pengeluaran' || cleanType === 'expense') {
+          prevMonthEndingBalance -= amt;
+        }
+      }
+    });
+
+    const existingSaldoTrx = transactions.find(
+      (t) =>
+        (String(t.category || '').toLowerCase().includes('saldo') ||
+         String(t.description || '').toLowerCase().includes('saldo kas awal')) &&
+        t.date &&
+        t.date.startsWith(currMonthKey)
+    );
+
+    if (existingSaldoTrx) {
+      if (existingSaldoTrx.amount !== prevMonthEndingBalance && prevMonthEndingBalance > 0) {
+        updateTransaction({
+          ...existingSaldoTrx,
+          amount: prevMonthEndingBalance,
+          description: `Saldo Kas Awal ${currMonthKey} (Otomatis dari Saldo Akhir Bulan Lalu)`
+        }).catch(() => {});
+      }
+    } else if (prevMonthEndingBalance > 0) {
+      addTransaction({
+        type: 'pemasukan',
+        category: 'Saldo Kas Awal',
+        amount: prevMonthEndingBalance,
+        date: startDateStr,
+        description: `Saldo Kas Awal ${currMonthKey} (Otomatis dari Saldo Akhir Bulan Lalu)`,
+        recordedBy: 'Sistem Otomatis GSS',
+        userRole: 'superadmin',
+        sourceHouse: 'Paguyuban GSS'
+      }, { skipReceiptCreation: true }).catch(() => {});
+    }
+  }, [transactions]);
+
   useEffect(() => {
     localStorage.setItem('grisspo_forum_posts', JSON.stringify(forumPosts));
   }, [forumPosts]);
