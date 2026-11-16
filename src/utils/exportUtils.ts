@@ -12,8 +12,8 @@ export function exportFinanceToPDF(
   totalExpense: number,
   currentBalance: number
 ) {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageWidth = doc.internal.pageSize.getWidth();
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth(); // 297mm
 
   // Header
   doc.setFillColor(30, 58, 138); // Blue 900
@@ -22,50 +22,51 @@ export function exportFinanceToPDF(
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('GRISSPO - LAPORAN KEUANGAN PAGUYUBAN', pageWidth / 2, 12, { align: 'center' });
+  doc.text('GRISSPO - LAPORAN KEUANGAN PAGUYUBAN (RESPONSIF)', pageWidth / 2, 12, { align: 'center' });
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text('Perumahan Griya Sedayu Selaras 1 - Bantul, D.I. Yogyakarta', pageWidth / 2, 18, { align: 'center' });
   doc.text(`Periode Laporan: ${periodTitle} | Dicetak: ${new Date().toLocaleDateString('id-ID')}`, pageWidth / 2, 23, { align: 'center' });
 
-  // Summary Cards
+  // Summary Cards (3 cards across landscape width: 85mm each)
   doc.setTextColor(30, 41, 59);
   doc.setFontSize(10);
   let y = 36;
+  const cardW = 85;
 
   // Box 1: Total Pemasukan
   doc.setFillColor(240, 253, 244);
-  doc.rect(14, y, 56, 18, 'F');
+  doc.rect(14, y, cardW, 18, 'F');
   doc.setDrawColor(34, 197, 94);
-  doc.rect(14, y, 56, 18, 'D');
+  doc.rect(14, y, cardW, 18, 'D');
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(22, 101, 52);
-  doc.text('TOTAL PEMASUKAN', 16, y + 6);
+  doc.text('TOTAL PEMASUKAN', 18, y + 6);
   doc.setFontSize(11);
-  doc.text(`Rp ${totalIncome.toLocaleString('id-ID')}`, 16, y + 13);
+  doc.text(`Rp ${totalIncome.toLocaleString('id-ID')}`, 18, y + 13);
 
   // Box 2: Total Pengeluaran
   doc.setFontSize(10);
   doc.setFillColor(254, 242, 242);
-  doc.rect(77, y, 56, 18, 'F');
+  doc.rect(14 + cardW + 8, y, cardW, 18, 'F');
   doc.setDrawColor(239, 68, 68);
-  doc.rect(77, y, 56, 18, 'D');
+  doc.rect(14 + cardW + 8, y, cardW, 18, 'D');
   doc.setTextColor(153, 27, 27);
-  doc.text('TOTAL PENGELUARAN', 79, y + 6);
+  doc.text('TOTAL PENGELUARAN', 14 + cardW + 12, y + 6);
   doc.setFontSize(11);
-  doc.text(`Rp ${totalExpense.toLocaleString('id-ID')}`, 79, y + 13);
+  doc.text(`Rp ${totalExpense.toLocaleString('id-ID')}`, 14 + cardW + 12, y + 13);
 
   // Box 3: Saldo Kas Saat Ini
   doc.setFontSize(10);
   doc.setFillColor(239, 246, 255);
-  doc.rect(140, y, 56, 18, 'F');
+  doc.rect(14 + (cardW + 8) * 2, y, cardW, 18, 'F');
   doc.setDrawColor(59, 130, 246);
-  doc.rect(140, y, 56, 18, 'D');
+  doc.rect(14 + (cardW + 8) * 2, y, cardW, 18, 'D');
   doc.setTextColor(30, 64, 175);
-  doc.text('SALDO KAS BERSIH', 142, y + 6);
+  doc.text('SALDO KAS BERSIH', 14 + (cardW + 8) * 2 + 4, y + 6);
   doc.setFontSize(11);
-  doc.text(`Rp ${currentBalance.toLocaleString('id-ID')}`, 142, y + 13);
+  doc.text(`Rp ${currentBalance.toLocaleString('id-ID')}`, 14 + (cardW + 8) * 2 + 4, y + 13);
 
   // Table Header
   y = 62;
@@ -76,53 +77,73 @@ export function exportFinanceToPDF(
   doc.setTextColor(51, 65, 85);
 
   doc.text('No', 16, y + 5.5);
-  doc.text('Tanggal', 24, y + 5.5);
-  doc.text('Kategori', 48, y + 5.5);
-  doc.text('Keterangan', 92, y + 5.5);
-  doc.text('Tipe', 145, y + 5.5);
-  doc.text('Nominal (Rp)', 193, y + 5.5, { align: 'right' });
+  doc.text('Tanggal', 28, y + 5.5);
+  doc.text('Kategori', 55, y + 5.5);
+  doc.text('Keterangan', 102, y + 5.5);
+  doc.text('Tipe', 215, y + 5.5);
+  doc.text('Nominal (Rp)', pageWidth - 16, y + 5.5, { align: 'right' });
 
   y += 10;
   doc.setFont('helvetica', 'normal');
 
   transactions.forEach((trx, idx) => {
-    if (y > 270) {
+    const descLines = doc.splitTextToSize(trx.description, 110);
+    const catLines = doc.splitTextToSize(trx.category, 42);
+    const lineCount = Math.max(1, descLines.length, catLines.length);
+    const rowHeight = lineCount * 5 + 4;
+
+    if (y + rowHeight > 185) {
       doc.addPage();
       y = 20;
+      doc.setFillColor(241, 245, 249);
+      doc.rect(14, y, pageWidth - 28, 8, 'F');
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(51, 65, 85);
+      doc.text('No', 16, y + 5.5);
+      doc.text('Tanggal', 28, y + 5.5);
+      doc.text('Kategori', 55, y + 5.5);
+      doc.text('Keterangan', 102, y + 5.5);
+      doc.text('Tipe', 215, y + 5.5);
+      doc.text('Nominal (Rp)', pageWidth - 16, y + 5.5, { align: 'right' });
+      y += 10;
+      doc.setFont('helvetica', 'normal');
     }
 
     doc.setFontSize(8.5);
     doc.setTextColor(71, 85, 105);
-    doc.text(String(idx + 1), 16, y);
-    doc.text(trx.date, 24, y);
+    doc.text(String(idx + 1), 16, y + 4);
+    doc.text(trx.date, 28, y + 4);
 
-    const categoryText = doc.splitTextToSize(trx.category, 40);
-    doc.text(categoryText[0] || trx.category, 48, y);
+    catLines.forEach((line: string, li: number) => {
+      doc.text(line, 55, y + 4 + (li * 4.5));
+    });
 
-    const descText = doc.splitTextToSize(trx.description, 50);
-    doc.text(descText[0] || trx.description, 92, y);
+    descLines.forEach((line: string, li: number) => {
+      doc.text(line, 102, y + 4 + (li * 4.5));
+    });
 
     if (trx.type === 'pemasukan') {
       doc.setTextColor(22, 163, 74);
-      doc.text('Masuk (+)', 145, y);
+      doc.text('Masuk (+)', 215, y + 4);
     } else {
       doc.setTextColor(220, 38, 38);
-      doc.text('Keluar (-)', 145, y);
+      doc.text('Keluar (-)', 215, y + 4);
     }
 
     doc.setFont('helvetica', 'bold');
-    doc.text(`Rp ${trx.amount.toLocaleString('id-ID')}`, 193, y, { align: 'right' });
+    doc.text(`Rp ${trx.amount.toLocaleString('id-ID')}`, pageWidth - 16, y + 4, { align: 'right' });
     doc.setFont('helvetica', 'normal');
 
     // Subtle line
     doc.setDrawColor(241, 245, 249);
-    doc.line(14, y + 3, pageWidth - 14, y + 3);
+    doc.line(14, y + rowHeight - 2, pageWidth - 14, y + rowHeight - 2);
 
-    y += 7;
+    y += rowHeight;
   });
 
   // Footer Signatures
-  if (y > 240) {
+  if (y > 170) {
     doc.addPage();
     y = 20;
   } else {
@@ -133,7 +154,7 @@ export function exportFinanceToPDF(
   doc.setFontSize(9);
   doc.text('Mengetahui / Mengesahkan,', 14, y);
   doc.text('Ketua Paguyuban GSS 1', 14, y + 5);
-  doc.text('Bendahara 1 / Bendahara 2', pageWidth - 60, y + 5);
+  doc.text('Bendahara 1 / Bendahara 2', pageWidth - 70, y + 5);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Bpk. BENI', 14, y + 25);
@@ -141,15 +162,15 @@ export function exportFinanceToPDF(
   doc.text('(Ketua / Superadmin)', 14, y + 29);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Bpk. CATUR / AHMAD 2', pageWidth - 60, y + 25);
+  doc.text('Bpk. CATUR / AHMAD 2', pageWidth - 70, y + 25);
   doc.setFont('helvetica', 'normal');
-  doc.text('(Bendahara Kas)', pageWidth - 60, y + 29);
+  doc.text('(Bendahara Kas)', pageWidth - 70, y + 29);
 
   doc.save(`Laporan_Keuangan_GRISSPO_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
 /**
- * Export Financial Transactions to Excel (.xlsx)
+ * Export Financial Transactions to Excel (.xlsx) with proper responsive column formatting
  */
 export function exportFinanceToExcel(transactions: Transaction[], currentBalance: number) {
   const data: any[] = transactions.map((t, idx) => ({
@@ -178,10 +199,21 @@ export function exportFinanceToExcel(transactions: Transaction[], currentBalance
   });
 
   const worksheet = XLSX.utils.json_to_sheet(data);
+  worksheet['!cols'] = [
+    { wch: 6 },  // No
+    { wch: 15 }, // Tanggal
+    { wch: 18 }, // Tipe
+    { wch: 25 }, // Kategori
+    { wch: 60 }, // Keterangan (wide for full description readability)
+    { wch: 18 }, // Nominal
+    { wch: 25 }, // Dicatat Oleh
+    { wch: 25 }, // Status Audit
+    { wch: 35 }  // Hash
+  ];
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Keuangan GSS');
 
-  // Generate and download
   XLSX.writeFile(workbook, `Laporan_Keuangan_GSS_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
@@ -539,11 +571,11 @@ export interface MonthlyKasSummaryData {
 }
 
 /**
- * Export Official Monthly Cash Flow Summary Report to PDF
+ * Export Official Monthly Cash Flow Summary Report to PDF (Responsive Landscape with Multi-line Descriptions)
  */
 export function exportMonthlyKasSummaryPDF(data: MonthlyKasSummaryData) {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageWidth = doc.internal.pageSize.getWidth();
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth(); // 297mm
 
   // Header Banner
   doc.setFillColor(30, 58, 138); // Blue 900
@@ -552,7 +584,7 @@ export function exportMonthlyKasSummaryPDF(data: MonthlyKasSummaryData) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(15);
   doc.setFont('helvetica', 'bold');
-  doc.text('GRISSPO - LAPORAN RINGKASAN KAS BULANAN', pageWidth / 2, 11, { align: 'center' });
+  doc.text('GRISSPO - LAPORAN RINGKASAN KAS BULANAN (RESPONSIF)', pageWidth / 2, 11, { align: 'center' });
 
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
@@ -561,15 +593,14 @@ export function exportMonthlyKasSummaryPDF(data: MonthlyKasSummaryData) {
 
   let y = 35;
 
-  // Ringkasan Arus Kas Cards
+  // Ringkasan Arus Kas Cards (4 cards across landscape width: 63mm each)
   doc.setTextColor(30, 41, 59);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.text('1. RINGKASAN REKAPITULASI ARUS KAS (CASH FLOW)', 14, y);
   y += 5;
 
-  // 4 Metric Boxes: Saldo Awal, Pemasukan (+), Pengeluaran (-), Saldo Akhir
-  const boxW = 42;
+  const boxW = 63;
   const boxH = 18;
 
   // Box 1: Saldo Awal
@@ -587,39 +618,39 @@ export function exportMonthlyKasSummaryPDF(data: MonthlyKasSummaryData) {
 
   // Box 2: Total Pemasukan
   doc.setFillColor(240, 253, 244);
-  doc.rect(14 + boxW + 4, y, boxW, boxH, 'F');
+  doc.rect(14 + boxW + 5, y, boxW, boxH, 'F');
   doc.setDrawColor(34, 197, 94);
-  doc.rect(14 + boxW + 4, y, boxW, boxH, 'D');
+  doc.rect(14 + boxW + 5, y, boxW, boxH, 'D');
   doc.setFontSize(7.5);
   doc.setTextColor(22, 101, 52);
-  doc.text('TOTAL PEMASUKAN (+)', 14 + boxW + 6, y + 5.5);
+  doc.text('TOTAL PEMASUKAN (+)', 14 + boxW + 8, y + 5.5);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Rp ${data.totalIncome.toLocaleString('id-ID')}`, 14 + boxW + 6, y + 13);
+  doc.text(`Rp ${data.totalIncome.toLocaleString('id-ID')}`, 14 + boxW + 8, y + 13);
 
   // Box 3: Total Pengeluaran
   doc.setFillColor(254, 242, 242);
-  doc.rect(14 + (boxW + 4) * 2, y, boxW, boxH, 'F');
+  doc.rect(14 + (boxW + 5) * 2, y, boxW, boxH, 'F');
   doc.setDrawColor(239, 68, 68);
-  doc.rect(14 + (boxW + 4) * 2, y, boxW, boxH, 'D');
+  doc.rect(14 + (boxW + 5) * 2, y, boxW, boxH, 'D');
   doc.setFontSize(7.5);
   doc.setTextColor(153, 27, 27);
-  doc.text('TOTAL PENGELUARAN (-)', 14 + (boxW + 4) * 2 + 2, y + 5.5);
+  doc.text('TOTAL PENGELUARAN (-)', 14 + (boxW + 5) * 2 + 3, y + 5.5);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Rp ${data.totalExpense.toLocaleString('id-ID')}`, 14 + (boxW + 4) * 2 + 2, y + 13);
+  doc.text(`Rp ${data.totalExpense.toLocaleString('id-ID')}`, 14 + (boxW + 5) * 2 + 3, y + 13);
 
   // Box 4: Saldo Akhir
   doc.setFillColor(239, 246, 255);
-  doc.rect(14 + (boxW + 4) * 3, y, boxW, boxH, 'F');
+  doc.rect(14 + (boxW + 5) * 3, y, boxW, boxH, 'F');
   doc.setDrawColor(59, 130, 246);
-  doc.rect(14 + (boxW + 4) * 3, y, boxW, boxH, 'D');
+  doc.rect(14 + (boxW + 5) * 3, y, boxW, boxH, 'D');
   doc.setFontSize(7.5);
   doc.setTextColor(30, 64, 175);
-  doc.text('SALDO AKHIR KAS', 14 + (boxW + 4) * 3 + 2, y + 5.5);
+  doc.text('SALDO AKHIR KAS', 14 + (boxW + 5) * 3 + 3, y + 5.5);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Rp ${data.finalBalance.toLocaleString('id-ID')}`, 14 + (boxW + 4) * 3 + 2, y + 13);
+  doc.text(`Rp ${data.finalBalance.toLocaleString('id-ID')}`, 14 + (boxW + 5) * 3 + 3, y + 13);
 
   y += 24;
 
@@ -644,17 +675,16 @@ export function exportMonthlyKasSummaryPDF(data: MonthlyKasSummaryData) {
   doc.text('2. RINCIAN SUMBER PEMASUKAN KAS (SEMUA KATEGORI TERVERIFIKASI)', 14, y);
   y += 4.5;
 
-  // Table Pemasukan Header
   doc.setFillColor(241, 245, 249);
   doc.rect(14, y, pageWidth - 28, 6.5, 'F');
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(51, 65, 85);
   doc.text('No', 16, y + 4.5);
-  doc.text('Kategori Pemasukan', 25, y + 4.5);
-  doc.text('Frekuensi Transaksi', 115, y + 4.5);
-  doc.text('Kontribusi %', 150, y + 4.5);
-  doc.text('Jumlah Nominal (Rp)', 193, y + 4.5, { align: 'right' });
+  doc.text('Kategori Pemasukan', 28, y + 4.5);
+  doc.text('Frekuensi Transaksi', 140, y + 4.5);
+  doc.text('Kontribusi %', 190, y + 4.5);
+  doc.text('Jumlah Nominal (Rp)', pageWidth - 16, y + 4.5, { align: 'right' });
   y += 8.5;
 
   doc.setFont('helvetica', 'normal');
@@ -669,33 +699,31 @@ export function exportMonthlyKasSummaryPDF(data: MonthlyKasSummaryData) {
       doc.setTextColor(71, 85, 105);
       doc.text(String(idx + 1), 16, y);
       doc.setFont('helvetica', 'bold');
-      doc.text(inc.category, 25, y);
+      doc.text(inc.category, 28, y);
       doc.setFont('helvetica', 'normal');
-      doc.text(`${inc.count} Transaksi`, 115, y);
+      doc.text(`${inc.count} Transaksi`, 140, y);
       const pct = data.totalIncome > 0 ? ((inc.amount / data.totalIncome) * 100).toFixed(1) : '0';
-      doc.text(`${pct}%`, 150, y);
+      doc.text(`${pct}%`, 190, y);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(22, 101, 52);
-      doc.text(`Rp ${inc.amount.toLocaleString('id-ID')}`, 193, y, { align: 'right' });
+      doc.text(`Rp ${inc.amount.toLocaleString('id-ID')}`, pageWidth - 16, y, { align: 'right' });
 
       doc.setDrawColor(241, 245, 249);
       doc.line(14, y + 2, pageWidth - 14, y + 2);
       y += 5.5;
     });
 
-    // Subtotal Row
     doc.setFillColor(240, 253, 244);
     doc.rect(14, y, pageWidth - 28, 6, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(22, 101, 52);
-    doc.text('SUBTOTAL PEMASUKAN', 25, y + 4);
-    doc.text(`Rp ${data.totalIncome.toLocaleString('id-ID')}`, 193, y + 4, { align: 'right' });
-    y += 9;
+    doc.text('SUBTOTAL PEMASUKAN', 28, y + 4);
+    doc.text(`Rp ${data.totalIncome.toLocaleString('id-ID')}`, pageWidth - 16, y + 4, { align: 'right' });
+    y += 10;
   }
 
   // Section 3: Rincian Pengeluaran per Kategori
-  y += 2;
   doc.setTextColor(30, 41, 59);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
@@ -708,10 +736,10 @@ export function exportMonthlyKasSummaryPDF(data: MonthlyKasSummaryData) {
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(51, 65, 85);
   doc.text('No', 16, y + 4.5);
-  doc.text('Kategori Pengeluaran', 25, y + 4.5);
-  doc.text('Frekuensi Transaksi', 115, y + 4.5);
-  doc.text('Porsi %', 150, y + 4.5);
-  doc.text('Jumlah Nominal (Rp)', 193, y + 4.5, { align: 'right' });
+  doc.text('Kategori Pengeluaran', 28, y + 4.5);
+  doc.text('Frekuensi Transaksi', 140, y + 4.5);
+  doc.text('Porsi %', 190, y + 4.5);
+  doc.text('Jumlah Nominal (Rp)', pageWidth - 16, y + 4.5, { align: 'right' });
   y += 8.5;
 
   doc.setFont('helvetica', 'normal');
@@ -726,33 +754,32 @@ export function exportMonthlyKasSummaryPDF(data: MonthlyKasSummaryData) {
       doc.setTextColor(71, 85, 105);
       doc.text(String(idx + 1), 16, y);
       doc.setFont('helvetica', 'bold');
-      doc.text(exp.category, 25, y);
+      doc.text(exp.category, 28, y);
       doc.setFont('helvetica', 'normal');
-      doc.text(`${exp.count} Transaksi`, 115, y);
+      doc.text(`${exp.count} Transaksi`, 140, y);
       const pct = data.totalExpense > 0 ? ((exp.amount / data.totalExpense) * 100).toFixed(1) : '0';
-      doc.text(`${pct}%`, 150, y);
+      doc.text(`${pct}%`, 190, y);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(185, 28, 28);
-      doc.text(`Rp ${exp.amount.toLocaleString('id-ID')}`, 193, y, { align: 'right' });
+      doc.text(`Rp ${exp.amount.toLocaleString('id-ID')}`, pageWidth - 16, y, { align: 'right' });
 
       doc.setDrawColor(241, 245, 249);
       doc.line(14, y + 2, pageWidth - 14, y + 2);
       y += 5.5;
     });
 
-    // Subtotal Row
     doc.setFillColor(254, 242, 242);
     doc.rect(14, y, pageWidth - 28, 6, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(185, 28, 28);
-    doc.text('SUBTOTAL PENGELUARAN', 25, y + 4);
-    doc.text(`Rp ${data.totalExpense.toLocaleString('id-ID')}`, 193, y + 4, { align: 'right' });
-    y += 10;
+    doc.text('SUBTOTAL PENGELUARAN', 28, y + 4);
+    doc.text(`Rp ${data.totalExpense.toLocaleString('id-ID')}`, pageWidth - 16, y + 4, { align: 'right' });
+    y += 12;
   }
 
-  // Section 4: Log Transaksi Lengkap dalam Bulan Ini
-  if (y > 230) {
+  // Section 4: Log Transaksi Lengkap dalam Bulan Ini (Landscape, multi-line wrapping for description)
+  if (y > 170) {
     doc.addPage();
     y = 20;
   }
@@ -769,79 +796,88 @@ export function exportMonthlyKasSummaryPDF(data: MonthlyKasSummaryData) {
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(51, 65, 85);
   doc.text('Tanggal', 16, y + 4.5);
-  doc.text('Kategori', 36, y + 4.5);
-  doc.text('Keterangan', 80, y + 4.5);
-  doc.text('Pencatat', 135, y + 4.5);
-  doc.text('Nominal (Rp)', 193, y + 4.5, { align: 'right' });
+  doc.text('Kategori', 42, y + 4.5);
+  doc.text('Keterangan', 95, y + 4.5);
+  doc.text('Pencatat', 210, y + 4.5);
+  doc.text('Nominal (Rp)', pageWidth - 16, y + 4.5, { align: 'right' });
   y += 8.5;
 
   doc.setFont('helvetica', 'normal');
   data.transactions.forEach((t) => {
-    if (y > 270) {
+    const descLines = doc.splitTextToSize(t.description, 110);
+    const catLines = doc.splitTextToSize(t.category, 50);
+    const recLines = doc.splitTextToSize(t.recordedBy, 32);
+    const lineCount = Math.max(1, descLines.length, catLines.length, recLines.length);
+    const rowHeight = lineCount * 4.5 + 4;
+
+    if (y + rowHeight > 185) {
       doc.addPage();
-      y = 18;
+      y = 20;
       doc.setFillColor(241, 245, 249);
       doc.rect(14, y, pageWidth - 28, 6.5, 'F');
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(51, 65, 85);
       doc.text('Tanggal', 16, y + 4.5);
-      doc.text('Kategori', 36, y + 4.5);
-      doc.text('Keterangan', 80, y + 4.5);
-      doc.text('Pencatat', 135, y + 4.5);
-      doc.text('Nominal (Rp)', 193, y + 4.5, { align: 'right' });
+      doc.text('Kategori', 42, y + 4.5);
+      doc.text('Keterangan', 95, y + 4.5);
+      doc.text('Pencatat', 210, y + 4.5);
+      doc.text('Nominal (Rp)', pageWidth - 16, y + 4.5, { align: 'right' });
       y += 8.5;
       doc.setFont('helvetica', 'normal');
     }
 
     doc.setFontSize(7.5);
     doc.setTextColor(71, 85, 105);
-    doc.text(t.date, 16, y);
+    doc.text(t.date, 16, y + 4);
 
-    const catShort = t.category.length > 22 ? t.category.slice(0, 22) + '..' : t.category;
-    doc.text(catShort, 36, y);
+    catLines.forEach((line: string, li: number) => {
+      doc.text(line, 42, y + 4 + (li * 4));
+    });
 
-    const descShort = t.description.length > 30 ? t.description.slice(0, 30) + '..' : t.description;
-    doc.text(descShort, 80, y);
+    descLines.forEach((line: string, li: number) => {
+      doc.text(line, 95, y + 4 + (li * 4));
+    });
 
-    const recShort = t.recordedBy.length > 18 ? t.recordedBy.slice(0, 18) + '..' : t.recordedBy;
-    doc.text(recShort, 135, y);
+    recLines.forEach((line: string, li: number) => {
+      doc.text(line, 210, y + 4 + (li * 4));
+    });
 
     doc.setFont('helvetica', 'bold');
     if (t.type === 'pemasukan') {
       doc.setTextColor(22, 101, 52);
-      doc.text(`+${Number(t.amount).toLocaleString('id-ID')}`, 193, y, { align: 'right' });
+      doc.text(`+${Number(t.amount).toLocaleString('id-ID')}`, pageWidth - 16, y + 4, { align: 'right' });
     } else {
       doc.setTextColor(185, 28, 28);
-      doc.text(`-${Number(t.amount).toLocaleString('id-ID')}`, 193, y, { align: 'right' });
+      doc.text(`-${Number(t.amount).toLocaleString('id-ID')}`, pageWidth - 16, y + 4, { align: 'right' });
     }
     doc.setFont('helvetica', 'normal');
 
     doc.setDrawColor(241, 245, 249);
-    doc.line(14, y + 2, pageWidth - 14, y + 2);
-    y += 5.5;
+    doc.line(14, y + rowHeight - 2, pageWidth - 14, y + rowHeight - 2);
+    y += rowHeight;
   });
 
   // Footer Signatures
-  if (y > 235) {
+  if (y > 170) {
     doc.addPage();
     y = 20;
   } else {
-    y += 10;
+    y += 12;
   }
 
   doc.setTextColor(71, 85, 105);
   doc.setFontSize(8.5);
   doc.text('Mengetahui / Mengesahkan,', 14, y);
   doc.text('Ketua Paguyuban Perum GSS 1', 14, y + 4.5);
-  doc.text('Bendahara Paguyuban Kas', pageWidth - 65, y + 4.5);
+  doc.text('Bendahara Paguyuban Kas', pageWidth - 70, y + 4.5);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Bpk. BENI (Rumah B 24)', 14, y + 22);
-  doc.text('Bpk. AHMAD (B 02) / ROBY (C 15)', pageWidth - 65, y + 22);
+  doc.text('Bpk. AHMAD (B 02) / ROBY (C 15)', pageWidth - 70, y + 22);
   doc.setFont('helvetica', 'normal');
   doc.text('Ketua Paguyuban & Superadmin', 14, y + 26);
-  doc.text('Bendahara 1 & Bendahara 2', pageWidth - 65, y + 26);
+  doc.text('Bendahara 1 & Bendahara 2', pageWidth - 70, y + 26);
 
   doc.setFontSize(7.5);
   doc.setTextColor(148, 163, 184);
