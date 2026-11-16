@@ -257,10 +257,10 @@ export const DataWargaView: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-stone-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-3 border border-blue-400/30">
-            <Users size={14} className="text-blue-300" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-emerald-300 text-xs font-semibold mb-3 border border-emerald-400/30">
+            <Users size={14} className="text-emerald-300" />
             <span>Database Kependudukan Perum GSS 1</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
@@ -371,7 +371,7 @@ export const DataWargaView: React.FC = () => {
       </div>
 
       {/* Berkas Kependudukan Status Banner */}
-      <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-emerald-50 p-4 rounded-2xl border border-blue-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-emerald-50 p-4 rounded-2xl border border-emerald-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-xs">
             <FileCheck size={20} />
@@ -408,7 +408,7 @@ export const DataWargaView: React.FC = () => {
           onClick={() => setWargaTab('semua')}
           className={`pb-3 px-4 text-xs font-black border-b-2 transition flex items-center gap-2 ${
             wargaTab === 'semua'
-              ? 'border-blue-600 text-blue-700'
+              ? 'border-blue-600 text-emerald-800'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -508,7 +508,7 @@ export const DataWargaView: React.FC = () => {
                       return (
                         <tr key={r.id} className="hover:bg-red-50/40 transition">
                           <td className="py-3 px-3 text-center font-bold text-slate-400">{idx + 1}</td>
-                          <td className="py-3 px-3 font-mono font-bold text-blue-700">{r.houseNumber}</td>
+                          <td className="py-3 px-3 font-mono font-bold text-emerald-800">{r.houseNumber}</td>
                           <td className="py-3 px-3 font-bold text-slate-900">{r.name}</td>
                           <td className="py-3 px-3 text-slate-600 text-[11px]">{r.statusRumah}</td>
                           <td className="py-3 px-3 text-center">
@@ -548,7 +548,7 @@ export const DataWargaView: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEdit(r)}
-                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                  className="p-1.5 text-emerald-700 hover:bg-blue-50 rounded-lg transition"
                                   title="Edit Master Data Warga (Superadmin)"
                                 >
                                   <Edit2 size={13} />
@@ -610,7 +610,7 @@ export const DataWargaView: React.FC = () => {
                 <select
                   value={filterBerkas}
                   onChange={(e) => setFilterBerkas(e.target.value as any)}
-                  className="text-xs py-1.5 px-2.5 bg-white border border-blue-200 rounded-lg text-slate-700 font-semibold"
+                  className="text-xs py-1.5 px-2.5 bg-white border border-emerald-200 rounded-lg text-slate-700 font-semibold"
                 >
                   <option value="ALL">Semua Berkas (58)</option>
                   <option value="LENGKAP">✅ Sudah Serah Berkas ({berkasLengkapCount})</option>
@@ -624,7 +624,7 @@ export const DataWargaView: React.FC = () => {
                     placeholder="Cari nama, no rumah, blok..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-8 pr-8 py-1.5 bg-white border border-blue-200 focus:border-blue-500 rounded-lg text-xs font-medium focus:ring-1 focus:ring-blue-500"
+                    className="w-full pl-8 pr-8 py-1.5 bg-white border border-emerald-200 focus:border-emerald-500 rounded-lg text-xs font-medium focus:ring-1 focus:ring-emerald-500"
                   />
                   {searchQuery && (
                     <button
@@ -756,7 +756,7 @@ export const DataWargaView: React.FC = () => {
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => handleOpenEdit(r)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          className="p-1.5 text-emerald-700 hover:bg-blue-50 rounded-lg transition"
                           title="Edit Data Warga (Superadmin)"
                         >
                           <Edit2 size={13} />
@@ -825,7 +825,7 @@ export const DataWargaView: React.FC = () => {
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="Nama Warga..."
                   required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold uppercase focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold uppercase focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -838,7 +838,7 @@ export const DataWargaView: React.FC = () => {
                     onChange={(e) => setFormHouse(e.target.value)}
                     placeholder="Contoh: A 01, B 10, C 05"
                     required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold uppercase focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold uppercase focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
 
@@ -847,7 +847,7 @@ export const DataWargaView: React.FC = () => {
                   <select
                     value={formBlock}
                     onChange={(e) => setFormBlock(e.target.value as any)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="A">Blok A</option>
                     <option value="B">Blok B</option>
@@ -1021,7 +1021,7 @@ export const DataWargaView: React.FC = () => {
                         min="0"
                         value={formPoints}
                         onChange={(e) => setFormPoints(Number(e.target.value))}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-blue-600"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-emerald-700"
                       />
                     </div>
                   </div>
@@ -1054,7 +1054,7 @@ export const DataWargaView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md"
                 >
                   Simpan Data Warga
                 </button>

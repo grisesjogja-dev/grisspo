@@ -104,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({
       case 'admin_inventaris':
         return { label: 'ADMIN INVENTARIS', bg: 'bg-amber-100 text-amber-800 border-amber-300' };
       default:
-        return { label: 'WARGA GSS', bg: 'bg-blue-100 text-blue-800 border-blue-300' };
+        return { label: 'WARGA GSS', bg: 'bg-blue-100 text-blue-800 border-emerald-300' };
     }
   };
 
@@ -143,9 +143,9 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Brand */}
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => currentUser && setActiveView('dashboard')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-amber-400 p-0.5 flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
-                <span className="font-black text-transparent bg-clip-text bg-gradient-to-tr from-blue-400 to-amber-300 text-lg">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-amber-500 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <div className="w-full h-full bg-stone-900 rounded-[10px] flex items-center justify-center">
+                <span className="font-black text-transparent bg-clip-text bg-gradient-to-tr from-emerald-400 to-amber-300 text-lg">
                   GS
                 </span>
               </div>
@@ -159,14 +159,14 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
                 <button
                   onClick={triggerManualSync}
-                  className="hidden md:inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition"
+                  className="hidden md:inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-stone-800 text-stone-300 border border-stone-700 hover:bg-stone-700 transition"
                   title="Klik untuk menyegarkan dan memperbarui timestamp sinkronisasi data"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                   <span>Sinkron: {lastSyncedAt}</span>
                 </button>
               </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block truncate max-w-xs">
+              <p className="text-[11px] text-stone-400 hidden sm:block truncate max-w-xs">
                 Griya Sedayu Selaras Portal Online
               </p>
             </div>
@@ -177,10 +177,10 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Struktur Pengurus Paguyuban Button (Always visible) */}
             <button
               onClick={() => setIsPengurusOpen(true)}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-indigo-900/40 hover:bg-indigo-800/60 text-indigo-300 border border-indigo-700/50 transition flex items-center gap-1.5 text-xs font-bold"
+              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-700/50 transition flex items-center gap-1.5 text-xs font-bold"
               title="Informasi Pengurus Paguyuban Warga Perum GSS"
             >
-              <Users size={15} className="text-indigo-400" />
+              <Users size={15} className="text-emerald-400" />
               <span className="hidden md:inline">Pengurus Paguyuban</span>
             </button>
 
@@ -188,7 +188,7 @@ export const Header: React.FC<HeaderProps> = ({
               /* Unauthenticated / Guest state: Only show Login Warga button */
               <button
                 onClick={onOpenLogin}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-blue-500/25 border border-blue-400/30 transition transform active:scale-95"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/25 border border-emerald-500/30 transition transform active:scale-95"
               >
                 <LogIn size={15} />
                 <span>Login Warga</span>
@@ -274,7 +274,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <div className="px-3 py-2 border-b border-slate-800 mb-2">
                         <p className="text-xs text-slate-400">Sedang aktif sebagai:</p>
                         <p className="text-sm font-bold text-white">{currentUser.name}</p>
-                        <p className="text-xs text-blue-400 font-mono">Rumah {currentUser.houseNumber} ({currentUser.role.toUpperCase()})</p>
+                        <p className="text-xs text-emerald-400 font-mono">Rumah {currentUser.houseNumber} ({currentUser.role.toUpperCase()})</p>
                         <div className="mt-1 flex items-center gap-1 text-[11px] text-amber-400 font-semibold">
                           <Coins size={12} />
                           <span>{currentUser.points || 0} Poin Loyalitas</span>
@@ -289,9 +289,9 @@ export const Header: React.FC<HeaderProps> = ({
                             setShowRoleMenu(false);
                             onOpenEditProfile();
                           }}
-                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-blue-300 font-bold flex items-center gap-2 transition"
+                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-800 text-emerald-300 font-bold flex items-center gap-2 transition"
                         >
-                          <Edit3 size={13} className="text-blue-400" />
+                          <Edit3 size={13} className="text-emerald-400" />
                           <span>Edit Profil Saya</span>
                         </button>
 
@@ -339,7 +339,7 @@ export const Header: React.FC<HeaderProps> = ({
                             setShowRoleMenu(false);
                             onOpenLogin();
                           }}
-                          className="flex-1 px-3 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-1.5"
+                          className="flex-1 px-3 py-2 text-xs font-semibold bg-blue-600 hover:bg-emerald-700 text-white rounded-lg flex items-center justify-center gap-1.5"
                         >
                           <LogIn size={13} />
                           <span>Ganti Akun / Login Warga</span>

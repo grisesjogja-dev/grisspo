@@ -72,7 +72,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
         </button>
 
         <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-lg shadow-md shadow-blue-500/20">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-700 text-white flex items-center justify-center font-black text-lg shadow-md shadow-emerald-600/20">
             {currentUser.name.slice(0, 2)}
           </div>
           <div>
@@ -97,7 +97,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
             {/* House Number (Read-only) */}
             <div>
               <label className="block text-xs font-bold text-slate-600 mb-1 flex items-center gap-1.5">
-                <Home size={14} className="text-blue-600" />
+                <Home size={14} className="text-emerald-700" />
                 <span>Nomor Rumah (Terkunci)</span>
               </label>
               <input
@@ -111,7 +111,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
             {/* Role Badge */}
             <div>
               <label className="block text-xs font-bold text-slate-600 mb-1 flex items-center gap-1.5">
-                <Shield size={14} className="text-blue-600" />
+                <Shield size={14} className="text-emerald-700" />
                 <span>Hak Akses Role</span>
               </label>
               <div className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black uppercase text-indigo-700">
@@ -122,7 +122,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
             {/* Resident Name */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                <User size={14} className="text-blue-600" />
+                <User size={14} className="text-emerald-700" />
                 <span>Nama Lengkap Warga</span>
               </label>
               <input
@@ -131,7 +131,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 onChange={(e) => setName(e.target.value)}
                 required
                 placeholder="Nama Bpk/Ibu Warga"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
 
@@ -146,7 +146,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="0812-xxxx-xxxx"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <p className="text-[10px] text-slate-400 mt-0.5">Digunakan untuk notifikasi penting paguyuban</p>
             </div>
@@ -154,7 +154,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
             {/* Family Members */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Users size={14} className="text-blue-600" />
+                <Users size={14} className="text-emerald-700" />
                 <span>Jumlah Anggota Keluarga (Jiwa)</span>
               </label>
               <input
@@ -163,7 +163,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 max={20}
                 value={familyMembers}
                 onChange={(e) => setFamilyMembers(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
 
@@ -178,7 +178,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Kosongkan jika tetap gunakan Griss123"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <p className="text-[10px] text-slate-400 mt-0.5">Password khusus untuk login akun rumah ini</p>
             </div>
@@ -227,7 +227,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
               <button
                 type="submit"
                 disabled={isSaving}
-                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-md shadow-blue-500/20 transition flex items-center gap-1.5"
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5"
               >
                 <CheckCircle2 size={15} />
                 <span>{isSaving ? 'Menyimpan...' : 'Simpan Profil'}</span>

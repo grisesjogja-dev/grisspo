@@ -35,7 +35,7 @@ export const DetailToggle: React.FC<DetailToggleProps> = ({
         }`}
         title={isOpen ? 'Sembunyikan keterangan' : 'Klik untuk melihat keterangan detail'}
       >
-        <Info size={11} className={isOpen ? (variant === 'dark' ? 'text-amber-300' : 'text-blue-600') : 'opacity-70'} />
+        <Info size={11} className={isOpen ? (variant === 'dark' ? 'text-amber-300' : 'text-emerald-700') : 'opacity-70'} />
         <span>{label}</span>
         {isOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
       </button>

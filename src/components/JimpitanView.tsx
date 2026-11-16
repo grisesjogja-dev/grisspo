@@ -715,7 +715,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                   <button
                     type="button"
                     onClick={onOpenLogin}
-                    className="text-[11px] text-blue-300 hover:text-white underline font-medium"
+                    className="text-[11px] text-emerald-300 hover:text-white underline font-medium"
                   >
                     Buka Popup Modal
                   </button>
@@ -974,7 +974,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                           ...existingForDate,
                           entries: existingForDate.entries.map((entry) => ({ ...entry }))
                         })}
-                        className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs transition inline-flex items-center gap-1 shadow-xs"
+                        className="px-3.5 py-1.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition inline-flex items-center gap-1 shadow-xs"
                       >
                         <Edit2 size={12} />
                         <span>Edit Data Tanggal Ini (Superadmin)</span>
@@ -1069,7 +1069,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       </h3>
                       {isAdminRole ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-extrabold text-[10px]">
-                          <ShieldCheck size={11} className="text-blue-600" />
+                          <ShieldCheck size={11} className="text-emerald-700" />
                           <span>Akses Pengurus / Admin (Bisa Absen)</span>
                         </span>
                       ) : isDutyOfficerToday ? (
@@ -1329,7 +1329,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
               <button
                 type="button"
                 onClick={() => handleSelectAll(true)}
-                className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold transition border border-blue-200"
+                className="px-2.5 py-1 rounded-lg bg-blue-50 text-emerald-800 hover:bg-blue-100 text-xs font-bold transition border border-emerald-200"
               >
                 Pilih Semua
               </button>
@@ -1616,7 +1616,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
                     <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 text-center min-w-[140px]">
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">Partisipasi</span>
-                      <div className="text-2xl font-black text-blue-400 mt-0.5">
+                      <div className="text-2xl font-black text-emerald-400 mt-0.5">
                         {activeDailyReport.entries.length} <span className="text-xs text-slate-400">Rumah</span>
                       </div>
                       <span className="text-[10px] text-slate-400">Minimal Rp 500 (Bebas)</span>
@@ -1651,7 +1651,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                           ...activeDailyReport,
                           entries: activeDailyReport.entries.map((entry) => ({ ...entry }))
                         })}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm"
+                        className="px-4 py-2 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm"
                         title="Edit Laporan Jimpitan (Hak Akses Khusus Superadmin)"
                       >
                         <Edit2 size={14} />
@@ -1710,7 +1710,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       {activeDailyReport.entries.map((entry, idx) => (
                         <tr key={idx} className="hover:bg-slate-50 transition">
                           <td className="py-3 px-4 text-center font-bold text-slate-400">{idx + 1}</td>
-                          <td className="py-3 px-4 font-mono font-bold text-blue-700">{entry.houseNumber}</td>
+                          <td className="py-3 px-4 font-mono font-bold text-emerald-800">{entry.houseNumber}</td>
                           <td className="py-3 px-4 font-semibold text-slate-800">{getResidentNameByHouse(entry.houseNumber, entry.residentName)}</td>
                           <td className="py-3 px-4 text-center">
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
@@ -1854,11 +1854,11 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-blue-100 shadow-xs">
-              <span className="text-xs font-semibold text-blue-700">Status Warga Lunas</span>
-              <div className="text-xl font-black text-blue-600 mt-1">
+              <span className="text-xs font-semibold text-emerald-800">Status Warga Lunas</span>
+              <div className="text-xl font-black text-emerald-700 mt-1">
                 {lunasCount} <span className="text-xs font-normal text-slate-500">/ {totalResidentsCount} Rumah</span>
               </div>
-              <p className="text-[11px] text-blue-700 mt-0.5">
+              <p className="text-[11px] text-emerald-800 mt-0.5">
                 {totalResidentsCount > 0 ? Math.round((lunasCount / totalResidentsCount) * 100) : 0}% Warga Tertib Jimpitan
               </p>
             </div>
@@ -1955,7 +1955,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     return (
                       <tr key={r.id} className="hover:bg-slate-50/80 transition">
                         <td className="py-3 px-3 text-center font-bold text-slate-400">{idx + 1}</td>
-                        <td className="py-3 px-3 font-mono font-bold text-blue-700">{r.houseNumber}</td>
+                        <td className="py-3 px-3 font-mono font-bold text-emerald-800">{r.houseNumber}</td>
                         <td className="py-3 px-3 font-semibold text-slate-800">{getResidentNameByHouse(r.houseNumber, r.name)}</td>
                         <td className="py-3 px-3 font-bold text-slate-600">Blok {r.block}</td>
                         <td className="py-3 px-3 text-right font-medium text-slate-600">
@@ -2146,7 +2146,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                         setSelectedDailyReportDate(report.date);
                         setTab('laporan_harian');
                       }}
-                      className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                      className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-emerald-800 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
                     >
                       <span>Lihat Rincian</span>
                       <ChevronRight size={12} />
@@ -2161,7 +2161,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                           ...report,
                           entries: report.entries.map((entry) => ({ ...entry }))
                         })}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                        className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-blue-50 rounded-lg transition"
                         title="Edit Laporan Jimpitan (Hak Akses Superadmin)"
                       >
                         <Edit2 size={15} />
@@ -2222,7 +2222,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 </div>
                 <div className="p-3 bg-blue-50 rounded-2xl border border-blue-100">
                   <span className="text-[11px] font-bold text-blue-800 uppercase">Warga Menjimpit</span>
-                  <div className="text-2xl font-black text-blue-700 mt-0.5">
+                  <div className="text-2xl font-black text-emerald-800 mt-0.5">
                     {submittedReport.entries.length} <span className="text-sm font-semibold text-slate-500">Rumah</span>
                   </div>
                 </div>
@@ -2343,7 +2343,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     </div>
                     <div className="flex justify-between items-center pb-1">
                       <span className="text-slate-500">Metode:</span>
-                      <span className="font-bold text-blue-700">{paySuccessReceipt.method}</span>
+                      <span className="font-bold text-emerald-800">{paySuccessReceipt.method}</span>
                     </div>
                     <div className="flex justify-between items-center pb-1">
                       <span className="text-slate-500">Tanggal:</span>
@@ -2507,7 +2507,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                             : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                         }`}
                       >
-                        <CreditCard size={16} className="text-blue-600" />
+                        <CreditCard size={16} className="text-emerald-700" />
                         <span className="text-[11px]">Transfer Bank BRI</span>
                       </button>
 
@@ -2526,7 +2526,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     </div>
 
                     {payMethod === 'transfer' && (
-                      <div className="mt-2.5 p-3 bg-blue-50/80 border border-blue-200 rounded-xl text-xs space-y-1">
+                      <div className="mt-2.5 p-3 bg-blue-50/80 border border-emerald-200 rounded-xl text-xs space-y-1">
                         <span className="font-extrabold text-blue-900 block text-[10px] uppercase">
                           Rekening Transfer Bank BRI:
                         </span>

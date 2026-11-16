@@ -349,10 +349,10 @@ export const KeuanganView: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-stone-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-3 border border-blue-400/30">
-            <ShieldCheck size={14} className="text-blue-300" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-emerald-300 text-xs font-semibold mb-3 border border-emerald-400/30">
+            <ShieldCheck size={14} className="text-emerald-300" />
             <span>Transparansi Kas 100% Warga & Anti Manipulasi</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
@@ -382,7 +382,7 @@ export const KeuanganView: React.FC = () => {
 
             <button
               onClick={() => exportFinanceToPDF(filteredTransactions, 'Buku Kas Paguyuban GSS 1', auditedTotals.totalIncome, auditedTotals.totalExpense, auditedTotals.currentBalance)}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 transition"
+              className="px-4 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 transition"
             >
               <FileDown size={15} />
               <span>Ekspor PDF Seluruh Kas</span>
@@ -471,15 +471,15 @@ export const KeuanganView: React.FC = () => {
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Saldo Kas Bersih Saat Ini</span>
               <span className="text-[10px] bg-blue-100 text-blue-800 font-extrabold px-1.5 py-0.5 rounded">Real-time</span>
             </div>
-            <div className="text-2xl font-black text-blue-700 mt-1">
+            <div className="text-2xl font-black text-emerald-800 mt-1">
               Rp {auditedTotals.currentBalance.toLocaleString('id-ID')}
             </div>
-            <div className="text-[11px] text-blue-700 mt-1 flex items-center gap-1 font-semibold">
+            <div className="text-[11px] text-emerald-800 mt-1 flex items-center gap-1 font-semibold">
               <Wallet size={12} />
               <span>Tersimpan di Rekening Paguyuban</span>
             </div>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-emerald-800 flex items-center justify-center">
             <Wallet size={24} />
           </div>
         </div>
@@ -490,11 +490,11 @@ export const KeuanganView: React.FC = () => {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-slate-100">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-xs font-bold mb-2">
-              <Sparkles size={13} className="text-indigo-600" />
+              <Sparkles size={13} className="text-emerald-700" />
               <span>Fitur Otomatis Transparansi Kas Bulanan</span>
             </div>
             <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <Calculator size={22} className="text-indigo-600" />
+              <Calculator size={22} className="text-emerald-700" />
               <span>Laporan Ringkasan Kas Bulanan Otomatis</span>
             </h3>
             <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
@@ -505,7 +505,7 @@ export const KeuanganView: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Periode Month Selector */}
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
-              <Calendar size={14} className="text-indigo-600" />
+              <Calendar size={14} className="text-emerald-700" />
               <span className="text-xs font-bold text-slate-600">Bulan:</span>
               <select
                 value={selectedMonth}
@@ -531,7 +531,7 @@ export const KeuanganView: React.FC = () => {
             {/* Tombol Ekspor PDF Laporan Kas Bulanan Resmi */}
             <button
               onClick={() => exportMonthlyKasSummaryPDF(monthlyReportData)}
-              className="px-4 py-2 bg-gradient-to-r from-blue-700 via-indigo-700 to-indigo-800 hover:from-blue-800 hover:to-indigo-900 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/25 flex items-center gap-1.5 transition active:scale-95"
+              className="px-4 py-2 bg-gradient-to-r from-blue-700 via-indigo-700 to-indigo-800 hover:from-blue-800 hover:to-indigo-900 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/25 flex items-center gap-1.5 transition active:scale-95"
               title="Download dokumen PDF resmi ringkasan kas bulanan dengan tanda tangan Ketua & Bendahara"
             >
               <FileDown size={15} />
@@ -582,15 +582,15 @@ export const KeuanganView: React.FC = () => {
           </div>
 
           {/* 4. Saldo Akhir Kas */}
-          <div className="bg-blue-50/60 p-4 rounded-2xl border border-blue-200/80">
+          <div className="bg-blue-50/60 p-4 rounded-2xl border border-emerald-200/80">
             <span className="text-[11px] font-bold text-blue-800 uppercase tracking-wider flex items-center gap-1">
-              <Wallet size={13} className="text-blue-600" />
+              <Wallet size={13} className="text-emerald-700" />
               <span>Saldo Akhir Kas</span>
             </span>
-            <div className="text-lg font-black text-blue-700 mt-1">
+            <div className="text-lg font-black text-emerald-800 mt-1">
               Rp {monthlyReportData.finalBalance.toLocaleString('id-ID')}
             </div>
-            <div className="text-[10px] text-blue-700 font-semibold mt-1">
+            <div className="text-[10px] text-emerald-800 font-semibold mt-1">
               Posisi Kas Per Akhir Bulan
             </div>
           </div>
@@ -704,7 +704,7 @@ export const KeuanganView: React.FC = () => {
 
           <button
             onClick={() => exportMonthlyKasSummaryPDF(monthlyReportData)}
-            className="text-xs text-slate-600 hover:text-blue-700 flex items-center gap-1 font-semibold"
+            className="text-xs text-slate-600 hover:text-emerald-800 flex items-center gap-1 font-semibold"
           >
             <Printer size={13} />
             <span>Format PDF Resmi dengan Tanda Tangan Pengurus</span>
@@ -999,7 +999,7 @@ export const KeuanganView: React.FC = () => {
                       className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[10px] flex items-center gap-1 mx-auto border border-slate-200"
                       title="Klik untuk memverifikasi keaslian hash SHA-256"
                     >
-                      <Lock size={10} className="text-blue-600" />
+                      <Lock size={10} className="text-emerald-700" />
                       <span>{trx.encryptedHash.slice(0, 8)}...</span>
                     </button>
                   </td>
@@ -1010,7 +1010,7 @@ export const KeuanganView: React.FC = () => {
                         {canAdd && (
                           <button
                             onClick={() => handleOpenEdit(trx)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-blue-50 rounded-lg transition"
                             title="Edit Transaksi Kas (Akses: Bendahara & Superadmin)"
                           >
                             <Edit2 size={14} />
@@ -1119,7 +1119,7 @@ export const KeuanganView: React.FC = () => {
                     else if (cat === 'Lain-lain Pemasukan') setTrxAmount(50000);
                     else if (cat === 'Pemasukan Jimpitan Bulanan') setTrxAmount(15000);
                   }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   {trxType === 'pemasukan'
                     ? incomeCategories
@@ -1152,7 +1152,7 @@ export const KeuanganView: React.FC = () => {
                     min={1}
                     value={trxAmount}
                     onChange={(e) => setTrxAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-black focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     placeholder="25000"
                     required
                   />
@@ -1196,8 +1196,8 @@ export const KeuanganView: React.FC = () => {
               </div>
 
               {/* Security notice */}
-              <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-[11px] text-blue-800 flex items-center gap-2">
-                <Lock size={14} className="text-blue-600 shrink-0" />
+              <div className="p-3 bg-blue-50 rounded-xl border border-emerald-200 text-[11px] text-blue-800 flex items-center gap-2">
+                <Lock size={14} className="text-emerald-700 shrink-0" />
                 <span>Transaksi otomatis dihitung hash integritas SHA-256 dan diaudit oleh deteksi anomali.</span>
               </div>
 
@@ -1211,7 +1211,7 @@ export const KeuanganView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-500/20"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-600/20"
                 >
                   Simpan Transaksi Kas
                 </button>
@@ -1368,7 +1368,7 @@ export const KeuanganView: React.FC = () => {
                     value={editAmount}
                     onChange={(e) => setEditAmount(e.target.value === '' ? '' : Number(e.target.value))}
                     required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-blue-700"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-emerald-800"
                   />
                 </div>
 
@@ -1405,7 +1405,7 @@ export const KeuanganView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md"
                 >
                   Simpan Perubahan Master Transaksi
                 </button>

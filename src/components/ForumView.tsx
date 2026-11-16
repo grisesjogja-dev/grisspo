@@ -93,7 +93,7 @@ export const ForumView: React.FC = () => {
       case 'Acara Komunitas':
         return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'Saran Umum':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-100 text-blue-800 border-emerald-200';
       default:
         return 'bg-slate-100 text-slate-800 border-slate-200';
     }
@@ -102,10 +102,10 @@ export const ForumView: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-indigo-900 via-blue-900 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-stone-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-3 border border-blue-400/30">
-            <MessageSquare size={14} className="text-blue-300" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-emerald-300 text-xs font-semibold mb-3 border border-emerald-400/30">
+            <MessageSquare size={14} className="text-emerald-300" />
             <span>Ruang Musyawarah Online Warga GSS</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
@@ -118,7 +118,7 @@ export const ForumView: React.FC = () => {
           <div className="mt-5 flex flex-wrap gap-2.5 items-center">
             <button
               onClick={() => setShowNewPostModal(true)}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/30 flex items-center gap-1.5 transition"
+              className="px-4 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 transition"
             >
               <PlusCircle size={15} />
               <span>Buat Topik Diskusi Baru (+5 Poin)</span>
@@ -186,7 +186,7 @@ export const ForumView: React.FC = () => {
               {/* Post Header */}
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs uppercase shadow-xs">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-700 text-white flex items-center justify-center font-bold text-xs uppercase shadow-xs">
                     {post.authorName.slice(0, 2)}
                   </div>
                   <div>
@@ -250,7 +250,7 @@ export const ForumView: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setEditingPost(post)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-blue-50 rounded-lg transition"
                           title="Edit Topik Diskusi (Superadmin)"
                         >
                           <Edit2 size={13} />
@@ -291,10 +291,10 @@ export const ForumView: React.FC = () => {
                 <button
                   onClick={() => togglePostLike(post.id)}
                   className={`flex items-center gap-1.5 py-1 px-2.5 rounded-lg transition ${
-                    hasLiked ? 'text-blue-600 bg-blue-50 font-bold' : 'hover:bg-slate-100'
+                    hasLiked ? 'text-emerald-700 bg-blue-50 font-bold' : 'hover:bg-slate-100'
                   }`}
                 >
-                  <ThumbsUp size={14} className={hasLiked ? 'fill-blue-600 text-blue-600' : ''} />
+                  <ThumbsUp size={14} className={hasLiked ? 'fill-blue-600 text-emerald-700' : ''} />
                   <span>{post.likes.length} Suka</span>
                 </button>
 
@@ -367,11 +367,11 @@ export const ForumView: React.FC = () => {
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleSendComment(post.id);
                       }}
-                      className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                     <button
                       onClick={() => handleSendComment(post.id)}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1"
+                      className="px-4 py-2 bg-blue-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1"
                     >
                       <Send size={12} />
                       <span>Kirim</span>
@@ -390,7 +390,7 @@ export const ForumView: React.FC = () => {
           <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden border border-slate-200 shadow-2xl">
             <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MessageSquare size={18} className="text-blue-400" />
+                <MessageSquare size={18} className="text-emerald-400" />
                 <h3 className="text-sm font-bold">Buat Topik Diskusi Warga Baru</h3>
               </div>
               <button
@@ -424,7 +424,7 @@ export const ForumView: React.FC = () => {
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -436,7 +436,7 @@ export const ForumView: React.FC = () => {
                   onChange={(e) => setNewContent(e.target.value)}
                   rows={4}
                   required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -455,7 +455,7 @@ export const ForumView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md"
                 >
                   Terbitkan Topik Diskusi
                 </button>
@@ -522,7 +522,7 @@ export const ForumView: React.FC = () => {
                       category: e.target.value as any
                     })
                   }
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="Keamanan">Keamanan</option>
                   <option value="Kebersihan">Kebersihan</option>
@@ -543,7 +543,7 @@ export const ForumView: React.FC = () => {
                       title: e.target.value
                     })
                   }
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -559,7 +559,7 @@ export const ForumView: React.FC = () => {
                       content: e.target.value
                     })
                   }
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -573,7 +573,7 @@ export const ForumView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md"
                 >
                   Simpan Perubahan Topik
                 </button>

@@ -105,7 +105,7 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans antialiased selection:bg-emerald-600 selection:text-white">
       {/* Top Header */}
       <Header
         onOpenLogin={() => setIsLoginOpen(true)}
@@ -139,7 +139,7 @@ const MainApp: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsVersionChangelogOpen(true)}
-              className="inline-flex items-center gap-1 text-[11px] font-black text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-0.5 rounded-full transition cursor-pointer"
+              className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700 hover:text-emerald-900 bg-blue-50 hover:bg-blue-100 border border-emerald-200 px-2.5 py-0.5 rounded-full transition cursor-pointer"
               title="Lihat riwayat catatan pembaruan sistem dari awal peluncuran hingga versi terbaru"
             >
               <span>Riwayat Pembaruan Sistem (Changelog) &raquo;</span>
@@ -218,7 +218,7 @@ const MainApp: React.FC = () => {
             <div className="pt-2">
               <button
                 onClick={clearInactivityNotice}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition"
+                className="w-full py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition"
               >
                 Mengerti & Lanjutkan
               </button>

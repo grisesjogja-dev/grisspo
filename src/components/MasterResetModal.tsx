@@ -304,8 +304,8 @@ export const MasterResetModal: React.FC<MasterResetModalProps> = ({ isOpen, onCl
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-xs text-blue-900 flex items-start gap-2.5">
-            <CheckCircle2 size={16} className="text-blue-600 shrink-0 mt-0.5" />
+          <div className="bg-blue-50 border border-emerald-200 rounded-2xl p-4 text-xs text-blue-900 flex items-start gap-2.5">
+            <CheckCircle2 size={16} className="text-emerald-700 shrink-0 mt-0.5" />
             <p>
               <strong>Ketentuan Perlindungan Data:</strong> Data resmi 58 warga (Nama, Blok/Nomor Rumah, Status Rumah) dan 33 item inventaris standar paguyuban dilindungi dan tidak akan terhapus secara tidak sengaja melalui tombol reset ini.
             </p>

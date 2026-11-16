@@ -65,7 +65,7 @@ export const Navbar: React.FC = () => {
               }}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
                 activeView === 'dashboard'
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-emerald-600/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -119,7 +119,7 @@ export const Navbar: React.FC = () => {
                 onClick={() => setOpenDropdown(openDropdown === 'keuangan' ? null : 'keuangan')}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
                   isKeuanganActive
-                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                    ? 'bg-blue-600 text-white shadow-sm shadow-emerald-600/20'
                     : openDropdown === 'keuangan'
                     ? 'bg-slate-100 text-slate-900'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -149,11 +149,11 @@ export const Navbar: React.FC = () => {
                     }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-left transition ${
                       activeView === 'fasum'
-                        ? 'bg-blue-50 text-blue-700 font-black'
-                        : 'text-slate-700 hover:bg-slate-50 hover:text-blue-600'
+                        ? 'bg-blue-50 text-emerald-800 font-black'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-emerald-700'
                     }`}
                   >
-                    <Building2 size={16} className={activeView === 'fasum' ? 'text-blue-600' : 'text-slate-400'} />
+                    <Building2 size={16} className={activeView === 'fasum' ? 'text-emerald-700' : 'text-slate-400'} />
                     <div className="flex flex-col">
                       <span>sewa fasum</span>
                       <span className="text-[10px] font-normal text-slate-400">Balai pertemuan, tenda & kursi</span>
@@ -169,11 +169,11 @@ export const Navbar: React.FC = () => {
                     }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-left transition ${
                       activeView === 'keuangan'
-                        ? 'bg-blue-50 text-blue-700 font-black'
-                        : 'text-slate-700 hover:bg-slate-50 hover:text-blue-600'
+                        ? 'bg-blue-50 text-emerald-800 font-black'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-emerald-700'
                     }`}
                   >
-                    <ReceiptText size={16} className={activeView === 'keuangan' ? 'text-blue-600' : 'text-slate-400'} />
+                    <ReceiptText size={16} className={activeView === 'keuangan' ? 'text-emerald-700' : 'text-slate-400'} />
                     <div className="flex flex-col">
                       <span>kas</span>
                       <span className="text-[10px] font-normal text-slate-400">Buku kas & laporan transaksi</span>
@@ -190,7 +190,7 @@ export const Navbar: React.FC = () => {
                 onClick={() => setOpenDropdown(openDropdown === 'info' ? null : 'info')}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
                   isInfoActive
-                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                    ? 'bg-blue-600 text-white shadow-sm shadow-emerald-600/20'
                     : openDropdown === 'info'
                     ? 'bg-slate-100 text-slate-900'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -220,11 +220,11 @@ export const Navbar: React.FC = () => {
                     }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-left transition ${
                       activeView === 'warga'
-                        ? 'bg-blue-50 text-blue-700 font-black'
-                        : 'text-slate-700 hover:bg-slate-50 hover:text-blue-600'
+                        ? 'bg-blue-50 text-emerald-800 font-black'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-emerald-700'
                     }`}
                   >
-                    <Users size={16} className={activeView === 'warga' ? 'text-blue-600' : 'text-slate-400'} />
+                    <Users size={16} className={activeView === 'warga' ? 'text-emerald-700' : 'text-slate-400'} />
                     <div className="flex flex-col">
                       <span>data warga</span>
                       <span className="text-[10px] font-normal text-slate-400">Data 58 warga & status hunian</span>
@@ -240,11 +240,11 @@ export const Navbar: React.FC = () => {
                     }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-left transition ${
                       activeView === 'ronda'
-                        ? 'bg-blue-50 text-blue-700 font-black'
-                        : 'text-slate-700 hover:bg-slate-50 hover:text-blue-600'
+                        ? 'bg-blue-50 text-emerald-800 font-black'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-emerald-700'
                     }`}
                   >
-                    <Shield size={16} className={activeView === 'ronda' ? 'text-blue-600' : 'text-slate-400'} />
+                    <Shield size={16} className={activeView === 'ronda' ? 'text-emerald-700' : 'text-slate-400'} />
                     <div className="flex flex-col">
                       <span>jadwal ronda</span>
                       <span className="text-[10px] font-normal text-slate-400">Jadwal ronda malam & petugas</span>
@@ -260,11 +260,11 @@ export const Navbar: React.FC = () => {
                     }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-left transition ${
                       activeView === 'notulen'
-                        ? 'bg-blue-50 text-blue-700 font-black'
-                        : 'text-slate-700 hover:bg-slate-50 hover:text-blue-600'
+                        ? 'bg-blue-50 text-emerald-800 font-black'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-emerald-700'
                     }`}
                   >
-                    <FileText size={16} className={activeView === 'notulen' ? 'text-blue-600' : 'text-slate-400'} />
+                    <FileText size={16} className={activeView === 'notulen' ? 'text-emerald-700' : 'text-slate-400'} />
                     <div className="flex flex-col">
                       <span>notulen & absensi</span>
                       <span className="text-[10px] font-normal text-slate-400">Hasil rapat & presensi warga</span>
@@ -280,11 +280,11 @@ export const Navbar: React.FC = () => {
                     }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-left transition ${
                       activeView === 'tatib'
-                        ? 'bg-blue-50 text-blue-700 font-black'
-                        : 'text-slate-700 hover:bg-slate-50 hover:text-blue-600'
+                        ? 'bg-blue-50 text-emerald-800 font-black'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-emerald-700'
                     }`}
                   >
-                    <BookOpen size={16} className={activeView === 'tatib' ? 'text-blue-600' : 'text-slate-400'} />
+                    <BookOpen size={16} className={activeView === 'tatib' ? 'text-emerald-700' : 'text-slate-400'} />
                     <div className="flex flex-col">
                       <span>tata tertib</span>
                       <span className="text-[10px] font-normal text-slate-400">Aturan resmi paguyuban 2026</span>
@@ -303,7 +303,7 @@ export const Navbar: React.FC = () => {
               }}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
                 activeView === 'inventaris'
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-emerald-600/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -320,7 +320,7 @@ export const Navbar: React.FC = () => {
               }}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
                 activeView === 'forum'
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-emerald-600/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -337,7 +337,7 @@ export const Navbar: React.FC = () => {
               }}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
                 activeView === 'poin'
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-emerald-600/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -361,7 +361,7 @@ export const Navbar: React.FC = () => {
               setMobileSheet(null);
             }}
             className={`flex flex-col items-center py-1 rounded-xl transition ${
-              activeView === 'dashboard' ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              activeView === 'dashboard' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <LayoutDashboard size={18} />
@@ -388,7 +388,7 @@ export const Navbar: React.FC = () => {
             type="button"
             onClick={() => setMobileSheet(mobileSheet === 'keuangan' ? null : 'keuangan')}
             className={`flex flex-col items-center py-1 rounded-xl transition ${
-              isKeuanganActive ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              isKeuanganActive ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <ReceiptText size={18} />
@@ -403,7 +403,7 @@ export const Navbar: React.FC = () => {
             type="button"
             onClick={() => setMobileSheet(mobileSheet === 'info' ? null : 'info')}
             className={`flex flex-col items-center py-1 rounded-xl transition ${
-              isInfoActive ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              isInfoActive ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Users size={18} />
@@ -419,7 +419,7 @@ export const Navbar: React.FC = () => {
             onClick={() => setMobileSheet(mobileSheet === 'lainnya' ? null : 'lainnya')}
             className={`flex flex-col items-center py-1 rounded-xl transition ${
               ['inventaris', 'forum', 'poin'].includes(activeView)
-                ? 'text-indigo-400 font-bold'
+                ? 'text-emerald-400 font-bold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -470,11 +470,11 @@ export const Navbar: React.FC = () => {
                   }}
                   className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
                     activeView === 'fasum'
-                      ? 'bg-blue-600/30 border-blue-500 text-white font-bold'
+                      ? 'bg-blue-600/30 border-emerald-500 text-white font-bold'
                       : 'bg-slate-800/80 border-slate-700 text-slate-300'
                   }`}
                 >
-                  <Building2 size={20} className="text-blue-400 shrink-0" />
+                  <Building2 size={20} className="text-emerald-400 shrink-0" />
                   <div>
                     <div className="text-sm font-bold">sewa fasum</div>
                     <div className="text-[11px] text-slate-400">Reservasi balai pertemuan, tenda & kursi</div>
@@ -489,7 +489,7 @@ export const Navbar: React.FC = () => {
                   }}
                   className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
                     activeView === 'keuangan'
-                      ? 'bg-blue-600/30 border-blue-500 text-white font-bold'
+                      ? 'bg-blue-600/30 border-emerald-500 text-white font-bold'
                       : 'bg-slate-800/80 border-slate-700 text-slate-300'
                   }`}
                 >
@@ -513,11 +513,11 @@ export const Navbar: React.FC = () => {
                   }}
                   className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
                     activeView === 'warga'
-                      ? 'bg-blue-600/30 border-blue-500 text-white font-bold'
+                      ? 'bg-blue-600/30 border-emerald-500 text-white font-bold'
                       : 'bg-slate-800/80 border-slate-700 text-slate-300'
                   }`}
                 >
-                  <Users size={20} className="text-indigo-400 shrink-0" />
+                  <Users size={20} className="text-emerald-400 shrink-0" />
                   <div>
                     <div className="text-sm font-bold">data warga</div>
                     <div className="text-[11px] text-slate-400">Data 58 kepala keluarga & status rumah</div>
@@ -532,7 +532,7 @@ export const Navbar: React.FC = () => {
                   }}
                   className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
                     activeView === 'ronda'
-                      ? 'bg-blue-600/30 border-blue-500 text-white font-bold'
+                      ? 'bg-blue-600/30 border-emerald-500 text-white font-bold'
                       : 'bg-slate-800/80 border-slate-700 text-slate-300'
                   }`}
                 >
@@ -551,7 +551,7 @@ export const Navbar: React.FC = () => {
                   }}
                   className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
                     activeView === 'notulen'
-                      ? 'bg-blue-600/30 border-blue-500 text-white font-bold'
+                      ? 'bg-blue-600/30 border-emerald-500 text-white font-bold'
                       : 'bg-slate-800/80 border-slate-700 text-slate-300'
                   }`}
                 >
@@ -570,7 +570,7 @@ export const Navbar: React.FC = () => {
                   }}
                   className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
                     activeView === 'tatib'
-                      ? 'bg-blue-600/30 border-blue-500 text-white font-bold'
+                      ? 'bg-blue-600/30 border-emerald-500 text-white font-bold'
                       : 'bg-slate-800/80 border-slate-700 text-slate-300'
                   }`}
                 >
@@ -594,7 +594,7 @@ export const Navbar: React.FC = () => {
                   }}
                   className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
                     activeView === 'inventaris'
-                      ? 'bg-blue-600/30 border-blue-500 text-white font-bold'
+                      ? 'bg-blue-600/30 border-emerald-500 text-white font-bold'
                       : 'bg-slate-800/80 border-slate-700 text-slate-300'
                   }`}
                 >
@@ -613,7 +613,7 @@ export const Navbar: React.FC = () => {
                   }}
                   className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
                     activeView === 'forum'
-                      ? 'bg-blue-600/30 border-blue-500 text-white font-bold'
+                      ? 'bg-blue-600/30 border-emerald-500 text-white font-bold'
                       : 'bg-slate-800/80 border-slate-700 text-slate-300'
                   }`}
                 >
@@ -632,7 +632,7 @@ export const Navbar: React.FC = () => {
                   }}
                   className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
                     activeView === 'poin'
-                      ? 'bg-blue-600/30 border-blue-500 text-white font-bold'
+                      ? 'bg-blue-600/30 border-emerald-500 text-white font-bold'
                       : 'bg-slate-800/80 border-slate-700 text-slate-300'
                   }`}
                 >

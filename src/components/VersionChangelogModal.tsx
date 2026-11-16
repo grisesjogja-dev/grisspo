@@ -28,7 +28,7 @@ export const VersionChangelogModal: React.FC<VersionChangelogModalProps> = ({ is
             <X size={20} />
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300">
               <Layers size={26} />
             </div>
             <div>
@@ -45,7 +45,7 @@ export const VersionChangelogModal: React.FC<VersionChangelogModalProps> = ({ is
               </h2>
               <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-300 mt-1">
                 <span className="flex items-center gap-1">
-                  <Calendar size={12} className="text-blue-400" />
+                  <Calendar size={12} className="text-emerald-400" />
                   <span>Build: {APP_BUILD_DATE}</span>
                 </span>
                 <span className="text-slate-500">&bull;</span>
@@ -65,7 +65,7 @@ export const VersionChangelogModal: React.FC<VersionChangelogModalProps> = ({ is
                 key={rel.version}
                 className={`p-4 rounded-2xl border transition ${
                   idx === 0
-                    ? 'bg-blue-50/70 border-blue-200 ring-1 ring-blue-500/20'
+                    ? 'bg-blue-50/70 border-emerald-200 ring-1 ring-blue-500/20'
                     : 'bg-slate-50/60 border-slate-200'
                 }`}
               >
@@ -74,7 +74,7 @@ export const VersionChangelogModal: React.FC<VersionChangelogModalProps> = ({ is
                     <span
                       className={`text-xs font-black font-mono px-2.5 py-0.5 rounded-lg border ${
                         idx === 0
-                          ? 'bg-blue-600 text-white border-blue-500 shadow-xs'
+                          ? 'bg-blue-600 text-white border-emerald-500 shadow-xs'
                           : 'bg-slate-200 text-slate-800 border-slate-300'
                       }`}
                     >
@@ -104,7 +104,7 @@ export const VersionChangelogModal: React.FC<VersionChangelogModalProps> = ({ is
                       <CheckCircle2
                         size={13}
                         className={`mt-0.5 shrink-0 ${
-                          idx === 0 ? 'text-blue-600' : 'text-slate-400'
+                          idx === 0 ? 'text-emerald-700' : 'text-slate-400'
                         }`}
                       />
                       <span className="leading-relaxed">{point}</span>
@@ -131,7 +131,7 @@ export const VersionChangelogModal: React.FC<VersionChangelogModalProps> = ({ is
         <div className="p-4 bg-slate-50 border-t border-slate-200 text-center">
           <button
             onClick={onClose}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs transition shadow-xs"
+            className="w-full py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs transition shadow-xs"
           >
             Tutup
           </button>

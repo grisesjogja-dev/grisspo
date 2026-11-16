@@ -176,11 +176,11 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
                     onClick={() => setPaymentMethod('transfer')}
                     className={`p-3 rounded-xl border text-center font-bold transition flex flex-col items-center gap-1.5 ${
                       paymentMethod === 'transfer'
-                        ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-xs'
+                        ? 'border-blue-600 bg-blue-50 text-emerald-800 shadow-xs'
                         : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                     }`}
                   >
-                    <CreditCard size={18} className="text-blue-600" />
+                    <CreditCard size={18} className="text-emerald-700" />
                     <span>Transfer Bank BRI</span>
                   </button>
 
@@ -200,7 +200,7 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
               </div>
 
               {paymentMethod === 'transfer' && (
-                <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-2xl text-xs space-y-2">
+                <div className="p-4 bg-blue-50/80 border border-emerald-200 rounded-2xl text-xs space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold text-blue-900 uppercase tracking-wider text-[10px]">
                       Rekening Resmi Bank BRI Paguyuban:
@@ -209,7 +209,7 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
                       BANK BRI
                     </span>
                   </div>
-                  <div className="p-3 bg-white rounded-xl border border-blue-200 flex items-center justify-between">
+                  <div className="p-3 bg-white rounded-xl border border-emerald-200 flex items-center justify-between">
                     <div>
                       <p className="font-mono font-black text-slate-900 text-base tracking-wider select-all">
                         155801007310503
@@ -224,12 +224,12 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
                         navigator.clipboard.writeText('155801007310503');
                         alert('Nomor Rekening BRI 155801007310503 berhasil disalin!');
                       }}
-                      className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-bold text-[11px] border border-blue-200 transition"
+                      className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-emerald-800 rounded-lg font-bold text-[11px] border border-emerald-200 transition"
                     >
                       Salin Rekening
                     </button>
                   </div>
-                  <p className="text-[11px] text-blue-700">
+                  <p className="text-[11px] text-emerald-800">
                     Setelah transfer, simpan struk atau kirimkan notifikasi pelunasan ke Bendahara.
                   </p>
                 </div>
@@ -283,7 +283,7 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
                 </div>
                 <div className="flex items-center justify-between pb-2 border-b border-red-200">
                   <span className="text-slate-600">Nomor Rumah:</span>
-                  <span className="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200">
+                  <span className="font-mono font-bold text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-200">
                     {resident.houseNumber}
                   </span>
                 </div>

@@ -39,8 +39,8 @@ export const JadwalRondaView: React.FC = () => {
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-3 border border-blue-400/30">
-            <Shield size={14} className="text-blue-300" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-emerald-300 text-xs font-semibold mb-3 border border-emerald-400/30">
+            <Shield size={14} className="text-emerald-300" />
             <span>Sistem Keamanan & Ketertiban Lingkungan GSS</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
@@ -230,7 +230,7 @@ export const JadwalRondaView: React.FC = () => {
                         setSelectedDayToAdd(group.day);
                         setSelectedResidentName(residents[0]?.name || '');
                       }}
-                      className="w-full mt-2 py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[11px] font-bold transition border border-blue-200 flex items-center justify-center gap-1"
+                      className="w-full mt-2 py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-emerald-800 rounded-xl text-[11px] font-bold transition border border-emerald-200 flex items-center justify-center gap-1"
                     >
                       <UserPlus size={12} />
                       <span>Tambah Petugas (Superadmin)</span>
@@ -263,7 +263,7 @@ export const JadwalRondaView: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-sm w-full overflow-hidden border border-slate-200 shadow-2xl p-6">
             <h3 className="text-sm font-bold text-slate-900 mb-1 flex items-center gap-2">
-              <Shield size={16} className="text-blue-600" />
+              <Shield size={16} className="text-emerald-700" />
               <span>Tambah Petugas Ronda: {selectedDayToAdd}</span>
             </h3>
             <p className="text-xs text-slate-500 mb-4">
@@ -302,7 +302,7 @@ export const JadwalRondaView: React.FC = () => {
                       setSelectedDayToAdd(null);
                     }
                   }}
-                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition"
+                  className="flex-1 py-2 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition"
                 >
                   Simpan
                 </button>

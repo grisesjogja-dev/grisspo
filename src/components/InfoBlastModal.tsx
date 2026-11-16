@@ -42,9 +42,9 @@ export const InfoBlastModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border-2 border-blue-500 animate-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border-2 border-emerald-500 animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-5 relative">
+        <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-stone-900 text-white p-5 relative">
           <button
             type="button"
             onClick={handleDismiss}
@@ -55,7 +55,7 @@ export const InfoBlastModal: React.FC = () => {
           </button>
 
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 animate-pulse text-amber-300">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-emerald-400/30 flex items-center justify-center shrink-0 animate-pulse text-amber-300">
               <Megaphone size={26} />
             </div>
             <div>
@@ -84,7 +84,7 @@ export const InfoBlastModal: React.FC = () => {
             <button
               type="button"
               onClick={handleDismiss}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md shadow-blue-500/30 transition active:scale-95 flex items-center justify-center gap-2"
+              className="w-full py-3 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md shadow-emerald-600/30 transition active:scale-95 flex items-center justify-center gap-2"
             >
               <CheckCircle2 size={16} />
               <span>Mengerti / Tutup Pengumuman</span>

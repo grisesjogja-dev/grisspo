@@ -550,9 +550,9 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200">
       {/* Top Banner Navigation */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-stone-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-4xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-3 border border-blue-400/30">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-emerald-300 text-xs font-semibold mb-3 border border-emerald-400/30">
             <Sparkles size={14} className="text-amber-300" />
             <span>Portal Resmi Paguyuban Griya Sedayu Selaras 1</span>
           </div>
@@ -581,7 +581,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
 
           <DetailToggle variant="dark" label="Detail Keterangan Sistem">
             <p className="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-2xl bg-white/5 p-3 rounded-xl border border-white/10">
-              Sistem terintegrasi iuran kas bulanan (Rp 25.000), iuran sampah (Rp 50.000), sewa fasum, jimpitan ronda, dan otomatisasi kwitansi resmi WhatsApp &amp; Email via <strong className="text-blue-300 font-mono">grises.jogja@gmail.com</strong>.
+              Sistem terintegrasi iuran kas bulanan (Rp 25.000), iuran sampah (Rp 50.000), sewa fasum, jimpitan ronda, dan otomatisasi kwitansi resmi WhatsApp &amp; Email via <strong className="text-emerald-300 font-mono">grises.jogja@gmail.com</strong>.
             </p>
           </DetailToggle>
 
@@ -592,7 +592,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               onClick={() => setDashboardTab('ringkasan')}
               className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 ${
                 dashboardTab === 'ringkasan'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-emerald-600/30'
                   : 'bg-white/10 hover:bg-white/20 text-slate-200'
               }`}
             >
@@ -759,7 +759,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
             {/* Form Penerimaan Pembayaran */}
             <div className="lg:col-span-2 bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-xs">
               <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
-                <PlusCircle size={16} className="text-blue-600" />
+                <PlusCircle size={16} className="text-emerald-700" />
                 <span>Formulir Pembayaran Kas Baru</span>
               </h4>
 
@@ -772,7 +772,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   <select
                     value={selectedResidentId}
                     onChange={(e) => setSelectedResidentId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500"
                   >
                     {residents.map((r) => (
                       <option key={r.id} value={r.id}>
@@ -784,7 +784,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                       <span>WhatsApp: <strong className="text-slate-800">{selectedResident.phone || '0812-3456-7800'}</strong></span>
                       <span>&bull;</span>
-                      <span>Status: <strong className="text-blue-700">{selectedResident.statusRumah}</strong></span>
+                      <span>Status: <strong className="text-emerald-800">{selectedResident.statusRumah}</strong></span>
                       <span>&bull;</span>
                       <span>Tunggakan Iuran: <strong className="text-red-600">{selectedResident.iuranUnpaidMonths || 0} Bulan</strong></span>
                     </div>
@@ -842,7 +842,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                           onClick={() => handlePaymentTypeChange(item.type)}
                           className={`p-3 rounded-2xl border cursor-pointer transition flex items-start justify-between gap-2 ${
                             isSelected
-                              ? 'bg-blue-50/80 border-blue-500 ring-2 ring-blue-500/20'
+                              ? 'bg-blue-50/80 border-emerald-500 ring-2 ring-blue-500/20'
                               : 'bg-white border-slate-200 hover:border-slate-300'
                           }`}
                         >
@@ -852,7 +852,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                             </span>
                             <span className="text-[10px] text-slate-500">{item.desc}</span>
                           </div>
-                          <span className={`text-[11px] font-black shrink-0 ${isSelected ? 'text-blue-700' : 'text-slate-600'}`}>
+                          <span className={`text-[11px] font-black shrink-0 ${isSelected ? 'text-emerald-800' : 'text-slate-600'}`}>
                             {item.nominal}
                           </span>
                         </div>
@@ -872,7 +872,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                       required
                       value={formDate}
                       onChange={(e) => setFormDate(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
 
@@ -887,7 +887,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                       step="1"
                       value={formAmount}
                       onChange={(e) => setFormAmount(Number(e.target.value))}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-black text-slate-900 text-base focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-black text-slate-900 text-base focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
 
@@ -901,7 +901,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                       value={formPeriod}
                       onChange={(e) => setFormPeriod(e.target.value)}
                       placeholder="Contoh: November 2026"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 text-sm focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 text-sm focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                 </div>
@@ -916,7 +916,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                       onClick={() => setFormPaymentMethod('transfer_bank')}
                       className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-center gap-3 ${
                         formPaymentMethod === 'transfer_bank'
-                          ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-500/20'
+                          ? 'bg-blue-50 border-emerald-500 ring-2 ring-blue-500/20'
                           : 'bg-white border-slate-200 hover:border-slate-300'
                       }`}
                     >
@@ -925,7 +925,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                         name="paymentMethod"
                         checked={formPaymentMethod === 'transfer_bank'}
                         onChange={() => setFormPaymentMethod('transfer_bank')}
-                        className="text-blue-600"
+                        className="text-emerald-700"
                       />
                       <div>
                         <span className="font-bold text-slate-900 block text-xs">
@@ -990,7 +990,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   <button
                     type="submit"
                     disabled={isSubmittingPayment}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 transition active:scale-95 flex items-center gap-2"
+                    className="px-6 py-3 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/25 transition active:scale-95 flex items-center gap-2"
                   >
                     <CheckCircle2 size={16} />
                     <span>{isSubmittingPayment ? 'Memproses...' : 'Proses Pembayaran & Terbitkan Kwitansi'}</span>
@@ -1001,7 +1001,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
 
             {/* Info Box: Petunjuk Standar & Rekening Kas */}
             <div className="space-y-4">
-              <div className="bg-gradient-to-br from-blue-900 to-indigo-950 text-white rounded-3xl p-6 border border-blue-800 shadow-md space-y-4">
+              <div className="bg-gradient-to-br from-blue-900 to-indigo-950 text-white rounded-3xl p-6 border border-emerald-800 shadow-md space-y-4">
                 <div className="flex items-center gap-2 border-b border-white/10 pb-3">
                   <CreditCard size={18} className="text-amber-400" />
                   <h5 className="font-bold text-xs uppercase tracking-wider text-blue-200">
@@ -1021,7 +1021,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                         setCopiedAccount(true);
                         setTimeout(() => setCopiedAccount(false), 2000);
                       }}
-                      className="px-2 py-1 bg-blue-600 text-[10px] font-bold rounded-lg hover:bg-blue-500 transition flex items-center gap-1"
+                      className="px-2 py-1 bg-blue-600 text-[10px] font-bold rounded-lg hover:bg-emerald-500 transition flex items-center gap-1"
                     >
                       {copiedAccount ? <Check size={11} /> : <Copy size={11} />}
                       <span>{copiedAccount ? 'Tersalin' : 'Salin'}</span>
@@ -1036,7 +1036,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     <span>Notifikasi Email Resmi:</span>
                   </div>
                   <p className="text-[11px] text-slate-300 leading-relaxed">
-                    Setiap kwitansi dapat dikirimkan ke email warga dari server resmi: <strong className="text-blue-300 font-mono">grises.jogja@gmail.com</strong>.
+                    Setiap kwitansi dapat dikirimkan ke email warga dari server resmi: <strong className="text-emerald-300 font-mono">grises.jogja@gmail.com</strong>.
                   </p>
                 </div>
               </div>
@@ -1050,7 +1050,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 <ul className="text-xs text-slate-600 space-y-2 divide-y divide-slate-100">
                   <li className="pt-1.5 flex justify-between items-center">
                     <span>Iuran Rutin Paguyuban</span>
-                    <strong className="text-blue-700">Rp 25.000 / KK / bln</strong>
+                    <strong className="text-emerald-800">Rp 25.000 / KK / bln</strong>
                   </li>
                   <li className="pt-1.5 flex justify-between items-center">
                     <span>Iuran Rutin + Sampah</span>
@@ -1066,7 +1066,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   </li>
                   <li className="pt-1.5 flex justify-between items-center">
                     <span>Sewa Fasum Balai / Lapangan</span>
-                    <strong className="text-blue-700">Rp 30.000 - Rp 50.000</strong>
+                    <strong className="text-emerald-800">Rp 30.000 - Rp 50.000</strong>
                   </li>
                 </ul>
               </div>
@@ -1082,8 +1082,8 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
         <div className="space-y-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-800 text-xs font-bold border border-blue-200 mb-1.5">
-                <ReceiptText size={14} className="text-blue-600" />
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-800 text-xs font-bold border border-emerald-200 mb-1.5">
+                <ReceiptText size={14} className="text-emerald-700" />
                 <span>
                   {isBendaharaOrAdmin
                     ? 'Manajemen Riwayat Pembayaran (Superadmin & Bendahara)'
@@ -1108,7 +1108,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               <button
                 type="button"
                 onClick={() => setDashboardTab('loket')}
-                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-xs"
+                className="px-4 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-xs"
               >
                 <PlusCircle size={15} />
                 <span>Buka Loket Pembayaran Baru</span>
@@ -1178,7 +1178,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     visibleReceipts.map((rc, idx) => (
                       <tr key={rc.id} className="hover:bg-slate-50/80 transition">
                         <td className="py-3 px-3 text-center font-bold text-slate-400">{idx + 1}</td>
-                        <td className="py-3 px-3 font-mono font-bold text-blue-700 whitespace-nowrap">
+                        <td className="py-3 px-3 font-mono font-bold text-emerald-800 whitespace-nowrap">
                           #{rc.receiptNumber}
                         </td>
                         <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
@@ -1211,7 +1211,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                           <div className="flex items-center justify-center gap-1.5">
                             {rc.emailSentAt ? (
                               <span
-                                className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[9px] font-bold flex items-center gap-0.5"
+                                className="px-1.5 py-0.5 bg-blue-100 text-emerald-800 rounded text-[9px] font-bold flex items-center gap-0.5"
                                 title={`Terkirim ke email via grises.jogja@gmail.com pada ${new Date(rc.emailSentAt).toLocaleString('id-ID')}`}
                               >
                                 <Mail size={10} />
@@ -1222,7 +1222,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                                 type="button"
                                 onClick={() => handleSendEmailNotification(rc)}
                                 disabled={emailSendingId === rc.id}
-                                className="p-1 text-slate-400 hover:text-blue-600 rounded transition"
+                                className="p-1 text-slate-400 hover:text-emerald-700 rounded transition"
                                 title="Kirim Notifikasi via Email grises.jogja@gmail.com"
                               >
                                 <Mail size={13} />
@@ -1258,7 +1258,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                               <button
                                 type="button"
                                 onClick={() => setEditingReceipt(rc)}
-                                className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                className="p-1 text-emerald-700 hover:bg-blue-50 rounded-lg transition"
                                 title="Edit Transaksi Pembayaran (Bendahara / Superadmin)"
                               >
                                 <Edit2 size={13} />
@@ -1411,12 +1411,12 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 onClick={handleTogglePushReminder}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${
                   pushReminderEnabled
-                    ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200'
+                    ? 'bg-blue-100 text-blue-800 border-emerald-200 hover:bg-blue-200'
                     : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
                 }`}
                 title="Aktifkan notifikasi pengingat jatuh tempo di perangkat ini"
               >
-                <BellRing size={13} className={pushReminderEnabled ? 'text-blue-600' : 'text-slate-400'} />
+                <BellRing size={13} className={pushReminderEnabled ? 'text-emerald-700' : 'text-slate-400'} />
                 <span>{pushReminderEnabled ? 'Pengingat Aktif' : 'Aktifkan Pengingat'}</span>
               </button>
 
@@ -1427,7 +1427,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     setDashboardTab('loket');
                     setSelectedResidentId(currentUser.id);
                   }}
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition flex items-center gap-1 shadow-sm"
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition flex items-center gap-1 shadow-sm"
                 >
                   <Wallet size={13} />
                   <span>Bayar Sekarang</span>
@@ -1533,7 +1533,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 <div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
-                      <Wallet size={14} className="text-blue-400" />
+                      <Wallet size={14} className="text-emerald-400" />
                       <span>Total Kekurangan Iuran + Sampah</span>
                     </span>
                     <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
@@ -1622,11 +1622,11 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
             {/* Saldo Kas */}
             <div
               onClick={() => setActiveView('keuangan')}
-              className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-blue-300 transition cursor-pointer"
+              className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-emerald-300 transition cursor-pointer"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500 uppercase">Saldo Kas Paguyuban</span>
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-emerald-700 flex items-center justify-center">
                   <Wallet size={16} />
                 </div>
               </div>
@@ -1705,7 +1705,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               <div className="text-2xl font-black text-amber-600 mt-2">
                 {currentUser.points || 0} <span className="text-xs font-normal text-slate-400">Poin</span>
               </div>
-              <div className="text-[11px] text-blue-600 mt-1 font-semibold flex items-center gap-1">
+              <div className="text-[11px] text-emerald-700 mt-1 font-semibold flex items-center gap-1">
                 <span>Tukarkan Benefit Bebas Iuran</span>
                 <ChevronRight size={11} />
               </div>
@@ -1719,12 +1719,12 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
             <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-sm space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-emerald-700 flex items-center justify-center border border-indigo-100 shrink-0">
                     <FileText size={22} />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-emerald-800">
                         Akses Khusus Superadmin & Sekretaris
                       </span>
                     </div>
@@ -1777,7 +1777,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               <div>
                 <div className="flex justify-between text-xs font-bold mb-1.5 text-slate-700">
                   <span>Persentase Kelengkapan Berkas Paguyuban:</span>
-                  <span className="text-indigo-600">{berkasSummary.percent}% Terkumpul ({berkasSummary.sudah}/{berkasSummary.total})</span>
+                  <span className="text-emerald-700">{berkasSummary.percent}% Terkumpul ({berkasSummary.sudah}/{berkasSummary.total})</span>
                 </div>
                 <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden p-0.5 border border-slate-200">
                   <div
@@ -1998,7 +1998,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
           {/* Feature Navigation Grid */}
           <div>
             <h3 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
-              <Sparkles size={16} className="text-blue-600" />
+              <Sparkles size={16} className="text-emerald-700" />
               <span>Menu Layanan Aplikasi GRISSPO:</span>
             </h3>
 
@@ -2018,9 +2018,9 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
 
               <button
                 onClick={() => setActiveView('keuangan')}
-                className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition text-left group"
+                className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-emerald-400 hover:shadow-md transition text-left group"
               >
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-emerald-700 flex items-center justify-center mb-3 group-hover:scale-110 transition">
                   <ReceiptText size={20} />
                 </div>
                 <h4 className="text-sm font-bold text-slate-900">Kas Transparan</h4>
@@ -2046,7 +2046,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 onClick={() => setActiveView('warga')}
                 className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-md transition text-left group"
               >
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3 group-hover:scale-110 transition">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-emerald-700 flex items-center justify-center mb-3 group-hover:scale-110 transition">
                   <Users size={20} />
                 </div>
                 <h4 className="text-sm font-bold text-slate-900">Data 58 Warga</h4>
@@ -2083,9 +2083,9 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
 
               <button
                 onClick={() => setActiveView('tatib')}
-                className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition text-left group"
+                className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-emerald-400 hover:shadow-md transition text-left group"
               >
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-emerald-700 flex items-center justify-center mb-3 group-hover:scale-110 transition">
                   <BookOpen size={20} />
                 </div>
                 <h4 className="text-sm font-bold text-slate-900">Tata Tertib 2026</h4>
@@ -2162,7 +2162,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   <p className="text-[10px] text-slate-500">
                     Argorejo, Sedayu, Bantul, D.I. Yogyakarta 55752 &bull; GRISSPO Portal
                   </p>
-                  <p className="text-[10px] text-blue-600 font-mono mt-1 font-bold">
+                  <p className="text-[10px] text-emerald-700 font-mono mt-1 font-bold">
                     BUKTI KAS RESMI #{activeReceiptModal.receiptNumber}
                   </p>
                 </div>
@@ -2200,7 +2200,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
 
                   <div className="flex justify-between">
                     <span className="text-slate-500">Metode Pembayaran:</span>
-                    <span className="font-bold text-blue-700">
+                    <span className="font-bold text-emerald-800">
                       {activeReceiptModal.paymentMethod === 'transfer_bank'
                         ? 'Transfer BANK BRI (155801007310503)'
                         : 'Tunai ke Bendahara Paguyuban'}
@@ -2235,8 +2235,8 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
 
               {/* Status Notifikasi */}
               {activeReceiptModal.emailSentAt && (
-                <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-[11px] text-blue-800 flex items-center gap-2">
-                  <Mail size={14} className="text-blue-600 shrink-0" />
+                <div className="p-2.5 bg-blue-50 border border-emerald-200 rounded-xl text-[11px] text-blue-800 flex items-center gap-2">
+                  <Mail size={14} className="text-emerald-700 shrink-0" />
                   <span>
                     Notifikasi kwitansi resmi telah terkirim via server email <strong className="font-mono">grises.jogja@gmail.com</strong> pada {new Date(activeReceiptModal.emailSentAt).toLocaleString('id-ID')}.
                   </span>
@@ -2260,7 +2260,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                     type="button"
                     onClick={() => handleSendEmailNotification(activeReceiptModal)}
                     disabled={emailSendingId === activeReceiptModal.id}
-                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-xs"
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-xs"
                     title="Kirim notifikasi email resmi dari grises.jogja@gmail.com"
                   >
                     <Mail size={13} />
@@ -2364,7 +2364,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                       amount: newAmount
                     });
                   }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="iuran_bulanan">Iuran Bulanan Rutin (Rp 25.000)</option>
                   <option value="iuran_sampah">Iuran Sampah (Rp 25.000)</option>
@@ -2380,7 +2380,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 <select
                   value={editingReceipt.paymentMethod}
                   onChange={(e) => setEditingReceipt({ ...editingReceipt, paymentMethod: e.target.value as any })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="transfer_bank">Transfer Bank BRI (Rek. 155801007310503 a/n Benisius Rahmat Basuki)</option>
                   <option value="tunai">Tunai ke Bendahara Paguyuban</option>
@@ -2396,7 +2396,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   required
                   value={editingReceipt.amount}
                   onChange={(e) => setEditingReceipt({ ...editingReceipt, amount: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-slate-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-slate-900 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -2460,7 +2460,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md text-xs"
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md text-xs"
                   >
                     Simpan Perubahan
                   </button>

@@ -88,7 +88,7 @@ export const LandingLoginView: React.FC<LandingLoginViewProps> = () => {
           <div className="absolute -top-12 -right-12 w-36 h-36 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
           <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-amber-400 p-0.5 shadow-xl shadow-blue-500/30 flex items-center justify-center mb-3">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-amber-400 p-0.5 shadow-xl shadow-emerald-600/30 flex items-center justify-center mb-3">
             <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center">
               <span className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-tr from-blue-400 to-amber-300">
                 GS
@@ -132,7 +132,7 @@ export const LandingLoginView: React.FC<LandingLoginViewProps> = () => {
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Nomor Rumah / Username
                 </label>
-                <span className="text-[11px] text-blue-600 font-semibold">58 Rumah Terdaftar</span>
+                <span className="text-[11px] text-emerald-700 font-semibold">58 Rumah Terdaftar</span>
               </div>
 
               <div className="relative">
@@ -144,7 +144,7 @@ export const LandingLoginView: React.FC<LandingLoginViewProps> = () => {
                   placeholder="Ketik B 24, B 02, C 15, atau pilih di bawah..."
                   value={usernameInput}
                   onChange={(e) => setUsernameInput(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
                 />
               </div>
 
@@ -156,7 +156,7 @@ export const LandingLoginView: React.FC<LandingLoginViewProps> = () => {
                     key={h}
                     type="button"
                     onClick={() => setUsernameInput(h)}
-                    className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 text-[11px] font-mono font-bold border border-slate-200 transition"
+                    className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-emerald-700 text-slate-600 text-[11px] font-mono font-bold border border-slate-200 transition"
                   >
                     {h}
                   </button>
@@ -179,18 +179,18 @@ export const LandingLoginView: React.FC<LandingLoginViewProps> = () => {
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
                   required
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
                 />
               </div>
               <p className="text-[11px] text-slate-400 mt-1.5">
-                Password bawaan default: <span className="font-mono text-blue-600 font-bold">Griss123</span> (dapat diubah setelah login)
+                Password bawaan default: <span className="font-mono text-emerald-700 font-bold">Griss123</span> (dapat diubah setelah login)
               </p>
             </div>
 
             {/* Submit Password Button */}
             <button
               type="submit"
-              className="w-full py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-600 text-white font-extrabold rounded-2xl text-sm transition shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transform active:scale-98"
+              className="w-full py-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-blue-500 hover:to-indigo-600 text-white font-extrabold rounded-2xl text-sm transition shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transform active:scale-98"
             >
               <KeyRound size={17} />
               <span>Verifikasi Sandi &amp; Masuk Portal</span>
@@ -227,7 +227,7 @@ export const LandingLoginView: React.FC<LandingLoginViewProps> = () => {
             <button
               type="button"
               onClick={() => setIsPengurusOpen(true)}
-              className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition"
+              className="text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 transition"
             >
               <Users size={14} />
               <span>Struktur Pengurus Paguyuban</span>

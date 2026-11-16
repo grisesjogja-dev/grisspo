@@ -255,7 +255,7 @@ export const FasumBookingView: React.FC = () => {
         facilitiesIncluded: includedArr,
         rules: rulesArr,
         icon: 'Building2',
-        badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+        badgeColor: 'bg-blue-100 text-blue-800 border-emerald-200'
       });
       alert(`Fasilitas "${facName}" berhasil ditambahkan!`);
     }
@@ -360,12 +360,12 @@ export const FasumBookingView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner & Title */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden border border-blue-800">
+      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-stone-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden border border-emerald-800">
         <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-blue-500/20 to-transparent pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 border border-blue-400/30 rounded-full text-blue-200 text-xs font-semibold">
-              <Building2 size={14} className="text-blue-300" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 border border-emerald-400/30 rounded-full text-blue-200 text-xs font-semibold">
+              <Building2 size={14} className="text-emerald-300" />
               <span>Sewa Fasum & Terintegrasi Kas Otomatis</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
@@ -391,7 +391,7 @@ export const FasumBookingView: React.FC = () => {
               <>
                 <button
                   onClick={handleOpenAddFacility}
-                  className="flex items-center justify-center gap-1.5 px-3.5 py-3 bg-blue-500/30 hover:bg-blue-500/40 text-blue-200 border border-blue-400/30 font-bold rounded-2xl transition text-xs"
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-3 bg-blue-500/30 hover:bg-emerald-500/40 text-blue-200 border border-emerald-400/30 font-bold rounded-2xl transition text-xs"
                   title="Tambah jenis fasum baru (Superadmin)"
                 >
                   <Plus size={15} />
@@ -536,13 +536,13 @@ export const FasumBookingView: React.FC = () => {
               {isSuperadmin && (
                 <button
                   onClick={handleOpenAddFacility}
-                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs"
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs"
                 >
                   <Plus size={14} />
                   <span>Tambah Jenis Fasum</span>
                 </button>
               )}
-              <div className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 flex items-center gap-1.5">
+              <div className="text-xs font-semibold text-emerald-800 bg-blue-50 px-3 py-1.5 rounded-xl border border-emerald-200 flex items-center gap-1.5">
                 <BadgePercent size={15} />
                 <span>Masuk Kas Perawatan Fasum</span>
               </div>
@@ -577,7 +577,7 @@ export const FasumBookingView: React.FC = () => {
                       </span>
                       <div className="text-right">
                         <span className="text-xs text-slate-400 block font-medium">Biaya Sewa</span>
-                        <span className="text-xl font-black text-blue-700">
+                        <span className="text-xl font-black text-emerald-800">
                           Rp {facility.defaultFee.toLocaleString('id-ID')}
                         </span>
                         <span className="text-[10px] text-slate-500 block">/ {facility.unit}</span>
@@ -637,7 +637,7 @@ export const FasumBookingView: React.FC = () => {
                 <div className="p-6 pt-0 space-y-2">
                   <button
                     onClick={() => handleOpenBooking(facility)}
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-sm shadow-blue-500/20 transition active:scale-95 text-xs sm:text-sm"
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-sm shadow-emerald-600/20 transition active:scale-95 text-xs sm:text-sm"
                   >
                     <CalendarCheck size={16} />
                     <span>Pilih Tanggal & Pesan Sekarang</span>
@@ -649,7 +649,7 @@ export const FasumBookingView: React.FC = () => {
                         onClick={() => handleOpenEditFacility(facility)}
                         className="flex-1 py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5"
                       >
-                        <Edit2 size={13} className="text-blue-600" />
+                        <Edit2 size={13} className="text-emerald-700" />
                         <span>Edit Tarif & Fasilitas</span>
                       </button>
                       <button
@@ -683,7 +683,7 @@ export const FasumBookingView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleOpenBooking()}
-                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5"
                 >
                   <PlusCircle size={14} />
                   <span>Buat Reservasi Baru</span>
@@ -704,7 +704,7 @@ export const FasumBookingView: React.FC = () => {
                       key={booking.id}
                       className={`p-4 rounded-2xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
                         isApproved
-                          ? 'bg-blue-50/50 border-blue-200'
+                          ? 'bg-blue-50/50 border-emerald-200'
                           : 'bg-amber-50/50 border-amber-200'
                       }`}
                     >
@@ -734,7 +734,7 @@ export const FasumBookingView: React.FC = () => {
                           </p>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                             <span className="flex items-center gap-1">
-                              <Calendar size={12} className="text-blue-600" />
+                              <Calendar size={12} className="text-emerald-700" />
                               <strong className="text-slate-800">{booking.date}</strong>
                             </span>
                             <span className="flex items-center gap-1">
@@ -752,7 +752,7 @@ export const FasumBookingView: React.FC = () => {
                       <div className="flex items-center gap-2 self-end sm:self-center">
                         <div className="text-right">
                           <span className="text-[10px] text-slate-400 block">Biaya Sewa</span>
-                          <span className="text-sm font-bold text-blue-700">
+                          <span className="text-sm font-bold text-emerald-800">
                             Rp {booking.rentalFee.toLocaleString('id-ID')}
                           </span>
                         </div>
@@ -805,7 +805,7 @@ export const FasumBookingView: React.FC = () => {
 
               <button
                 onClick={() => handleOpenBooking()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
+                className="px-4 py-2 bg-blue-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
               >
                 <PlusCircle size={15} />
                 <span>Pesan Fasum Baru</span>
@@ -823,7 +823,7 @@ export const FasumBookingView: React.FC = () => {
                 </p>
                 <button
                   onClick={() => handleOpenBooking()}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition inline-flex items-center gap-2"
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition inline-flex items-center gap-2"
                 >
                   <PlusCircle size={15} />
                   <span>Ajukan Pemesanan Sekarang</span>
@@ -836,7 +836,7 @@ export const FasumBookingView: React.FC = () => {
                   return (
                     <div
                       key={booking.id}
-                      className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs hover:border-blue-300 transition flex flex-col md:flex-row md:items-center justify-between gap-4"
+                      className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs hover:border-emerald-300 transition flex flex-col md:flex-row md:items-center justify-between gap-4"
                     >
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -858,7 +858,7 @@ export const FasumBookingView: React.FC = () => {
 
                         <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
                           <span className="flex items-center gap-1 font-medium text-slate-700">
-                            <Calendar size={13} className="text-blue-600" />
+                            <Calendar size={13} className="text-emerald-700" />
                             {booking.date}
                           </span>
                           <span className="flex items-center gap-1">
@@ -882,7 +882,7 @@ export const FasumBookingView: React.FC = () => {
                       <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
                         <div className="text-right">
                           <span className="text-[10px] text-slate-400 block font-medium">Biaya Sewa</span>
-                          <span className="text-lg font-black text-blue-700">
+                          <span className="text-lg font-black text-emerald-800">
                             Rp {booking.rentalFee.toLocaleString('id-ID')}
                           </span>
                         </div>
@@ -990,14 +990,14 @@ export const FasumBookingView: React.FC = () => {
                         <span>Waktu: {booking.startTime} - {booking.endTime} WIB</span>
                         <span>Metode: {booking.paymentMethod}</span>
                         {booking.approvedBy && (
-                          <span className="text-blue-600 font-medium">Verifikator: {booking.approvedBy}</span>
+                          <span className="text-emerald-700 font-medium">Verifikator: {booking.approvedBy}</span>
                         )}
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3 self-end md:self-center">
                       <div className="text-right">
-                        <span className="text-sm font-black text-blue-700">
+                        <span className="text-sm font-black text-emerald-800">
                           Rp {booking.rentalFee.toLocaleString('id-ID')}
                         </span>
                       </div>
@@ -1045,7 +1045,7 @@ export const FasumBookingView: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => setEditingBooking(booking)}
-                              className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition"
+                              className="p-2 bg-blue-50 text-emerald-700 hover:bg-blue-100 rounded-xl transition"
                               title="Edit Pemesanan (Superadmin)"
                             >
                               <Edit2 size={16} />
@@ -1088,7 +1088,7 @@ export const FasumBookingView: React.FC = () => {
       {showBookingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden my-8">
-            <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 relative">
+            <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-stone-900 text-white p-6 relative">
               <button
                 onClick={() => setShowBookingModal(false)}
                 className="absolute top-5 right-5 text-white/70 hover:text-white p-1 rounded-full hover:bg-white/10 transition"
@@ -1096,8 +1096,8 @@ export const FasumBookingView: React.FC = () => {
                 <XCircle size={22} />
               </button>
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-500/30 rounded-2xl border border-blue-400/30">
-                  <CalendarCheck size={24} className="text-blue-300" />
+                <div className="p-3 bg-blue-500/30 rounded-2xl border border-emerald-400/30">
+                  <CalendarCheck size={24} className="text-emerald-300" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold">Formulir Pemesanan Fasum GSS</h3>
@@ -1126,7 +1126,7 @@ export const FasumBookingView: React.FC = () => {
                 <select
                   value={formFacilityId}
                   onChange={(e) => setFormFacilityId(e.target.value)}
-                  className="w-full text-sm font-semibold bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  className="w-full text-sm font-semibold bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                 >
                   {activeFacilities.map((f) => (
                     <option key={f.id} value={f.id}>
@@ -1150,7 +1150,7 @@ export const FasumBookingView: React.FC = () => {
                     required
                     value={formDate}
                     onChange={(e) => setFormDate(e.target.value)}
-                    className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
+                    className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-medium"
                   />
                 </div>
 
@@ -1177,7 +1177,7 @@ export const FasumBookingView: React.FC = () => {
                         setFormEndTime('22:00');
                       }
                     }}
-                    className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
+                    className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-medium"
                   >
                     <option value="pagi">Pagi (08:00 - 12:00 WIB)</option>
                     <option value="siang">Siang (13:00 - 17:00 WIB)</option>
@@ -1221,7 +1221,7 @@ export const FasumBookingView: React.FC = () => {
                   placeholder="Contoh: Arisan Ibu-Ibu RT Blok A, Syukuran Keluarga, Turnamen Badminton"
                   value={formPurpose}
                   onChange={(e) => setFormPurpose(e.target.value)}
-                  className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -1234,7 +1234,7 @@ export const FasumBookingView: React.FC = () => {
                   <select
                     value={targetResidentHouse}
                     onChange={(e) => setTargetResidentHouse(e.target.value)}
-                    className="w-full text-sm font-semibold bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                    className="w-full text-sm font-semibold bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                   >
                     {residents.map((r) => (
                       <option key={r.id} value={r.houseNumber}>
@@ -1251,7 +1251,7 @@ export const FasumBookingView: React.FC = () => {
                   <select
                     value={formPaymentMethod}
                     onChange={(e) => setFormPaymentMethod(e.target.value as FasumPaymentMethod)}
-                    className="w-full text-sm font-semibold bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                    className="w-full text-sm font-semibold bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="transfer_bank">Transfer BANK BRI (155801007310503 a/n Benisius Rahmat Basuki)</option>
                     <option value="tunai_bendahara">Tunai ke Bendahara 1 (Bpk. Ahmad B02) / Bendahara 2 (Bpk. Robi C15)</option>
@@ -1269,7 +1269,7 @@ export const FasumBookingView: React.FC = () => {
                   placeholder="Kebutuhan meja tambahan, sound system, atau koordinasi kunci fasum..."
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -1277,7 +1277,7 @@ export const FasumBookingView: React.FC = () => {
               <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <span className="text-xs text-slate-500 block">Total Biaya Sewa Fasum</span>
-                  <span className="text-2xl font-black text-blue-700">
+                  <span className="text-2xl font-black text-emerald-800">
                     Rp {calculatedRentalFee.toLocaleString('id-ID')}
                   </span>
                   <span className="text-[10px] text-emerald-600 block font-semibold">
@@ -1295,7 +1295,7 @@ export const FasumBookingView: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition active:scale-95 flex items-center gap-2"
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition active:scale-95 flex items-center gap-2"
                   >
                     <CheckCircle2 size={16} />
                     <span>Lanjut ke Pembayaran</span>
@@ -1348,14 +1348,14 @@ export const FasumBookingView: React.FC = () => {
                 </div>
                 <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-700">Total Biaya Sewa</span>
-                  <span className="text-xl font-black text-blue-700">
+                  <span className="text-xl font-black text-emerald-800">
                     Rp {paymentModalBooking.rentalFee.toLocaleString('id-ID')}
                   </span>
                 </div>
               </div>
 
               {/* Bank BRI / Tunai Card */}
-              <div className="p-4 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 rounded-2xl text-white space-y-3 shadow-md border border-blue-700/50">
+              <div className="p-4 bg-gradient-to-br from-emerald-900 via-teal-900 to-stone-900 rounded-2xl text-white space-y-3 shadow-md border border-blue-700/50">
                 <div className="flex items-center justify-between border-b border-white/10 pb-2">
                   <div className="flex items-center gap-2">
                     <CreditCard size={17} className="text-amber-400" />
@@ -1363,7 +1363,7 @@ export const FasumBookingView: React.FC = () => {
                       Transfer BANK BRI
                     </span>
                   </div>
-                  <span className="text-[10px] bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-400/30 text-blue-300 font-semibold">
+                  <span className="text-[10px] bg-blue-500/20 px-2 py-0.5 rounded-full border border-emerald-400/30 text-emerald-300 font-semibold">
                     Rekening Kas Resmi
                   </span>
                 </div>
@@ -1383,7 +1383,7 @@ export const FasumBookingView: React.FC = () => {
                         setCopiedBri(true);
                         setTimeout(() => setCopiedBri(false), 2000);
                       }}
-                      className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs"
+                      className="px-2.5 py-1.5 bg-blue-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs"
                       title="Salin Nomor Rekening BRI"
                     >
                       {copiedBri ? <Check size={13} className="text-emerald-300" /> : <Copy size={13} />}
@@ -1458,7 +1458,7 @@ export const FasumBookingView: React.FC = () => {
                   <p className="text-[10px] text-slate-500">
                     Argorejo, Sedayu, Bantul, D.I. Yogyakarta 55752 &bull; GRISSPO Portal
                   </p>
-                  <p className="text-[10px] text-blue-600 font-mono mt-1">
+                  <p className="text-[10px] text-emerald-700 font-mono mt-1">
                     No. Bukti Kas: BKK-FSM/{receiptModalBooking.id.toUpperCase()}
                   </p>
                 </div>
@@ -1522,7 +1522,7 @@ export const FasumBookingView: React.FC = () => {
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   onClick={() => window.print()}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
+                  className="px-4 py-2 bg-blue-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
                 >
                   <Printer size={15} />
                   <span>Cetak Dokumen</span>
@@ -1543,7 +1543,7 @@ export const FasumBookingView: React.FC = () => {
       {showFacilityModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden my-8">
-            <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-5 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-stone-900 text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <ShieldCheck size={20} className="text-amber-400" />
                 <div>
@@ -1598,7 +1598,7 @@ export const FasumBookingView: React.FC = () => {
                     required
                     value={facFee}
                     onChange={(e) => setFacFee(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-blue-700"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-emerald-800"
                   />
                 </div>
               </div>
@@ -1676,7 +1676,7 @@ export const FasumBookingView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md"
                 >
                   {editingFacility ? 'Simpan Perubahan Fasilitas' : 'Tambahkan Fasilitas Baru'}
                 </button>
@@ -1745,7 +1745,7 @@ export const FasumBookingView: React.FC = () => {
                       purpose: e.target.value
                     })
                   }
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -1762,7 +1762,7 @@ export const FasumBookingView: React.FC = () => {
                         date: e.target.value
                       })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
@@ -1777,7 +1777,7 @@ export const FasumBookingView: React.FC = () => {
                         rentalFee: Number(e.target.value)
                       })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-blue-700 focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-emerald-800 focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -1793,7 +1793,7 @@ export const FasumBookingView: React.FC = () => {
                         status: e.target.value as any
                       })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="disetujui">DISETUJUI</option>
                     <option value="menunggu_konfirmasi">MENUNGGU KONFIRMASI</option>
@@ -1813,7 +1813,7 @@ export const FasumBookingView: React.FC = () => {
                         paymentStatus: e.target.value as any
                       })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="lunas">LUNAS</option>
                     <option value="menunggu_pembayaran">MENUNGGU PEMBAYARAN</option>
@@ -1833,7 +1833,7 @@ export const FasumBookingView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md"
                 >
                   Simpan Perubahan Reservasi
                 </button>

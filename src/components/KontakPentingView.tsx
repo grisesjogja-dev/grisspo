@@ -190,9 +190,9 @@ export const KontakPentingView: React.FC = () => {
       case 'Polisi & Keamanan':
         return {
           icon: Shield,
-          color: 'bg-blue-100 text-blue-800 border-blue-200',
+          color: 'bg-blue-100 text-blue-800 border-emerald-200',
           headerBg: 'from-blue-600 to-indigo-700',
-          chipBg: 'bg-blue-500/10 text-blue-600'
+          chipBg: 'bg-blue-500/10 text-emerald-700'
         };
       case 'Medis & Kesehatan':
         return {
@@ -439,7 +439,7 @@ export const KontakPentingView: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleOpenEdit(contact)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-100/60 rounded-lg transition"
+                        className="p-1.5 text-emerald-700 hover:bg-blue-100/60 rounded-lg transition"
                         title="Edit Nomor Kontak"
                       >
                         <Edit2 size={13} />

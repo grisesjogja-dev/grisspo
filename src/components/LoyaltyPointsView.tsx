@@ -49,7 +49,7 @@ export const LoyaltyPointsView: React.FC = () => {
 
   const getRank = (pts: number) => {
     if (pts >= 350) return { title: 'Warga Teladan Utama', color: 'from-amber-400 to-yellow-600', badge: 'bg-amber-100 text-amber-900 border-amber-300' };
-    if (pts >= 200) return { title: 'Warga Sangat Aktif', color: 'from-blue-500 to-indigo-600', badge: 'bg-blue-100 text-blue-900 border-blue-300' };
+    if (pts >= 200) return { title: 'Warga Sangat Aktif', color: 'from-blue-500 to-indigo-600', badge: 'bg-blue-100 text-blue-900 border-emerald-300' };
     if (pts >= 100) return { title: 'Warga Berpartisipasi', color: 'from-emerald-500 to-teal-600', badge: 'bg-emerald-100 text-emerald-900 border-emerald-300' };
     return { title: 'Warga GSS Rukun', color: 'from-slate-500 to-slate-700', badge: 'bg-slate-100 text-slate-800 border-slate-300' };
   };
@@ -164,7 +164,7 @@ export const LoyaltyPointsView: React.FC = () => {
             <p className="text-[11px] text-slate-500 mt-2">Gotong royong lingkungan warga GSS</p>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-blue-50 border-2 border-blue-200 text-center flex flex-col justify-between">
+          <div className="p-3.5 rounded-xl bg-blue-50 border-2 border-emerald-200 text-center flex flex-col justify-between">
             <div>
               <span className="font-black text-blue-800 text-xl block">+25 Poin</span>
               <span className="font-extrabold text-slate-900 block mt-1">Hadir Rapat Bulanan</span>
@@ -310,7 +310,7 @@ export const LoyaltyPointsView: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setEditingReward(reward)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            className="p-1.5 text-emerald-700 hover:bg-blue-50 rounded-lg transition"
                             title="Edit Benefit Ini (Superadmin)"
                           >
                             <Edit2 size={13} />

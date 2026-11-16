@@ -117,9 +117,9 @@ export const InfoBlastManagementView: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-stone-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-3 border border-blue-400/30">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-emerald-300 text-xs font-semibold mb-3 border border-emerald-400/30">
             <Shield size={14} className="text-amber-300" />
             <span>Fitur Khusus Superadmin • Siaran Informasi Warga</span>
           </div>
@@ -134,7 +134,7 @@ export const InfoBlastManagementView: React.FC = () => {
             <button
               type="button"
               onClick={handleOpenAdd}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/30 flex items-center gap-2 transition"
+              className="px-4 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition"
             >
               <PlusCircle size={16} />
               <span>Buat Info Blast Baru</span>
@@ -147,7 +147,7 @@ export const InfoBlastManagementView: React.FC = () => {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <Megaphone size={16} className="text-blue-600" />
+            <Megaphone size={16} className="text-emerald-700" />
             <span>Daftar Info Blast Aktif ({infoBlasts.length})</span>
           </h3>
           <span className="text-xs text-slate-500">Tampil otomatis saat warga login</span>
@@ -169,7 +169,7 @@ export const InfoBlastManagementView: React.FC = () => {
                         blast.category === 'Darurat' ? 'bg-rose-100 text-rose-800' :
                         blast.category === 'Penting' ? 'bg-amber-100 text-amber-800' :
                         blast.category === 'Keuangan' ? 'bg-emerald-100 text-emerald-800' :
-                        blast.category === 'Kegiatan' ? 'bg-indigo-100 text-indigo-800' : 'bg-blue-100 text-blue-800'
+                        blast.category === 'Kegiatan' ? 'bg-indigo-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
                       }`}>
                         {blast.category}
                       </span>
@@ -254,7 +254,7 @@ export const InfoBlastManagementView: React.FC = () => {
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
                   placeholder="Contoh: Pemberitahuan Gotong Royong & Kerja Bakti Minggu Ini..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -295,7 +295,7 @@ export const InfoBlastManagementView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setSelectedHouses(residents.map((r) => r.houseNumber))}
-                        className="text-[10px] text-blue-600 hover:underline"
+                        className="text-[10px] text-emerald-700 hover:underline"
                       >
                         Pilih Semua
                       </button>
@@ -353,7 +353,7 @@ export const InfoBlastManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-500/20"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-600/20"
                 >
                   {editingBlast ? 'Simpan Perubahan Info Blast' : 'Kirim Info Blast Sekarang'}
                 </button>

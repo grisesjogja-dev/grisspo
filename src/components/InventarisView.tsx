@@ -345,13 +345,13 @@ export const InventarisView: React.FC = () => {
                         item.statusPinjam === 'Tersedia'
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : item.statusPinjam === 'Dipinjam'
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          ? 'bg-blue-50 text-emerald-800 border border-emerald-200'
                           : 'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}
                     >
                       {item.statusPinjam}
                       {item.peminjamTerakhir && item.statusPinjam === 'Dipinjam' && (
-                        <div className="text-[9px] font-normal text-blue-600">({item.peminjamTerakhir})</div>
+                        <div className="text-[9px] font-normal text-emerald-700">({item.peminjamTerakhir})</div>
                       )}
                     </span>
                   </td>
@@ -363,7 +363,7 @@ export const InventarisView: React.FC = () => {
                       {item.statusPinjam === 'Tersedia' && item.kondisi !== 'RUSAK' && item.kondisi !== 'HILANG' && (
                         <button
                           onClick={() => setBorrowingItem(item)}
-                          className="px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-[10px] font-bold transition border border-blue-200"
+                          className="px-2 py-1 bg-blue-50 text-emerald-800 hover:bg-blue-100 rounded text-[10px] font-bold transition border border-emerald-200"
                           title="Pinjam Barang Ini"
                         >
                           Pinjam
@@ -603,7 +603,7 @@ export const InventarisView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
+                  className="flex-1 py-2 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md"
                 >
                   Konfirmasi Pinjam
                 </button>

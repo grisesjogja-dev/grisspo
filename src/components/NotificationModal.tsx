@@ -57,7 +57,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
               {!showAddForm ? (
                 <button
                   onClick={() => setShowAddForm(true)}
-                  className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold border border-blue-200 transition flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-emerald-800 rounded-xl text-xs font-bold border border-emerald-200 transition flex items-center justify-center gap-1.5"
                 >
                   <PlusCircle size={15} />
                   <span>Siarkan Pengumuman Baru (Pengurus)</span>

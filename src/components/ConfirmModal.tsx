@@ -42,7 +42,7 @@ export const ConfirmModal: React.FC<ConfirmDialogProps> = ({
                   ? 'bg-rose-100 text-rose-600'
                   : isWarning
                   ? 'bg-amber-100 text-amber-600'
-                  : 'bg-blue-100 text-blue-600'
+                  : 'bg-blue-100 text-emerald-700'
               }`}
             >
               {isDanger ? (
@@ -83,7 +83,7 @@ export const ConfirmModal: React.FC<ConfirmDialogProps> = ({
                 ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/30'
                 : isWarning
                 ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/30'
-                : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30'
+                : 'bg-blue-600 hover:bg-emerald-700 shadow-blue-600/30'
             }`}
           >
             <Check size={14} />

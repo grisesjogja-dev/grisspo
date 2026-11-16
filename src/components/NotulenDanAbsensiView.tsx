@@ -279,7 +279,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-stone-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-3xl">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-xs font-semibold mb-3 border border-white/20">
             <FileText size={14} className="text-blue-200" />
@@ -303,8 +303,8 @@ export const NotulenDanAbsensiView: React.FC = () => {
               <Award size={13} className="text-emerald-300" />
               <span>Hadir Kerja Bakti: +40 Poin</span>
             </span>
-            <span className="px-3 py-1.5 rounded-xl bg-blue-500/30 border border-blue-400/40 text-blue-200 font-bold flex items-center gap-1.5">
-              <Award size={13} className="text-blue-300" />
+            <span className="px-3 py-1.5 rounded-xl bg-blue-500/30 border border-emerald-400/40 text-blue-200 font-bold flex items-center gap-1.5">
+              <Award size={13} className="text-emerald-300" />
               <span>Hadir Rapat Bulanan: +25 Poin</span>
             </span>
             {isPengurus ? (
@@ -361,7 +361,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
           onClick={() => setActiveTab('notulen')}
           className={`flex items-center gap-2 py-3 px-5 text-xs sm:text-sm font-bold border-b-2 whitespace-nowrap transition ${
             activeTab === 'notulen'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-blue-600 text-emerald-700'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
@@ -388,13 +388,13 @@ export const NotulenDanAbsensiView: React.FC = () => {
           onClick={() => setActiveTab('absensi_rapat')}
           className={`flex items-center gap-2 py-3 px-5 text-xs sm:text-sm font-bold border-b-2 whitespace-nowrap transition ${
             activeTab === 'absensi_rapat'
-              ? 'border-indigo-600 text-indigo-600'
+              ? 'border-indigo-600 text-emerald-700'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
           <Calendar size={16} />
           <span>Absensi Rapat Bulanan (+25 Poin)</span>
-          <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-extrabold">
+          <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-emerald-800 text-[10px] font-extrabold">
             Pengurus
           </span>
         </button>
@@ -452,14 +452,14 @@ export const NotulenDanAbsensiView: React.FC = () => {
                   placeholder="Cari notulen / PIC..."
                   value={searchNotulen}
                   onChange={(e) => setSearchNotulen(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
               {isPengurus && (
                 <button
                   onClick={handleOpenAddNotulen}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition whitespace-nowrap"
                 >
                   <Plus size={16} />
                   <span>Tambah Notulen</span>
@@ -490,7 +490,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                       {/* Top Badges */}
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-                          <Calendar size={13} className="text-blue-600" />
+                          <Calendar size={13} className="text-emerald-700" />
                           <span>{new Date(note.meetingDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                         </span>
 
@@ -532,7 +532,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                             <select
                               value={note.status}
                               onChange={(e) => updateMeetingNoteStatus(note.id, e.target.value as MeetingNoteStatus)}
-                              className="text-[11px] font-bold bg-slate-100 border border-slate-300 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="text-[11px] font-bold bg-slate-100 border border-slate-300 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                             >
                               <option value="belum_terlaksana">Belum Terlaksana</option>
                               <option value="on_proses">On Proses</option>
@@ -543,7 +543,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => handleOpenEditNotulen(note)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                              className="p-1.5 text-emerald-700 hover:bg-blue-50 rounded-lg transition"
                               title="Edit Notulen"
                             >
                               <Edit size={14} />
@@ -573,7 +573,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
               <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                    <FileText size={18} className="text-blue-600" />
+                    <FileText size={18} className="text-emerald-700" />
                     <span>{editingNote ? 'Edit Notulen Rapat' : 'Tambah Notulen Rapat Baru'}</span>
                   </h3>
                   <button
@@ -594,7 +594,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                       value={noteFormDate}
                       onChange={(e) => setNoteFormDate(e.target.value)}
                       required
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
 
@@ -608,7 +608,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                       onChange={(e) => setNoteFormTitle(e.target.value)}
                       placeholder="Contoh: Rapat Evaluasi Portal & Kebersihan Selokan"
                       required
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
 
@@ -622,7 +622,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                       rows={4}
                       placeholder="Tuliskan hasil musyawarah warga secara rinci..."
                       required
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
 
@@ -634,7 +634,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                       <select
                         value={noteFormStatus}
                         onChange={(e) => setNoteFormStatus(e.target.value as MeetingNoteStatus)}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       >
                         <option value="belum_terlaksana">Belum Terlaksana</option>
                         <option value="on_proses">On Proses</option>
@@ -652,7 +652,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                         onChange={(e) => setNoteFormPic(e.target.value)}
                         placeholder="Nama & Jabatan PIC"
                         required
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </div>
                   </div>
@@ -667,7 +667,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
+                      className="px-5 py-2 bg-blue-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
                     >
                       {editingNote ? 'Simpan Perubahan' : 'Simpan Notulen'}
                     </button>
@@ -709,7 +709,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        <Calendar size={18} className="text-indigo-600" />
+                        <Calendar size={18} className="text-emerald-700" />
                         <span>Form Checklist Kehadiran Rapat Rutin Bulanan Paguyuban</span>
                       </>
                     )}
@@ -737,7 +737,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                     type="date"
                     value={sessionDate}
                     onChange={(e) => setSessionDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
 
@@ -752,7 +752,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                         ? 'Contoh: Pembersihan Selokan Blok A & Fasum Timur'
                         : 'Contoh: Rapat Pertemuan Bulanan Rutin Paguyuban'
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -787,7 +787,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                         type="button"
                         onClick={() => setBlockFilter(b)}
                         className={`px-2.5 py-1 rounded-lg transition ${
-                          blockFilter === b ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                          blockFilter === b ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
                         {b === 'ALL' ? 'Semua' : `Blok ${b}`}
@@ -802,7 +802,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                       placeholder="Cari warga..."
                       value={residentSearch}
                       onChange={(e) => setResidentSearch(e.target.value)}
-                      className="w-full pl-8 pr-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full pl-8 pr-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </div>
                 </div>
@@ -837,7 +837,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                         {isChecked ? (
                           <CheckCircle2
                             size={18}
-                            className={activeTab === 'absensi_kerjabakti' ? 'text-emerald-600' : 'text-indigo-600'}
+                            className={activeTab === 'absensi_kerjabakti' ? 'text-emerald-600' : 'text-emerald-700'}
                           />
                         ) : (
                           <div className="w-4 h-4 rounded-full border border-slate-300" />
@@ -866,7 +866,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                       ? 'bg-slate-300 cursor-not-allowed'
                       : activeTab === 'absensi_kerjabakti'
                       ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
-                      : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20'
+                      : 'bg-indigo-600 hover:bg-indigo-700 shadow-emerald-600/20'
                   }`}
                 >
                   <Send size={15} />
@@ -926,7 +926,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setEditingAttendanceSession(session)}
-                            className="text-blue-600 hover:text-blue-800 text-xs font-bold p-2 hover:bg-blue-50 rounded-xl transition flex items-center gap-1"
+                            className="text-emerald-700 hover:text-emerald-900 text-xs font-bold p-2 hover:bg-blue-50 rounded-xl transition flex items-center gap-1"
                             title="Edit Sesi Absensi (Superadmin)"
                           >
                             <Edit size={14} />
@@ -1010,7 +1010,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
 
               <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                 <span className="text-[10px] font-bold text-slate-500 uppercase block">Rapat Bulanan</span>
-                <span className="text-xl font-black text-indigo-600 mt-1 block">
+                <span className="text-xl font-black text-emerald-700 mt-1 block">
                   {attendanceSessions.filter((s) => s.type === 'rapat').length} <span className="text-xs font-normal text-slate-500">Sesi</span>
                 </span>
                 <span className="text-[10px] text-slate-400">Reward +25 Poin / hadir</span>
@@ -1049,7 +1049,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                   placeholder="Cari sesi, warga, atau rumah..."
                   value={logSearchQuery}
                   onChange={(e) => setLogSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
             </div>
@@ -1087,7 +1087,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                               ? 'bg-amber-100 text-amber-800 border-amber-300'
                               : session.type === 'kerjabakti'
                               ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                              : 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                              : 'bg-indigo-100 text-emerald-800 border-indigo-300'
                           }`}
                         >
                           {session.type === 'ronda' && 'Ronda Malam'}
@@ -1104,7 +1104,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
 
                       <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
                         <span className="flex items-center gap-1 text-slate-700 font-semibold">
-                          <Calendar size={13} className="text-blue-600" />
+                          <Calendar size={13} className="text-emerald-700" />
                           <span>Tanggal: {session.date}</span>
                         </span>
                         <span>&bull;</span>
@@ -1127,7 +1127,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                                 key={a.residentId}
                                 className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800"
                               >
-                                <span className="font-mono font-bold text-blue-700">{a.residentHouse}</span>
+                                <span className="font-mono font-bold text-emerald-800">{a.residentHouse}</span>
                                 <span>{getResidentNameByHouse(a.residentHouse, a.residentName)}</span>
                               </span>
                             ))
@@ -1142,7 +1142,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setEditingAttendanceSession(session)}
-                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-blue-200"
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-emerald-700 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-emerald-200"
                           title="Edit Sesi Absensi (Superadmin)"
                         >
                           <Edit size={13} />
@@ -1238,7 +1238,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                       title: e.target.value
                     })
                   }
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -1255,7 +1255,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                         date: e.target.value
                       })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
@@ -1270,7 +1270,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                         recordedBy: e.target.value
                       })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -1328,7 +1328,7 @@ export const NotulenDanAbsensiView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-md"
+                  className="flex-1 py-2 bg-blue-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition shadow-md"
                 >
                   Simpan Perubahan Sesi
                 </button>

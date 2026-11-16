@@ -52,8 +52,8 @@ export const TataTertibView: React.FC = () => {
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-3 border border-blue-400/30">
-            <BookOpen size={14} className="text-blue-300" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-emerald-300 text-xs font-semibold mb-3 border border-emerald-400/30">
+            <BookOpen size={14} className="text-emerald-300" />
             <span>Anggaran Dasar & Pedoman Warga</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
@@ -64,7 +64,7 @@ export const TataTertibView: React.FC = () => {
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs">
-            <span className="px-3 py-1.5 rounded-xl bg-blue-500/20 text-blue-200 font-semibold border border-blue-400/20">
+            <span className="px-3 py-1.5 rounded-xl bg-blue-500/20 text-blue-200 font-semibold border border-emerald-400/20">
               Iuran, Sampah &amp; Sewa Parkir: Jatuh Tempo Tgl 28
             </span>
             <span className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-200 font-semibold border border-amber-400/20">
@@ -107,14 +107,14 @@ export const TataTertibView: React.FC = () => {
           return (
             <div
               key={section.number}
-              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:border-blue-300 transition"
+              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:border-emerald-300 transition"
             >
               <div className="flex items-center gap-3 pb-3 border-b border-slate-100 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-emerald-800 flex items-center justify-center font-bold">
                   <Icon size={20} />
                 </div>
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">
                     Pasal {section.number}
                   </span>
                   <h3 className="text-base font-bold text-slate-900">{section.title}</h3>

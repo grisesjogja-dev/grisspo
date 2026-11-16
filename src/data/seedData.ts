@@ -348,7 +348,7 @@ export const fasumFacilities: FasumFacilityConfig[] = [
     facilitiesIncluded: ['Meja & Kursi Napolly (tersedia hingga 0 kursi)', 'Akses Listrik & Stopkontak', 'Toilet & Wastafel Fasum', 'Area Parkir Luas'],
     rules: ['Wajib menjaga kebersihan setelah acara', 'Batas maksimal suara bising pukul 22.00 WIB'],
     icon: 'Building2',
-    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+    badgeColor: 'bg-blue-100 text-blue-800 border-emerald-200'
   },
   {
     id: 'lapangan_olahraga',

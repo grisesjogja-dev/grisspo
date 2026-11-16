@@ -43,7 +43,7 @@ export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({ isOpen
       case 'admin_inventaris':
         return { label: 'ADMIN INVENTARIS', bg: 'bg-amber-50 text-amber-700 border-amber-200' };
       default:
-        return { label: 'WARGA GSS', bg: 'bg-blue-50 text-blue-700 border-blue-200' };
+        return { label: 'WARGA GSS', bg: 'bg-blue-50 text-emerald-800 border-emerald-200' };
     }
   };
 
@@ -145,7 +145,7 @@ export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({ isOpen
         {/* Security Info Notice */}
         <div className="bg-slate-50 px-5 py-3 border-b border-slate-200 text-xs text-slate-600 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Shield size={15} className="text-blue-600 shrink-0" />
+            <Shield size={15} className="text-emerald-700 shrink-0" />
             <span>
               <strong>Keamanan Otomatis:</strong> Sesi pengguna yang tidak aktif selama <strong>30 menit</strong> otomatis di-logout dan dikeluarkan dari daftar ini demi keamanan portal.
             </span>
@@ -205,7 +205,7 @@ export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({ isOpen
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari nama, rumah, role..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
@@ -232,7 +232,7 @@ export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({ isOpen
                     key={session.sessionId || session.userId}
                     className={`p-3.5 sm:p-4 rounded-2xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                       isCurrentSelf
-                        ? 'bg-blue-50/70 border-blue-200'
+                        ? 'bg-blue-50/70 border-emerald-200'
                         : 'bg-white hover:bg-slate-50 border-slate-200'
                     }`}
                   >
@@ -254,7 +254,7 @@ export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({ isOpen
                           <h4 className="text-xs sm:text-sm font-black text-slate-900">
                             {session.name}
                           </h4>
-                          <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">
+                          <span className="text-[11px] font-mono font-bold text-emerald-800 bg-blue-100 px-1.5 py-0.5 rounded">
                             Rumah {session.houseNumber}
                           </span>
                           {isCurrentSelf && (
