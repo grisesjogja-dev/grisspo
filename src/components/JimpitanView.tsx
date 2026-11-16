@@ -247,6 +247,10 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
   const handleSaveRondaAttendance = async () => {
     if (!dutyGroup) return;
+    if (todayRondaSession && !isSuperadmin) {
+      alert('Akses Ditolak: Absen ronda malam/jimpit hanya bisa dilakukan 1x per hari. Edit kehadiran absensi hanya bisa dilakukan oleh Superadmin.');
+      return;
+    }
     if (!canDoRondaAttendance) {
       alert(
         `Akses Dibatasi: Khusus hanya petugas ronda hari ${selectedDay} (${dutyGroup.members.join(
@@ -1212,23 +1216,23 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                   {todayRondaSession && (
                     <div className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
                       <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
-                      <span>Tercatat ({todayRondaSession.attendees.filter((a) => a.isPresent).length} Hadir) &bull; Klik kartu untuk update</span>
+                      <span>Absensi tgl {selectedDate} sudah tercatat (1x/hari). {isSuperadmin ? 'Klik untuk update' : 'Edit absensi khusus Superadmin'}</span>
                     </div>
                   )}
 
                   <button
                     type="button"
-                    disabled={isSavingRondaAttendance || !canDoRondaAttendance}
+                    disabled={isSavingRondaAttendance || !canDoRondaAttendance || (Boolean(todayRondaSession) && !isSuperadmin)}
                     onClick={handleSaveRondaAttendance}
                     className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-black rounded-xl shadow-md transition ${
-                      !canDoRondaAttendance
+                      !canDoRondaAttendance || (Boolean(todayRondaSession) && !isSuperadmin)
                         ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
                         : todayRondaSession
                         ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-600/20'
                         : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-amber-600/20'
                     }`}
                   >
-                    {!canDoRondaAttendance ? (
+                    {!canDoRondaAttendance || (Boolean(todayRondaSession) && !isSuperadmin) ? (
                       <Lock size={14} />
                     ) : (
                       <CheckSquare size={14} />
@@ -1238,8 +1242,10 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                         ? 'Menyimpan...'
                         : !canDoRondaAttendance
                         ? 'Terkunci (Khusus Petugas Hari Ini & Admin)'
+                        : todayRondaSession && !isSuperadmin
+                        ? 'Sudah Tercatat (1x/hari - Edit oleh Superadmin)'
                         : todayRondaSession
-                        ? 'Perbarui Absensi Ronda'
+                        ? 'Perbarui Absensi Ronda (Superadmin)'
                         : 'Simpan Absensi Ronda (+25 Poin / Petugas)'}
                     </span>
                   </button>

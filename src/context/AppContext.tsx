@@ -4174,21 +4174,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    // Jika absensi ronda untuk tanggal tersebut sudah ada, perbarui sesi yang sudah ada
+    // Absen ronda malam/jimpit hanya bisa dilakukan 1x per hari
     const existingRonda = sessionData.type === 'ronda'
       ? attendanceSessionsRef.current.find((s) => s.type === 'ronda' && s.date === sessionData.date)
       : undefined;
 
     if (existingRonda) {
-      const updatedSession: AttendanceSession = sanitizeForFirestore({
-        ...existingRonda,
-        ...sessionData,
-        id: existingRonda.id,
-        createdAt: existingRonda.createdAt,
-        pointsAwarded: true
-      });
-      await updateAttendanceSession(updatedSession);
-      return;
+      throw new Error('Absen ronda malam / jimpit untuk tanggal tersebut sudah tercatat. Absen ronda/jimpit hanya bisa dilakukan 1x per hari. Edit kehadiran absensi hanya bisa dilakukan oleh Superadmin.');
     }
 
     const id = `att-${Date.now()}`;
@@ -4583,29 +4575,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Edit / Update Absensi Session (Superadmin, Pengurus/Admin, and Duty Officers for Ronda)
+  // Edit / Update Absensi Session (Superadmin only)
   const updateAttendanceSession = async (session: AttendanceSession) => {
-    const isAdminRole = Boolean(
-      currentUser && ['superadmin', 'sekretaris', 'bendahara1', 'bendahara2', 'admin_inventaris'].includes(currentUser.role)
-    );
-    const isDutyToday = (() => {
-      if (!currentUser || session.type !== 'ronda') return false;
-      const targetDay = session.day || 'Senin';
-      const group = rondaSchedule.find((g) => g.day === targetDay);
-      if (!group) return false;
-      const currentHouseClean = (currentUser.houseNumber || '').replace(/\s+/g, '').toUpperCase();
-      const currentNameClean = normalizeCleanName(currentUser.name || '');
-      return group.members.some((m) => {
-        const mClean = normalizeCleanName(m);
-        if (currentNameClean && (mClean.includes(currentNameClean) || currentNameClean.includes(mClean))) return true;
-        const r = findResidentByMemberName(m, residentsRef.current);
-        return Boolean(r && r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentHouseClean);
-      });
-    })();
-
-    if (!isAdminRole && !isDutyToday) {
-      alert('Akses Ditolak: Hanya Petugas Ronda Hari Ini, Pengurus/Admin, dan Superadmin yang memiliki hak mengedit data absensi!');
-      return;
+    const isSuperadmin = Boolean(currentUser && currentUser.role === 'superadmin');
+    if (!isSuperadmin) {
+      throw new Error('Akses Ditolak: Edit kehadiran absensi hanya bisa dilakukan oleh Superadmin (Bpk. Beni B 24)!');
     }
 
     const existingSession = attendanceSessionsRef.current.find((s) => s.id === session.id);
