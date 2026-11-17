@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useApp, findResidentByMemberName, normalizeCleanName } from '../context/AppContext';
 import { DayOfWeek, JimpitDailyReport, Resident } from '../types';
 import {
@@ -98,6 +98,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
   // Active sub-tab: 'input' | 'laporan_harian' | 'laporan_bulanan' | 'riwayat'
   const [tab, setTab] = useState<'input' | 'laporan_harian' | 'laporan_bulanan' | 'riwayat'>('input');
+  const rondaAttendanceCardRef = useRef<HTMLDivElement>(null);
 
   // Today string (local timezone YYYY-MM-DD so WIB 00:00-06:59 does not shift to yesterday)
   const todayStr = useMemo(() => {
@@ -421,11 +422,15 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     }
 
     confirmAction({
-      title: 'Konfirmasi Pengiriman Jimpit',
-      message: `Kirim pencatatan uang jimpitan tanggal ${selectedDate} (${selectedDay}) sebesar Rp ${currentTotalRevenue.toLocaleString('id-ID')} (${totalSelectedCount} rumah)? Dana otomatis masuk langsung ke total pemasukan dan saldo kas paguyuban.`,
-      confirmLabel: 'Setuju',
-      cancelLabel: 'Batal',
+      title: 'Konfirmasi Absen Ronda',
+      message: 'Apakah absen ronda sudah di submit?',
+      confirmLabel: 'Sudah',
+      cancelLabel: 'Belum',
       variant: 'primary',
+      onCancel: () => {
+        rondaAttendanceCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        alert('Silakan lengkapi dan submit absensi ronda terlebih dahulu.');
+      },
       onConfirm: () => {
         const entries: JimpitDailyReport['entries'] = [];
         residents.forEach((r) => {
@@ -1056,7 +1061,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
           {/* ABSENSI PETUGAS RONDA HARI INI (KHUSUS PETUGAS RONDA HARI TERSEBUT & ADMIN) */}
           {dutyGroup && (
-            <div className="bg-white border-2 border-amber-300 rounded-2xl p-5 shadow-sm space-y-4">
+            <div ref={rondaAttendanceCardRef} className="bg-white border-2 border-amber-300 rounded-2xl p-5 shadow-sm space-y-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-amber-100">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-sm shadow-md shadow-amber-500/20">
