@@ -6,17 +6,28 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.8.1';
-export const APP_BUILD_DATE = '13 November 2026';
-export const APP_BUILD_CODE = '2026.11.13-v1.8.1';
-export const APP_RELEASE_NAME = 'Edisi Rekonsiliasi Keuangan Real-Time & Sinkronisasi Kas Otomatis';
+export const APP_VERSION = 'v1.8.2';
+export const APP_BUILD_DATE = '16 November 2026';
+export const APP_BUILD_CODE = '2026.11.16-v1.8.2';
+export const APP_RELEASE_NAME = 'Konfirmasi Absen Ronda Jimpit, Palette Hijau Soft Natural & Ekspor Keuangan Responsif';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.8.2',
+    releaseDate: '16 November 2026',
+    releaseTitle: 'Konfirmasi Absen Ronda Jimpit, Palette Hijau Soft Natural & Ekspor Keuangan Responsif',
+    badge: 'Terbaru',
+    highlights: [
+      'Validasi Absen Ronda Saat Kirim Jimpit: Tombol Kirim Jimpit kini memvalidasi apakah absen ronda sudah disubmit (pilihan "Belum" otomatis mengarahkan ke checklist absensi ronda, pilihan "Sudah" langsung memproses pengiriman jimpit).',
+      'Palette Warna Natural Soft Green & Earth Tones: Tampilan antarmuka disempurnakan dengan nuansa hijau lembut (emerald/teal) yang natural dan menenangkan.',
+      'Ekspor Laporan Keuangan & Jimpit Responsif: Dokumen PDF dan Excel dirancang lebih responsif dengan pelipatan teks deskripsi yang rapi.',
+      'Keamanan & Otomatisasi Sesi: Auto-logout otomatis ketika browser ditutup serta perlindungan data real-time via Cloud Firestore.'
+    ]
+  },
   {
     version: 'v1.8.1',
     releaseDate: '13 November 2026',
     releaseTitle: 'Rekonsiliasi Keuangan Real-Time, Sinkronisasi Kas Otomatis & Pembersihan Kwitansi Duplikat',
-    badge: 'Terbaru',
     highlights: [
       'Rekonsiliasi Total Keuangan Real-Time: Seluruh transaksi kas, loket pembayaran, iuran, jimpitan, sumbangan, saldo awal, dan sewa fasum otomatis masuk ke Distribusi Sumber Pemasukan dan Saldo Kas Dashboard secara akurat 100%.',
       'Sinkronisasi Dua Arah Sewa Fasum: Perubahan status lunas, nominal, atau tanggal pemesanan Fasum otomatis memperbarui buku kas dan transaksi terkait.',

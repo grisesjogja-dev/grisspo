@@ -736,15 +736,26 @@ export const DataWargaView: React.FC = () => {
                   </td>
                   <td className="py-3 px-4">
                     {r.phone && r.phone !== '-' ? (
-                      <a
-                        href={`https://wa.me/62${r.phone.replace(/[^0-9]/g, '').slice(1)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-semibold"
-                      >
-                        <Phone size={12} />
-                        <span>{r.phone}</span>
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`https://wa.me/62${r.phone.replace(/[^0-9]/g, '').slice(1)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-semibold"
+                        >
+                          <Phone size={12} />
+                          <span>{r.phone}</span>
+                        </a>
+                        <a
+                          href={`https://wa.me/62${r.phone.replace(/[^0-9]/g, '').slice(1)}?text=Halo%20Bpk/Ibu%20${encodeURIComponent(r.name)},%20berikut%20informasi%20terkait%20data%20warga%20Griya%20Sedayu%20Selaras%201.`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs transition inline-flex items-center justify-center"
+                          title="Kirim Pesan WhatsApp Langsung"
+                        >
+                          <MessageSquare size={13} />
+                        </a>
+                      </div>
                     ) : (
                       <span className="text-slate-400">-</span>
                     )}

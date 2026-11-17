@@ -565,6 +565,27 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     }, 0);
   }, [wajibJimpitResidents]);
 
+  const blockStats = useMemo(() => {
+    const blocks = ['A', 'B', 'C'] as const;
+    return blocks.map((blk) => {
+      const blockResidents = wajibJimpitResidents.filter((r) => r.block === blk);
+      const count = blockResidents.length;
+      const target = count * targetMonthly;
+      const collected = blockResidents.reduce((acc, r) => acc + (r.jimpitanPaidMonth || 0), 0);
+      const lunas = blockResidents.filter((r) => (r.jimpitanPaidMonth || 0) >= targetMonthly).length;
+      const percent = target > 0 ? Math.min(100, Math.round((collected / target) * 100)) : 0;
+      return {
+        block: blk,
+        count,
+        target,
+        collected,
+        lunas,
+        kurang: count - lunas,
+        percent
+      };
+    });
+  }, [wajibJimpitResidents]);
+
   const handleOpenPayModal = (resident?: Resident) => {
     const target = resident || (currentUser ? residents.find((r) => r.houseNumber === currentUser.houseNumber) : undefined) || residents[0];
     setSelectedResidentForPay(target);
@@ -1866,6 +1887,69 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
               <p className="text-[11px] text-emerald-800 mt-0.5">
                 {totalResidentsCount > 0 ? Math.round((lunasCount / totalResidentsCount) * 100) : 0}% Warga Tertib Jimpitan
               </p>
+            </div>
+          </div>
+
+          {/* CHART & ANALISIS VISUAL JIMPITAN WARGA */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black">
+                  <TrendingUp size={18} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-900">
+                    Chart &amp; Grafik Capaian Jimpitan Warga per Blok
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Visualisasi persentase pengumpulan jimpitan kas per blok (Blok A, B, C) periode {selectedMonth}.
+                  </p>
+                </div>
+              </div>
+
+              <div className="hidden sm:flex items-center gap-3 text-xs font-bold text-slate-600">
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-600 inline-block" /> Lunas ({lunasCount})</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-500 inline-block" /> Belum Lunas ({totalResidentsCount - lunasCount})</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {blockStats.map((stat) => (
+                <div key={stat.block} className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="px-3 py-1 bg-emerald-800 text-white rounded-xl text-xs font-black">
+                      Blok {stat.block}
+                    </span>
+                    <span className="text-xs font-bold text-slate-600">
+                      {stat.count} Rumah Wajib
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-slate-500">Capaian:</span>
+                      <span className="text-emerald-700">{stat.percent}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${stat.percent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 text-[11px]">
+                    <div className="bg-white p-2 rounded-xl border border-slate-200">
+                      <div className="text-slate-400">Terkumpul</div>
+                      <div className="font-extrabold text-slate-800 mt-0.5">Rp {stat.collected.toLocaleString('id-ID')}</div>
+                    </div>
+                    <div className="bg-white p-2 rounded-xl border border-slate-200">
+                      <div className="text-slate-400">Status Warga</div>
+                      <div className="font-extrabold text-emerald-700 mt-0.5">{stat.lunas} Lunas / {stat.kurang} Kurang</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
