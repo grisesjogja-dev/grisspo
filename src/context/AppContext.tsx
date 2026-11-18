@@ -98,10 +98,27 @@ export function findResidentByMemberName(memberName: string, residentsList: Resi
   if (!cleanTarget) return undefined;
   const aliases = MEMBER_NAME_ALIASES[cleanTarget] || [cleanTarget];
 
+  for (const alias of aliases) {
+    // 1. Exact match on normalized resident name
+    const foundExact = residentsList.find((r) => normalizeCleanName(r.name) === alias);
+    if (foundExact) return foundExact;
+
+    // 2. Whole word token match
+    const foundToken = residentsList.find((r) => {
+      const resWords = normalizeCleanName(r.name).split(/\s+/);
+      return resWords.includes(alias);
+    });
+    if (foundToken) return foundToken;
+  }
+
+  // 3. Fallback: match only if resident word starts with the alias token (whole word token prefix)
   return residentsList.find((r) => {
     const resClean = normalizeCleanName(r.name);
     if (!resClean) return false;
-    return aliases.some((alias) => resClean === alias || resClean.includes(alias) || alias.includes(resClean));
+    const resWords = resClean.split(/\s+/);
+    return aliases.some((alias) => {
+      return resWords.some((w) => w === alias || (alias.length >= 3 && w.startsWith(alias)));
+    });
   });
 }
 
