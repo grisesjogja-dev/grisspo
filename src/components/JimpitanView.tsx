@@ -132,8 +132,8 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
       const isEligible = isStatusEligibleForJimpitan(r.statusRumah);
       if (isEligible) {
         init[r.houseNumber] = {
-          selected: true,
-          nominal: 500,
+          selected: false,
+          nominal: 0,
           method: 'cash'
         };
       }
@@ -151,8 +151,8 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
         if (isEligible) {
           if (!next[r.houseNumber]) {
             next[r.houseNumber] = {
-              selected: true,
-              nominal: 500,
+              selected: false,
+              nominal: 0,
               method: 'cash'
             };
             changed = true;
@@ -1384,7 +1384,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
             {filteredResidents.map((resident) => {
               const itemData = selectedMap[resident.houseNumber] || {
                 selected: false,
-                nominal: 500,
+                nominal: 0,
                 method: 'cash'
               };
 
