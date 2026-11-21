@@ -6,17 +6,27 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.8.2';
-export const APP_BUILD_DATE = '16 November 2026';
-export const APP_BUILD_CODE = '2026.11.16-v1.8.2';
-export const APP_RELEASE_NAME = 'Konfirmasi Absen Ronda Jimpit, Palette Hijau Soft Natural & Ekspor Keuangan Responsif';
+export const APP_VERSION = 'v1.8.3';
+export const APP_BUILD_DATE = '21 November 2026';
+export const APP_BUILD_CODE = '2026.11.21-v1.8.3';
+export const APP_RELEASE_NAME = 'Edisi Chart Keaktifan Warga Hadir Ronda & Manajemen Sesi Absensi Real-Time';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.8.3',
+    releaseDate: '21 November 2026',
+    releaseTitle: 'Chart Keaktifan Warga Hadir Ronda & Manajemen Sesi Absensi Real-Time',
+    badge: 'Terbaru',
+    highlights: [
+      'Chart Keaktifan Warga Hadir Ronda: Ditambahkan widget visual statistik dan grafik peringkat keaktifan kehadiran ronda malam seluruh warga di Dashboard utama.',
+      'Manajemen Sesi Absensi Superadmin: Superadmin kini dapat menambah dan menghapus nama anggota/warga secara langsung di dalam log sesi absensi.',
+      'Pembaruan Versi Sistem Real-Time: Setiap pembaruan sistem dan fitur baru secara otomatis memperbarui nomor versi aplikasi dan catatan rilis.'
+    ]
+  },
   {
     version: 'v1.8.2',
     releaseDate: '16 November 2026',
     releaseTitle: 'Konfirmasi Absen Ronda Jimpit, Palette Hijau Soft Natural & Ekspor Keuangan Responsif',
-    badge: 'Terbaru',
     highlights: [
       'Validasi Absen Ronda Saat Kirim Jimpit: Tombol Kirim Jimpit kini memvalidasi apakah absen ronda sudah disubmit (pilihan "Belum" otomatis mengarahkan ke checklist absensi ronda, pilihan "Sudah" langsung memproses pengiriman jimpit).',
       'Palette Warna Natural Soft Green & Earth Tones: Tampilan antarmuka disempurnakan dengan nuansa hijau lembut (emerald/teal) yang natural dan menenangkan.',

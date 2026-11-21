@@ -72,7 +72,8 @@ export const DashboardView: React.FC = () => {
     getResidentNameByHouse,
     toggleBerkasKependudukan,
     deletedIds,
-    confirmAction
+    confirmAction,
+    attendanceSessions
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
 
@@ -182,6 +183,47 @@ export const DashboardView: React.FC = () => {
       alert('Notifikasi Pengingat Jatuh Tempo Diaktifkan! Sistem akan mengingatkan pembayaran iuran bulanan, sewa lahan parkir, dan iuran sampah sebelum tanggal 28 setiap bulan.');
     }
   };
+
+  // Ronda attendance activity ranking & statistics for dashboard chart
+  const rondaAttendanceStats = useMemo(() => {
+    const rondaSessions = attendanceSessions.filter((s) => s.type === 'ronda');
+    const totalRondaSessions = rondaSessions.length;
+
+    const attendanceMap: Record<string, { residentName: string; houseNumber: string; count: number }> = {};
+    residents.forEach((r) => {
+      attendanceMap[r.id] = {
+        residentName: r.name,
+        houseNumber: r.houseNumber,
+        count: 0
+      };
+    });
+
+    rondaSessions.forEach((sess) => {
+      sess.attendees.forEach((att) => {
+        if (att.isPresent) {
+          const matchedRes = residents.find(
+            (r) => r.id === att.residentId || r.houseNumber.replace(/\s+/g, '').toUpperCase() === att.residentHouse.replace(/\s+/g, '').toUpperCase()
+          );
+          if (matchedRes) {
+            if (!attendanceMap[matchedRes.id]) {
+              attendanceMap[matchedRes.id] = {
+                residentName: matchedRes.name,
+                houseNumber: matchedRes.houseNumber,
+                count: 0
+              };
+            }
+            attendanceMap[matchedRes.id].count += 1;
+          }
+        }
+      });
+    });
+
+    const ranked = Object.values(attendanceMap).sort((a, b) => b.count - a.count);
+    return {
+      totalRondaSessions,
+      ranked
+    };
+  }, [attendanceSessions, residents]);
 
   // Superadmin / Sekretaris Panel Berkas Kependudukan State
   const [berkasBlockFilter, setBerkasBlockFilter] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
@@ -1332,6 +1374,90 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               </button>
             </div>
           )}
+
+          {/* ============================================================== */}
+          {/* CHART & GRAFIK KEAKTIFAN WARGA HADIR RONDA                      */}
+          {/* ============================================================== */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-black">
+                  <Shield size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>Chart Keaktifan Warga Hadir Ronda</span>
+                    <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-black">
+                      {rondaAttendanceStats.totalRondaSessions} Sesi Tercatat
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Statistik kehadiran ronda malam seluruh warga berdasarkan rekap absensi cloud real-time.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('jimpit')}
+                className="text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 border border-amber-200"
+              >
+                <span>Lihat Jadwal &amp; Absen Ronda</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+
+            {/* Top 6 Active Ronda Attendees Chart / Rankings */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {rondaAttendanceStats.ranked.slice(0, 6).map((item, idx) => {
+                const maxCount = rondaAttendanceStats.totalRondaSessions || 1;
+                const percent = Math.min(100, Math.round((item.count / maxCount) * 100));
+                const rankColor =
+                  idx === 0
+                    ? 'bg-amber-500 text-white shadow-amber-500/30'
+                    : idx === 1
+                    ? 'bg-slate-400 text-white'
+                    : idx === 2
+                    ? 'bg-amber-700 text-white'
+                    : 'bg-slate-100 text-slate-700';
+
+                return (
+                  <div key={item.houseNumber} className="p-3.5 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center shadow-xs ${rankColor}`}>
+                          #{idx + 1}
+                        </span>
+                        <span className="font-mono font-black text-xs text-emerald-800 bg-white px-2 py-0.5 rounded border border-slate-200">
+                          {item.houseNumber}
+                        </span>
+                      </div>
+                      <span className="text-xs font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                        {item.count} Hadir
+                      </span>
+                    </div>
+
+                    <div className="font-bold text-xs text-slate-900 truncate" title={item.residentName}>
+                      {item.residentName}
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px] font-bold text-slate-500">
+                        <span>Tingkat Kehadiran:</span>
+                        <span className="text-emerald-700">{percent}%</span>
+                      </div>
+                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full transition-all duration-500"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {/* ============================================================== */}
           {/* INDIKATOR VISUAL & NOTIFIKASI PUSH: JATUH TEMPO PEMBAYARAN      */}
