@@ -1346,6 +1346,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
       {/* ============================================================== */}
       {dashboardTab === 'ringkasan' && (
         <div className="space-y-6">
+          <>
 
           {/* Priority Announcement Alert */}
           {announcements.length > 0 && (
@@ -1375,373 +1376,273 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
             </div>
           )}
 
-          {/* ============================================================== */}
-          {/* CHART & GRAFIK KEAKTIFAN WARGA HADIR RONDA                      */}
-          {/* ============================================================== */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-black">
-                  <Shield size={20} />
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
-                    <span>Chart Keaktifan Warga Hadir Ronda</span>
-                    <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-black">
-                      {rondaAttendanceStats.totalRondaSessions} Sesi Tercatat
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Statistik kehadiran ronda malam seluruh warga berdasarkan rekap absensi cloud real-time.
-                  </p>
-                </div>
-              </div>
+          {/* 2-Column Responsive Layout for Simplicity & Cleanliness */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* Left Column (Ronda Activity Chart & Duty Group) */}
+            <div className="lg:col-span-7 space-y-6">
 
-              <button
-                type="button"
-                onClick={() => setActiveView('jimpit')}
-                className="text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 border border-amber-200"
-              >
-                <span>Lihat Jadwal &amp; Absen Ronda</span>
-                <ChevronRight size={14} />
-              </button>
-            </div>
-
-            {/* Top 6 Active Ronda Attendees Chart / Rankings */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {rondaAttendanceStats.ranked.slice(0, 6).map((item, idx) => {
-                const maxCount = rondaAttendanceStats.totalRondaSessions || 1;
-                const percent = Math.min(100, Math.round((item.count / maxCount) * 100));
-                const rankColor =
-                  idx === 0
-                    ? 'bg-amber-500 text-white shadow-amber-500/30'
-                    : idx === 1
-                    ? 'bg-slate-400 text-white'
-                    : idx === 2
-                    ? 'bg-amber-700 text-white'
-                    : 'bg-slate-100 text-slate-700';
-
-                return (
-                  <div key={item.houseNumber} className="p-3.5 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center shadow-xs ${rankColor}`}>
-                          #{idx + 1}
+              {/* Chart Keaktifan Warga Hadir Ronda */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-black">
+                      <Shield size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
+                        <span>Chart Keaktifan Warga Hadir Ronda</span>
+                        <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-black">
+                          {rondaAttendanceStats.totalRondaSessions} Sesi
                         </span>
-                        <span className="font-mono font-black text-xs text-emerald-800 bg-white px-2 py-0.5 rounded border border-slate-200">
-                          {item.houseNumber}
-                        </span>
-                      </div>
-                      <span className="text-xs font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
-                        {item.count} Hadir
-                      </span>
-                    </div>
-
-                    <div className="font-bold text-xs text-slate-900 truncate" title={item.residentName}>
-                      {item.residentName}
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-[10px] font-bold text-slate-500">
-                        <span>Tingkat Kehadiran:</span>
-                        <span className="text-emerald-700">{percent}%</span>
-                      </div>
-                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                        <div
-                          className="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full transition-all duration-500"
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Peringkat kehadiran ronda malam seluruh warga.
+                      </p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
 
-          {/* ============================================================== */}
-          {/* INDIKATOR VISUAL & NOTIFIKASI PUSH: JATUH TEMPO PEMBAYARAN      */}
-          {/* ============================================================== */}
-          <div className={`p-4 sm:p-5 rounded-2xl border transition shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-            userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
-              : isPastDue
-              ? 'bg-rose-50 border-rose-300 text-rose-950 ring-2 ring-rose-400/30'
-              : 'bg-amber-50 border-amber-300 text-amber-950 ring-2 ring-amber-400/20'
-          }`}>
-            <div className="flex items-start sm:items-center gap-3.5">
-              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
-                userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : isPastDue
-                  ? 'bg-rose-100 text-rose-700 animate-pulse'
-                  : 'bg-amber-100 text-amber-700'
-              }`}>
-                {userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0 ? (
-                  <CheckCircle2 size={24} />
-                ) : isPastDue ? (
-                  <AlertTriangle size={24} />
-                ) : (
-                  <Clock size={24} />
-                )}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                    userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0
-                      ? 'bg-emerald-200/80 text-emerald-900'
-                      : isPastDue
-                      ? 'bg-rose-200 text-rose-900 font-extrabold'
-                      : isDueToday
-                      ? 'bg-amber-300 text-amber-950 font-black'
-                      : 'bg-amber-200 text-amber-900 font-extrabold'
-                  }`}>
-                    {userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0
-                      ? 'Kewajiban Lunas (Iuran & Sampah)'
-                      : isPastDue
-                      ? `Melewati Jatuh Tempo (Tanggal 28 ${currentMonthName})`
-                      : isDueToday
-                      ? `Hari Ini Jatuh Tempo (28 ${currentMonthName})`
-                      : `Jatuh Tempo: 28 ${currentMonthName}`}
-                  </span>
-
-                  <span className="text-[10px] text-slate-500 font-medium">
-                    Jatuh tempo setiap tgl 28 (Iuran Bulanan, Sewa Lahan Parkir, Sampah)
-                  </span>
-                </div>
-
-                <div className="text-sm font-black text-slate-900 mt-1">
-                  {userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0 ? (
-                    'Terima kasih! Seluruh iuran bulanan, sewa lahan parkir, dan iuran sampah bulan ini sudah lunas.'
-                  ) : isPastDue ? (
-                    `Perhatian: Pembayaran iuran bulanan, sewa lahan parkir, atau iuran sampah telah melewati tanggal jatuh tempo (28 ${currentMonthName})!`
-                  ) : isDueToday ? (
-                    `Hari ini tanggal jatuh tempo pembayaran iuran bulanan, sewa lahan parkir, dan iuran sampah bulan ${currentMonthName} (Tanggal 28)!`
-                  ) : (
-                    `Sisa ${daysUntilDue} hari lagi menuju tanggal jatuh tempo pembayaran (28 ${currentMonthName}).`
-                  )}
-                </div>
-
-                <p className="text-xs text-slate-600 mt-0.5">
-                  {userTotalIuranSampahDeficit === 0 && userCurrentMonthJimpitanDeficit === 0
-                    ? 'Partisipasi Anda sangat berarti demi kelancaran operasional, kebersihan, dan keamanan lingkungan GSS 1.'
-                    : 'Batas akhir pembayaran iuran bulanan (Rp 25.000), iuran sampah, dan sewa lahan parkir adalah tanggal 28 setiap bulannya melalui Loket Kas atau transfer Bank BRI.'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 pt-2 sm:pt-0">
-              <button
-                type="button"
-                onClick={handleTogglePushReminder}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${
-                  pushReminderEnabled
-                    ? 'bg-blue-100 text-blue-800 border-emerald-200 hover:bg-blue-200'
-                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                }`}
-                title="Aktifkan notifikasi pengingat jatuh tempo di perangkat ini"
-              >
-                <BellRing size={13} className={pushReminderEnabled ? 'text-emerald-700' : 'text-slate-400'} />
-                <span>{pushReminderEnabled ? 'Pengingat Aktif' : 'Aktifkan Pengingat'}</span>
-              </button>
-
-              {(userTotalIuranSampahDeficit > 0 || userCurrentMonthJimpitanDeficit > 0) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDashboardTab('loket');
-                    setSelectedResidentId(currentUser.id);
-                  }}
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition flex items-center gap-1 shadow-sm"
-                >
-                  <Wallet size={13} />
-                  <span>Bayar Sekarang</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* ============================================================== */}
-          {/* INFORMASI KEKURANGAN JIMPITAN & IURAN + SAMPAH WARGA           */}
-          {/* ============================================================== */}
-          <div className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-md border border-slate-800">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
-                  <CreditCard size={20} />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
-                    Kewajiban Pembayaran Warga
-                  </span>
-                  <h3 className="text-base font-black text-white">
-                    Status Tagihan Rumah {currentUser.houseNumber} ({getResidentNameByHouse(currentUser.houseNumber, currentUser.name)})
-                  </h3>
-                </div>
-              </div>
-
-              {/* Badges for Pengurus */}
-              {isBendaharaOrAdmin && (
-                <div className="flex items-center gap-2 self-start sm:self-auto">
-                  <span className="text-[10px] font-bold bg-slate-800 text-slate-300 px-3 py-1.5 rounded-xl border border-slate-700">
-                    Akses Pengurus: Rekap Paguyuban Tersedia
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Card 1: Kekurangan Jimpitan s/d Akhir Bulan Sebelumnya */}
-              <div className="bg-slate-800/90 rounded-2xl p-4.5 border border-slate-700/80 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
-                      <Coins size={14} className="text-amber-400" />
-                      <span>Kekurangan Jimpitan s/d Akhir Bulan Sebelumnya</span>
-                    </span>
-                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
-                      userPrevMonthJimpitanDeficit === 0
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                    }`}>
-                      {userPrevMonthJimpitanDeficit === 0 ? 'LUNAS (RP 0)' : 'KURANG RP ' + userPrevMonthJimpitanDeficit.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex items-baseline gap-2">
-                    <span className={`text-2xl sm:text-3xl font-black ${
-                      userPrevMonthJimpitanDeficit === 0 ? 'text-emerald-400' : 'text-amber-400'
-                    }`}>
-                      Rp {userPrevMonthJimpitanDeficit.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-xs text-slate-400 font-medium">s/d akhir bulan {prevMonthName}</span>
-                  </div>
-
-                  <div className="mt-3 space-y-1.5 text-[11px] text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-700/50">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Target Jimpitan Bulan Ini ({currentMonthName}):</span>
-                      <span className="font-semibold text-white">Rp 15.000 (Rp 500/hari)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Tercatat Jimpitan Bulan Berjalan:</span>
-                      <span className="font-semibold text-emerald-400">Rp {userJimpitanPaid.toLocaleString('id-ID')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Kekurangan Jimpitan Bulan Berjalan:</span>
-                      <span className="font-semibold text-amber-300">Rp {userCurrentMonthJimpitanDeficit.toLocaleString('id-ID')}</span>
-                    </div>
-                    <div className="flex justify-between text-rose-300 pt-1 border-t border-slate-800">
-                      <span>Kekurangan s/d Akhir Bulan Sebelumnya ({prevMonthName}):</span>
-                      <span className="font-bold">Rp {userPrevMonthJimpitanDeficit.toLocaleString('id-ID')}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-300 pt-1 border-t border-slate-800 font-semibold">
-                      <span className="text-slate-400">Total Akumulasi Seluruhnya:</span>
-                      <span className="font-black text-amber-400">Rp {userTotalJimpitanDeficit.toLocaleString('id-ID')}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-700/50 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-400">Kelipatan Rp 500 / Rumah</span>
                   <button
-                    onClick={() => setActiveView('jimpitan')}
-                    className="text-xs font-bold px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg transition flex items-center gap-1"
+                    type="button"
+                    onClick={() => setActiveView('jimpit')}
+                    className="text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl transition flex items-center gap-1 border border-amber-200"
                   >
-                    <span>Cek Rincian Jimpitan</span>
-                    <ChevronRight size={12} />
+                    <span>Absen Ronda</span>
+                    <ChevronRight size={14} />
                   </button>
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {rondaAttendanceStats.ranked.slice(0, 4).map((item, idx) => {
+                    const maxCount = rondaAttendanceStats.totalRondaSessions || 1;
+                    const percent = Math.min(100, Math.round((item.count / maxCount) * 100));
+                    const rankColor =
+                      idx === 0
+                        ? 'bg-amber-500 text-white shadow-amber-500/30'
+                        : idx === 1
+                        ? 'bg-slate-400 text-white'
+                        : idx === 2
+                        ? 'bg-amber-700 text-white'
+                        : 'bg-slate-100 text-slate-700';
+
+                    return (
+                      <div key={item.houseNumber} className="p-3.5 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center shadow-xs ${rankColor}`}>
+                              #{idx + 1}
+                            </span>
+                            <span className="font-mono font-black text-xs text-emerald-800 bg-white px-2 py-0.5 rounded border border-slate-200">
+                              {item.houseNumber}
+                            </span>
+                          </div>
+                          <span className="text-xs font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                            {item.count} Hadir
+                          </span>
+                        </div>
+
+                        <div className="font-bold text-xs text-slate-900 truncate" title={item.residentName}>
+                          {item.residentName}
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[10px] font-bold text-slate-500">
+                            <span>Kehadiran:</span>
+                            <span className="text-emerald-700">{percent}%</span>
+                          </div>
+                          <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                            <div
+                              className="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full transition-all duration-500"
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Card 2: Total Kekurangan Iuran Bulanan + Sampah */}
-              <div className="bg-slate-800/90 rounded-2xl p-4.5 border border-slate-700/80 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
-                      <Wallet size={14} className="text-emerald-400" />
-                      <span>Total Kekurangan Iuran + Sampah</span>
-                    </span>
-                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
-                      userTotalIuranSampahDeficit === 0
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                    }`}>
-                      {userTotalIuranSampahDeficit === 0 ? 'LUNAS BULAN INI' : `${userUnpaidMonthsCount} BULAN TERTUNGGAK`}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex items-baseline gap-2">
-                    <span className={`text-2xl sm:text-3xl font-black ${
-                      userTotalIuranSampahDeficit === 0 ? 'text-emerald-400' : 'text-rose-400'
-                    }`}>
-                      Rp {userTotalIuranSampahDeficit.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-xs text-slate-400 font-medium">total kewajiban</span>
-                  </div>
-
-                  <div className="mt-3 space-y-1.5 text-[11px] text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-700/50">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Paket Iuran Bulanan:</span>
-                      <span className="font-semibold text-white">Rp 50.000 / Bulan</span>
+              {/* Ronda Malam Hari Ini Widget */}
+              <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-3xl p-6 shadow-md border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                      <Shield size={20} />
                     </div>
-                    <div className="flex justify-between text-[10px] text-slate-400 pl-2">
-                      <span>• Iuran Rutin Paguyuban:</span>
-                      <span className="text-slate-300">Rp 25.000</span>
-                    </div>
-                    <div className="flex justify-between text-[10px] text-slate-400 pl-2">
-                      <span>• Retribusi Kebersihan Sampah:</span>
-                      <span className="text-slate-300">Rp 25.000</span>
-                    </div>
-                    <div className="flex justify-between pt-1 border-t border-slate-800">
-                      <span className="text-slate-400">Status Periode:</span>
-                      <span className="font-bold text-amber-300">
-                        {userUnpaidMonthsCount === 0
-                          ? 'Semua Lunas'
-                          : userUnpaidMonthNames.length > 0
-                          ? userUnpaidMonthNames.join(', ')
-                          : `${userUnpaidMonthsCount} Bulan Belum Lunas`}
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">
+                        Jadwal Ronda Malam Ini
                       </span>
+                      <h4 className="text-sm sm:text-base font-black text-white">
+                        Hari {todayDay} ({dutyGroup?.members.length} Petugas)
+                      </h4>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setActiveView('jimpitan')}
+                    className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs transition shadow-xs"
+                  >
+                    Input Jimpit
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+                    <span className="text-[10px] text-slate-400 block font-semibold">Petugas Bertugas:</span>
+                    <span className="font-bold text-amber-300 mt-0.5 block truncate">
+                      {dutyGroup?.members.join(', ') || 'Belum diatur'}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+                    <span className="text-[10px] text-slate-400 block font-semibold">Ketentuan Portal:</span>
+                    <span className="font-bold text-white mt-0.5 block">
+                      Dikunci Pukul 21.00 WIB
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Column (Personal Arrears / Bill Status & Quick Actions) */}
+            <div className="lg:col-span-5 space-y-6">
+
+              {/* Status Tagihan Rumah Anda */}
+              <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-md border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                      <CreditCard size={20} />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
+                        Tagihan Rumah {currentUser.houseNumber}
+                      </span>
+                      <h4 className="text-sm font-black text-white">
+                        {getResidentNameByHouse(currentUser.houseNumber, currentUser.name)}
+                      </h4>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-700/50 flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-[10px] text-slate-400">
-                    Rek. BRI <span className="font-mono text-white font-bold">1558-01-007310-50-3</span>
+                <div className="space-y-3 text-xs">
+                  <div className="p-3 bg-slate-800/90 rounded-2xl border border-slate-700/80 flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-400 text-[11px] block">Kekurangan Jimpitan:</span>
+                      <span className="font-black text-amber-400 text-sm">Rp {userTotalJimpitanDeficit.toLocaleString('id-ID')}</span>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
+                      userTotalJimpitanDeficit === 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
+                    }`}>
+                      {userTotalJimpitanDeficit === 0 ? 'LUNAS' : 'BELUM LUNAS'}
+                    </span>
                   </div>
+
+                  <div className="p-3 bg-slate-800/90 rounded-2xl border border-slate-700/80 flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-400 text-[11px] block">Tunggakan Iuran &amp; Sampah:</span>
+                      <span className="font-black text-rose-400 text-sm">Rp {userTotalIuranSampahDeficit.toLocaleString('id-ID')}</span>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
+                      userTotalIuranSampahDeficit === 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                    }`}>
+                      {userTotalIuranSampahDeficit === 0 ? 'LUNAS' : `${userUnpaidMonthsCount} Bulan`}
+                    </span>
+                  </div>
+                </div>
+
+                {(userTotalIuranSampahDeficit > 0 || userCurrentMonthJimpitanDeficit > 0) && (
                   <button
+                    type="button"
                     onClick={() => {
                       setDashboardTab('loket');
                       setSelectedResidentId(currentUser.id);
                     }}
-                    className="text-xs font-bold px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition flex items-center gap-1"
+                    className="w-full py-2.5 bg-blue-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 shadow-md"
                   >
-                    <span>Bayar di Loket</span>
-                    <ChevronRight size={12} />
+                    <Wallet size={14} />
+                    <span>Bayar Tagihan via Loket Kas</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Actions Shortcuts */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
+                <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <Sparkles size={14} className="text-emerald-700" />
+                  <span>Akses Cepat Layanan</span>
+                </h4>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    onClick={() => setActiveView('jimpitan')}
+                    className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-left group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mb-2">
+                      <Coins size={16} />
+                    </div>
+                    <h5 className="text-xs font-bold text-slate-900">Jimpit Online</h5>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Input &amp; Rekap</p>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveView('keuangan')}
+                    className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-left group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-2">
+                      <ReceiptText size={16} />
+                    </div>
+                    <h5 className="text-xs font-bold text-slate-900">Kas Transparan</h5>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Buku Kas &amp; PDF</p>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveView('fasum')}
+                    className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-left group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-2">
+                      <Building2 size={16} />
+                    </div>
+                    <h5 className="text-xs font-bold text-slate-900">Sewa Fasum</h5>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Booking Tenda/Balai</p>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveView('warga')}
+                    className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-left group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-indigo-100 text-emerald-700 flex items-center justify-center mb-2">
+                      <Users size={16} />
+                    </div>
+                    <h5 className="text-xs font-bold text-slate-900">Data 58 Warga</h5>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Checklist Berkas</p>
                   </button>
                 </div>
               </div>
+
             </div>
 
-            {/* Total Paguyuban Summary for Pengurus */}
-            {isBendaharaOrAdmin && (
-              <div className="mt-4 p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <Shield size={14} className="text-amber-400" />
-                  <span className="font-bold text-slate-300">Rekap Kekurangan Seluruh Paguyuban (Semua Rumah):</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-4 text-xs font-bold">
-                  <span className="text-amber-400">
-                    Tunggakan Jimpitan: <span className="text-white">Rp {totalPaguyubanJimpitanDeficit.toLocaleString('id-ID')}</span>
-                  </span>
-                  <span className="text-rose-400">
-                    Tunggakan Iuran + Sampah: <span className="text-white">Rp {totalPaguyubanIuranSampahDeficit.toLocaleString('id-ID')}</span>
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
+
+          {/* Total Paguyuban Summary for Pengurus */}
+          {isBendaharaOrAdmin && (
+            <div className="mt-4 p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5 text-slate-300">
+                <Shield size={16} className="text-amber-400" />
+                <span className="font-bold">Rekap Kekurangan Seluruh Paguyuban (Semua Rumah):</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 text-xs font-bold">
+                <span className="text-amber-400 bg-amber-500/10 px-3 py-1 rounded-lg border border-amber-500/20">
+                  Tunggakan Jimpitan: <span className="text-white">Rp {totalPaguyubanJimpitanDeficit.toLocaleString('id-ID')}</span>
+                </span>
+                <span className="text-rose-400 bg-rose-500/10 px-3 py-1 rounded-lg border border-rose-500/20">
+                  Tunggakan Iuran + Sampah: <span className="text-white">Rp {totalPaguyubanIuranSampahDeficit.toLocaleString('id-ID')}</span>
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Key Metrics Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2247,6 +2148,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               </button>
             </div>
           </div>
+          </>
         </div>
       )}
 

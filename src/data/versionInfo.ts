@@ -6,17 +6,26 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.8.3';
-export const APP_BUILD_DATE = '21 November 2026';
-export const APP_BUILD_CODE = '2026.11.21-v1.8.3';
-export const APP_RELEASE_NAME = 'Edisi Chart Keaktifan Warga Hadir Ronda & Manajemen Sesi Absensi Real-Time';
+export const APP_VERSION = 'v1.8.4';
+export const APP_BUILD_DATE = '22 November 2026';
+export const APP_BUILD_CODE = '2026.11.22-v1.8.4';
+export const APP_RELEASE_NAME = 'Edisi Redesain & Penyederhanaan Tata Letak Dashboard Utama';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.8.4',
+    releaseDate: '22 November 2026',
+    releaseTitle: 'Redesain & Penyederhanaan Tata Letak Dashboard Utama',
+    badge: 'Terbaru',
+    highlights: [
+      'Tata Letak Dashboard Lebih Simpel & Rapi: Tampilan ringkasan dashboard didesain ulang dengan struktur dua kolom responsif yang rapi, mengelompokkan informasi penting, chart keaktifan ronda, tagihan, dan akses cepat secara intuitif.',
+      'Navigasi Pengguna yang Lebih Mudah: Peningkatan keterbacaan dan hierarki visual untuk kenyamanan seluruh warga dan pengurus.'
+    ]
+  },
   {
     version: 'v1.8.3',
     releaseDate: '21 November 2026',
     releaseTitle: 'Chart Keaktifan Warga Hadir Ronda & Manajemen Sesi Absensi Real-Time',
-    badge: 'Terbaru',
     highlights: [
       'Chart Keaktifan Warga Hadir Ronda: Ditambahkan widget visual statistik dan grafik peringkat keaktifan kehadiran ronda malam seluruh warga di Dashboard utama.',
       'Manajemen Sesi Absensi Superadmin: Superadmin kini dapat menambah dan menghapus nama anggota/warga secara langsung di dalam log sesi absensi.',
