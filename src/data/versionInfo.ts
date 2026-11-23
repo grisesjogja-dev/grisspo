@@ -6,17 +6,26 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.8.5';
+export const APP_VERSION = 'v1.8.6';
 export const APP_BUILD_DATE = '23 November 2026';
-export const APP_BUILD_CODE = '2026.11.23-v1.8.5';
-export const APP_RELEASE_NAME = 'Klasifikasi Jenis Pembayaran Warga & Hak Akses Superadmin';
+export const APP_BUILD_CODE = '2026.11.23-v1.8.6';
+export const APP_RELEASE_NAME = 'Sinkronisasi Tagihan Warga & Pemilihan Jenis Iuran Superadmin';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.8.6',
+    releaseDate: '23 November 2026',
+    releaseTitle: 'Sinkronisasi Tagihan Warga & Pemilihan Jenis Iuran Superadmin',
+    badge: 'Terbaru',
+    highlights: [
+      'Sinkronisasi Tagihan Warga Real-Time: Tagihan dan tunggakan warga di seluruh fitur (Dashboard, Loket Kas, Data Warga, Modal Peringatan Iuran, dan WhatsApp Notif) kini otomatis tersinkronisasi dengan jenis iuran/tarif bulanan masing-masing warga (contoh: Rp 50.000 x 2 bulan = Rp 100.000).',
+      'Pemilihan Jenis Iuran Warga (Superadmin): Superadmin dapat memilih dan mengatur tarif iuran bulanan warga secara langsung melalui formulir Tambah/Edit Data Warga.'
+    ]
+  },
   {
     version: 'v1.8.5',
     releaseDate: '23 November 2026',
     releaseTitle: 'Klasifikasi Jenis Pembayaran Warga & Hak Akses Superadmin',
-    badge: 'Terbaru',
     highlights: [
       'Jenis Pembayaran di Data Warga: Ditambahkan informasi jenis pembayaran iuran bulanan (Rp 50.000 untuk iuran + sampah bagi warga berstatus "rumah di huni" kecuali Fajar dan Arnado, serta Rp 25.000 untuk kategori lainnya) pada tabel Data Warga.',
       'Otorisasi Edit & Hapus Eksklusif Superadmin: Hak akses untuk mengubah dan menghapus data warga pada fitur Data Warga secara ketat dikhususkan untuk Superadmin.'

@@ -45,7 +45,8 @@ import {
   computeTransactionHash,
   detectFinancialAnomaly,
   sendAnomalyEmailAlert,
-  EmailAlertLog
+  EmailAlertLog,
+  getResidentMonthlyFee
 } from '../utils/security';
 import { db } from '../services/firebase';
 import {
@@ -3089,7 +3090,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!resident) throw new Error('Data warga tidak ditemukan!');
 
     const unpaidMonths = resident.iuranUnpaidMonths || 2;
-    const totalArrears = unpaidMonths * 25000;
+    const monthlyFee = getResidentMonthlyFee(resident);
+    const totalArrears = unpaidMonths * monthlyFee;
     const monthListStr =
       resident.unpaidMonthNames && resident.unpaidMonthNames.length > 0
         ? resident.unpaidMonthNames.join(', ')
@@ -3107,7 +3109,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       `Yth. Bpk/Ibu *${resident.name}* (Rumah *${resident.houseNumber}*)\n` +
       `Paguyuban Griya Sedayu Selaras 1\n\n` +
       `Berdasarkan pembukuan keuangan paguyuban warga, kami menginformasikan bahwa terdapat tunggakan Iuran Bulanan selama *${unpaidMonths} Bulan Berturut-turut* (${monthListStr}) dengan rincian kewajiban:\n` +
-      `• Nominal Iuran: Rp 25.000 / KK / bulan\n` +
+      `• Nominal Iuran: Rp ${monthlyFee.toLocaleString('id-ID')} / bulan\n` +
       `• Tanggal Jatuh Tempo: Tanggal 28 setiap bulan\n` +
       `• Total Tunggakan: *Rp ${totalArrears.toLocaleString('id-ID')}*\n\n` +
       `Sesuai Tata Tertib Warga Perum GSS 2026, mohon kerjasamanya untuk segera melakukan pelunasan sebelum tanggal 28 melalui transfer kas atau konfirmasi ke:\n` +

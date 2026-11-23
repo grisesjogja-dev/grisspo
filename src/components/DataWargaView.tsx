@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { Resident, StatusRumah, UserRole } from '../types';
-import { permissions } from '../utils/security';
+import { permissions, getResidentMonthlyFee } from '../utils/security';
 import { DetailToggle } from './DetailToggle';
 import {
   Users,
@@ -74,6 +74,7 @@ export const DataWargaView: React.FC = () => {
   const [formJimpitanPaid, setFormJimpitanPaid] = useState<number>(0);
   const [formPoints, setFormPoints] = useState<number>(50);
   const [formPassword, setFormPassword] = useState<string>('Griss123');
+  const [formMonthlyFee, setFormMonthlyFee] = useState<number>(50000);
 
   // Permission checks
   const canEditOrDelete = currentUser ? currentUser.role === 'superadmin' : false;
@@ -139,20 +140,13 @@ export const DataWargaView: React.FC = () => {
   };
 
   const getResidentPaymentType = (r: Resident) => {
-    const nameUpper = (r.name || '').toUpperCase();
-    const statusUpper = (r.statusRumah || '').toUpperCase();
-    const isInhabited = statusUpper.includes('DI HUNI');
-    const isExceptional = nameUpper.includes('FAJAR') || nameUpper.includes('ARNADO');
-
-    if (isInhabited) {
-      if (isExceptional) {
-        return { label: 'Iuran Bulanan Rutin (Rp 25.000)', badge: 'bg-amber-100 text-amber-800 border-amber-300' };
-      }
+    const fee = getResidentMonthlyFee(r);
+    if (fee === 50000) {
       return { label: 'Iuran Bulanan + Sampah (Rp 50.000)', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold' };
-    } else if (statusUpper.includes('MEMBAYAR IURAN')) {
-      return { label: 'Iuran Rumah Kosong (Rp 25.000)', badge: 'bg-blue-100 text-blue-800 border-blue-300' };
+    } else if (fee === 25000) {
+      return { label: 'Iuran Bulanan Rutin (Rp 25.000)', badge: 'bg-amber-100 text-amber-800 border-amber-300' };
     } else {
-      return { label: 'Jimpitan Saja / Non-Wajib Iuran', badge: 'bg-slate-100 text-slate-700 border-slate-300' };
+      return { label: 'Jimpitan Saja / Non-Wajib Iuran (Rp 0)', badge: 'bg-slate-100 text-slate-700 border-slate-300' };
     }
   };
 
@@ -215,6 +209,7 @@ export const DataWargaView: React.FC = () => {
     setFormJimpitanPaid(r.jimpitanPaidMonth || 0);
     setFormPoints(r.points || 50);
     setFormPassword(r.password || 'Griss123');
+    setFormMonthlyFee(getResidentMonthlyFee(r));
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
@@ -242,6 +237,7 @@ export const DataWargaView: React.FC = () => {
           previousMonthsJimpitanDeficit: Number(formPrevJimpitanDeficit),
           jimpitanPaidMonth: Number(formJimpitanPaid),
           points: Number(formPoints),
+          monthlyFee: Number(formMonthlyFee),
           password: formPassword || undefined
         });
         setEditingResident(null);
@@ -266,7 +262,8 @@ export const DataWargaView: React.FC = () => {
       familyMembers: formFamily,
       points: 50,
       jimpitanPaidMonth: 0,
-      monthlyIuranPaid: false
+      monthlyIuranPaid: false,
+      monthlyFee: Number(formMonthlyFee)
     });
     setShowAddModal(false);
     alert('Warga baru berhasil ditambahkan oleh Superadmin!');
@@ -910,6 +907,22 @@ export const DataWargaView: React.FC = () => {
                   <option value="KOSONG (ADA PEMILIK)">KOSONG (ADA PEMILIK)</option>
                   <option value="BELUM ADA PEMILIK">BELUM ADA PEMILIK</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Jenis Iuran / Tarif Bulanan (Superadmin)</label>
+                <select
+                  value={formMonthlyFee}
+                  onChange={(e) => setFormMonthlyFee(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-emerald-800"
+                >
+                  <option value={50000}>Rp 50.000 / bulan (Iuran Bulanan + Sampah)</option>
+                  <option value={25000}>Rp 25.000 / bulan (Iuran Bulanan Rutin)</option>
+                  <option value={0}>Rp 0 / bulan (Jimpitan Saja / Non-Wajib)</option>
+                </select>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  Kecuali Fajar &amp; Arnado (Default Rp 25.000 atau sesuai pilihan Superadmin).
+                </span>
               </div>
 
               {/* Checklist Berkas Kependudukan (Di sebelah / bawah Status Rumah) */}

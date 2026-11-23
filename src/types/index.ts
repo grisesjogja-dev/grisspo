@@ -32,6 +32,7 @@ export interface Resident {
   previousMonthsJimpitanDeficit?: number; // accumulated deficit carried over from previous months
   points: number;
   password?: string;
+  monthlyFee?: number; // e.g. 50000, 25000, 0
 }
 
 export interface WhatsAppNotificationLog {

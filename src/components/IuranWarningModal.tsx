@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp, defaultGuestUser, getLocalDateString } from '../context/AppContext';
+import { getResidentMonthlyFee } from '../utils/security';
 import {
   AlertTriangle,
   X,
@@ -42,7 +43,8 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
 
   if (!isOpen || !resident || !isOverdue) return null;
 
-  const totalDue = unpaidMonths * 25000;
+  const monthlyFee = getResidentMonthlyFee(resident);
+  const totalDue = unpaidMonths * monthlyFee;
   const monthListStr =
     resident.unpaidMonthNames && resident.unpaidMonthNames.length > 0
       ? resident.unpaidMonthNames.join(', ')

@@ -158,3 +158,27 @@ export const permissions = {
   // Reset or system config: Superadmin only
   canConfigureSystem: (role: UserRole) => role === 'superadmin',
 };
+
+/**
+ * Helper to compute monthly fee for a resident based on explicit monthlyFee or default rules:
+ * - Inhabited house: Rp 50,000 (except Fajar and Arnado: Rp 25,000)
+ * - Empty house paying iuran: Rp 25,000
+ * - Other: Rp 0
+ */
+export function getResidentMonthlyFee(r: { name?: string; statusRumah?: string; monthlyFee?: number }): number {
+  if (r.monthlyFee !== undefined && r.monthlyFee !== null) {
+    return r.monthlyFee;
+  }
+  const nameUpper = (r.name || '').toUpperCase();
+  const statusUpper = (r.statusRumah || '').toUpperCase();
+  const isInhabited = statusUpper.includes('DI HUNI');
+  const isExceptional = nameUpper.includes('FAJAR') || nameUpper.includes('ARNADO');
+
+  if (isInhabited) {
+    if (isExceptional) return 25000;
+    return 50000;
+  } else if (statusUpper.includes('MEMBAYAR IURAN')) {
+    return 25000;
+  }
+  return 0;
+}

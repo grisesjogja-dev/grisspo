@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp, defaultGuestUser, getLocalDateString, LEGACY_FAKE_SEED_IDS } from '../context/AppContext';
 import { DayOfWeek, PaymentReceipt, PaymentReceiptType, PaymentMethodType, Resident } from '../types';
+import { getResidentMonthlyFee } from '../utils/security';
 import { DetailToggle } from './DetailToggle';
 import {
   Coins,
@@ -136,9 +137,10 @@ export const DashboardView: React.FC = () => {
   const userPrevMonthJimpitanDeficit = currentResidentRecord?.previousMonthsJimpitanDeficit || 0;
   const userTotalJimpitanDeficit = userCurrentMonthJimpitanDeficit + userPrevMonthJimpitanDeficit;
 
-  // Total kekurangan iuran bulanan + sampah: Rp 50.000 / month (Iuran Bulanan 25.000 + Sampah 25.000)
+  // Total kekurangan iuran bulanan + sampah: Berdasarkan jenis iuran warga masing-masing
   const userUnpaidMonthsCount = currentResidentRecord?.iuranUnpaidMonths ?? (currentResidentRecord?.monthlyIuranPaid ? 0 : 1);
-  const userTotalIuranSampahDeficit = userUnpaidMonthsCount * 50000;
+  const userMonthlyFee = currentResidentRecord ? getResidentMonthlyFee(currentResidentRecord) : 50000;
+  const userTotalIuranSampahDeficit = userUnpaidMonthsCount * userMonthlyFee;
   const userUnpaidMonthNames = currentResidentRecord?.unpaidMonthNames || [];
 
   // Paguyuban overall totals (for Bendahara & Superadmin view)
@@ -153,7 +155,7 @@ export const DashboardView: React.FC = () => {
   const totalPaguyubanIuranSampahDeficit = useMemo(() => {
     return residents.reduce((acc, r) => {
       const count = r.iuranUnpaidMonths ?? (r.monthlyIuranPaid ? 0 : 1);
-      return acc + (count * 50000);
+      return acc + (count * getResidentMonthlyFee(r));
     }, 0);
   }, [residents]);
 
