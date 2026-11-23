@@ -76,7 +76,7 @@ export const DataWargaView: React.FC = () => {
   const [formPassword, setFormPassword] = useState<string>('Griss123');
 
   // Permission checks
-  const canEditOrDelete = currentUser ? permissions.canManageResidents(currentUser.role) : false;
+  const canEditOrDelete = currentUser ? currentUser.role === 'superadmin' : false;
   // Hak akses checklist berkas kependudukan hanya dimiliki oleh superadmin dan sekretaris
   const canManageBerkas = currentUser ? (currentUser.role === 'superadmin' || currentUser.role === 'sekretaris') : false;
 
@@ -135,6 +135,24 @@ export const DataWargaView: React.FC = () => {
         return 'bg-red-100 text-red-800 border-red-300';
       default:
         return 'bg-slate-100 text-slate-800 border-slate-300';
+    }
+  };
+
+  const getResidentPaymentType = (r: Resident) => {
+    const nameUpper = (r.name || '').toUpperCase();
+    const statusUpper = (r.statusRumah || '').toUpperCase();
+    const isInhabited = statusUpper.includes('DI HUNI');
+    const isExceptional = nameUpper.includes('FAJAR') || nameUpper.includes('ARNADO');
+
+    if (isInhabited) {
+      if (isExceptional) {
+        return { label: 'Iuran Bulanan Rutin (Rp 25.000)', badge: 'bg-amber-100 text-amber-800 border-amber-300' };
+      }
+      return { label: 'Iuran Bulanan + Sampah (Rp 50.000)', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold' };
+    } else if (statusUpper.includes('MEMBAYAR IURAN')) {
+      return { label: 'Iuran Rumah Kosong (Rp 25.000)', badge: 'bg-blue-100 text-blue-800 border-blue-300' };
+    } else {
+      return { label: 'Jimpitan Saja / Non-Wajib Iuran', badge: 'bg-slate-100 text-slate-700 border-slate-300' };
     }
   };
 
@@ -649,6 +667,7 @@ export const DataWargaView: React.FC = () => {
                 <th className="py-3 px-4">No. Rumah</th>
                 <th className="py-3 px-4">Nama Kepala Keluarga / Warga</th>
                 <th className="py-3 px-4">Status Rumah</th>
+                <th className="py-3 px-4">Jenis Pembayaran Iuran</th>
                 <th className="py-3 px-4 text-center">Berkas Kependudukan</th>
                 <th className="py-3 px-4">Role Akses</th>
                 <th className="py-3 px-4 text-center">GRISS-Poin</th>
@@ -679,6 +698,16 @@ export const DataWargaView: React.FC = () => {
                     >
                       {r.statusRumah}
                     </span>
+                  </td>
+                  <td className="py-3 px-4">
+                    {(() => {
+                      const payInfo = getResidentPaymentType(r);
+                      return (
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${payInfo.badge}`}>
+                          {payInfo.label}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="py-3 px-4 text-center">
                     {canManageBerkas ? (
