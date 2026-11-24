@@ -6,17 +6,27 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.2';
+export const APP_VERSION = 'v1.9.3';
 export const APP_BUILD_DATE = '23 November 2026';
-export const APP_BUILD_CODE = '2026.11.23-v1.9.2';
-export const APP_RELEASE_NAME = 'Default Pos Pembayaran Iuran Bulanan + Sampah';
+export const APP_BUILD_CODE = '2026.11.23-v1.9.3';
+export const APP_RELEASE_NAME = 'Menu PIN Portal & Integrasi Grisspoin ke Menu Info';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.3',
+    releaseDate: '23 November 2026',
+    releaseTitle: 'Menu PIN Portal & Integrasi Grisspoin ke Menu Info',
+    badge: 'Terbaru',
+    highlights: [
+      'Menu Baru "PIN Portal" di Sebelah Dashboard: Ditambahkan menu "PIN Portal" tepat di samping menu "dashboard" dengan indikator berkedip permanen (selalu berkedip).',
+      'Pembatasan Akses PIN Portal (< 2 Bulan Tunggakan): Menu "PIN Portal" hanya dapat diakses dan menampilkan kode PIN gerbang perumahan bagi pengguna dengan tunggakan iuran kurang dari 2 bulan (pengguna dengan tunggakan >= 2 bulan akan diarahkan ke halaman pembatasan akses & konfirmasi pelunasan).',
+      'Menu "Grisspoin" Masuk ke Menu "Info": Menu "Grisspoin" kini dipindahkan ke dalam dropdown/submenu "info" baik di navigasi desktop maupun mobile.'
+    ]
+  },
   {
     version: 'v1.9.2',
     releaseDate: '23 November 2026',
     releaseTitle: 'Default Pos Pembayaran Iuran Bulanan + Sampah',
-    badge: 'Terbaru',
     highlights: [
       'Default Jenis Transaksi / Pos Pembayaran: Pilihan bawaan pada menu Jenis Transaksi / Pos Pembayaran di Loket Pembayaran Kas dan Catat Transaksi Keuangan kini otomatis terpilih pada "Iuran Bulanan + Sampah (Rp 50.000)".'
     ]

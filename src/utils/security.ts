@@ -621,3 +621,18 @@ export function openWhatsAppLink(url: string): void {
     // Fallback handled by visible clickable link in confirmation modal/receipt
   }
 }
+
+/**
+ * Returns the resident's unpaid monthly iuran count.
+ */
+export function getResidentUnpaidMonthsCount(resident?: Resident | null): number {
+  if (!resident) return 0;
+  return resident.iuranUnpaidMonths ?? (resident.monthlyIuranPaid ? 0 : 1);
+}
+
+/**
+ * PIN Portal is strictly accessible only to users with unpaid iuran < 2 months.
+ */
+export function canAccessPinPortal(resident?: Resident | null): boolean {
+  return getResidentUnpaidMonthsCount(resident) < 2;
+}

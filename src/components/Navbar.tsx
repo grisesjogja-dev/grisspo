@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { canAccessPinPortal } from '../utils/security';
 import {
   LayoutDashboard,
   Coins,
@@ -15,13 +16,25 @@ import {
   ChevronDown,
   X,
   Menu,
-  Sparkles,
-  Megaphone
+  Megaphone,
+  Key,
+  Lock
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { activeView, setActiveView, currentUser: authUser } = useApp();
-  const currentUser = authUser || { role: 'warga' };
+  const { activeView, setActiveView, currentUser: authUser, residents } = useApp();
+  const currentUser = authUser || { id: '', houseNumber: '', role: 'warga' as const };
+
+  const currentResident = useMemo(() => {
+    const cleanHouse = (currentUser.houseNumber || '').replace(/\s+/g, '').toUpperCase();
+    return residents.find(
+      (r) =>
+        (cleanHouse && r.houseNumber.replace(/\s+/g, '').toUpperCase() === cleanHouse) ||
+        (currentUser.id && r.id === currentUser.id)
+    );
+  }, [residents, currentUser]);
+
+  const hasPinPortalAccess = canAccessPinPortal(currentResident);
 
   // Dropdown states for Desktop
   const [openDropdown, setOpenDropdown] = useState<'keuangan' | 'info' | null>(null);
@@ -43,7 +56,7 @@ export const Navbar: React.FC = () => {
   }, []);
 
   const isKeuanganActive = activeView === 'fasum' || activeView === 'keuangan';
-  const isInfoActive = ['warga', 'ronda', 'notulen', 'tatib'].includes(activeView);
+  const isInfoActive = ['warga', 'ronda', 'notulen', 'tatib', 'poin'].includes(activeView);
 
   return (
     <>
@@ -71,6 +84,42 @@ export const Navbar: React.FC = () => {
             >
               <LayoutDashboard size={15} />
               <span>dashboard</span>
+            </button>
+
+            {/* 1b. PIN Portal (sebelah dashboard, selalu berkedip, akses khusus tunggakan < 2 bulan) */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveView('pin_portal');
+                setOpenDropdown(null);
+              }}
+              title={
+                hasPinPortalAccess
+                  ? 'PIN Portal Gerbang Utama GSS 1 (Tersedia untuk tunggakan < 2 bulan)'
+                  : 'Terkunci: Menu PIN Portal hanya dapat diakses oleh user dengan tunggakan iuran kurang dari 2 bulan'
+              }
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition whitespace-nowrap border ${
+                activeView === 'pin_portal'
+                  ? hasPinPortalAccess
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/25'
+                    : 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                  : hasPinPortalAccess
+                  ? 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border-emerald-300'
+                  : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200'
+              }`}
+            >
+              <Key size={14} className="animate-pulse shrink-0" />
+              <span className="animate-pulse">PIN Portal</span>
+              {!hasPinPortalAccess && <Lock size={12} className="shrink-0 opacity-85" />}
+              <span
+                className={`w-2 h-2 rounded-full animate-ping shrink-0 ${
+                  activeView === 'pin_portal'
+                    ? 'bg-amber-300'
+                    : hasPinPortalAccess
+                    ? 'bg-emerald-500'
+                    : 'bg-rose-500'
+                }`}
+              />
             </button>
 
             {/* 2. jimpit */}
@@ -290,6 +339,26 @@ export const Navbar: React.FC = () => {
                       <span className="text-[10px] font-normal text-slate-400">Aturan resmi paguyuban 2026</span>
                     </div>
                   </button>
+
+                  {/* Grisspoin */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveView('poin');
+                      setOpenDropdown(null);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-left transition ${
+                      activeView === 'poin'
+                        ? 'bg-blue-50 text-emerald-800 font-black'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-emerald-700'
+                    }`}
+                  >
+                    <Award size={16} className={activeView === 'poin' ? 'text-emerald-700' : 'text-amber-500'} />
+                    <div className="flex flex-col">
+                      <span>Grisspoin</span>
+                      <span className="text-[10px] font-normal text-slate-400">Poin keaktifan &amp; katalog reward</span>
+                    </div>
+                  </button>
                 </div>
               )}
             </div>
@@ -327,23 +396,6 @@ export const Navbar: React.FC = () => {
               <MessageSquare size={15} />
               <span>forum</span>
             </button>
-
-            {/* 7. Grisspoin */}
-            <button
-              type="button"
-              onClick={() => {
-                setActiveView('poin');
-                setOpenDropdown(null);
-              }}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-                activeView === 'poin'
-                  ? 'bg-blue-600 text-white shadow-sm shadow-emerald-600/20'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <Award size={15} />
-              <span>Grisspoin</span>
-            </button>
           </div>
         </div>
       </nav>
@@ -351,8 +403,8 @@ export const Navbar: React.FC = () => {
       {/* ========================================================================= */}
       {/* MOBILE RESPONSIVE BOTTOM NAVIGATION BAR                                   */}
       {/* ========================================================================= */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 text-white z-40 px-2 py-1.5 shadow-2xl safe-area-bottom">
-        <div className="grid grid-cols-5 gap-1 max-w-md mx-auto">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 text-white z-40 px-1.5 py-1.5 shadow-2xl safe-area-bottom">
+        <div className="grid grid-cols-6 gap-0.5 max-w-lg mx-auto">
           {/* 1. dashboard */}
           <button
             type="button"
@@ -364,8 +416,36 @@ export const Navbar: React.FC = () => {
               activeView === 'dashboard' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <LayoutDashboard size={18} />
-            <span className="text-[10px] mt-0.5">dashboard</span>
+            <LayoutDashboard size={17} />
+            <span className="text-[9.5px] mt-0.5">dashboard</span>
+          </button>
+
+          {/* 1b. PIN Portal (sebelah dashboard, selalu berkedip) */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveView('pin_portal');
+              setMobileSheet(null);
+            }}
+            className={`flex flex-col items-center py-1 rounded-xl transition relative ${
+              activeView === 'pin_portal'
+                ? hasPinPortalAccess
+                  ? 'text-emerald-300 font-black'
+                  : 'text-rose-400 font-black'
+                : hasPinPortalAccess
+                ? 'text-emerald-400/90 hover:text-emerald-300'
+                : 'text-rose-400/90 hover:text-rose-300'
+            }`}
+          >
+            <div className="relative">
+              <Key size={17} className="animate-pulse" />
+              <span
+                className={`absolute -top-0.5 -right-1.5 w-2 h-2 rounded-full animate-ping ${
+                  hasPinPortalAccess ? 'bg-emerald-400' : 'bg-rose-400'
+                }`}
+              />
+            </div>
+            <span className="text-[9px] mt-0.5 whitespace-nowrap animate-pulse font-bold">PIN Portal</span>
           </button>
 
           {/* 2. jimpit */}
@@ -379,8 +459,8 @@ export const Navbar: React.FC = () => {
               activeView === 'jimpitan' ? 'text-amber-400 font-bold' : 'text-amber-300/80 hover:text-amber-300'
             }`}
           >
-            <Coins size={18} className="text-amber-400" />
-            <span className="text-[10px] mt-0.5">jimpit</span>
+            <Coins size={17} className="text-amber-400" />
+            <span className="text-[9.5px] mt-0.5">jimpit</span>
           </button>
 
           {/* 3. keuangan (dropdown trigger) */}
@@ -391,10 +471,10 @@ export const Navbar: React.FC = () => {
               isKeuanganActive ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <ReceiptText size={18} />
-            <span className="text-[10px] mt-0.5 flex items-center gap-0.5">
+            <ReceiptText size={17} />
+            <span className="text-[9.5px] mt-0.5 flex items-center gap-0.5">
               keuangan
-              <ChevronDown size={10} className={mobileSheet === 'keuangan' ? 'rotate-180' : ''} />
+              <ChevronDown size={9} className={mobileSheet === 'keuangan' ? 'rotate-180' : ''} />
             </span>
           </button>
 
@@ -406,27 +486,27 @@ export const Navbar: React.FC = () => {
               isInfoActive ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Users size={18} />
-            <span className="text-[10px] mt-0.5 flex items-center gap-0.5">
+            <Users size={17} />
+            <span className="text-[9.5px] mt-0.5 flex items-center gap-0.5">
               info
-              <ChevronDown size={10} className={mobileSheet === 'info' ? 'rotate-180' : ''} />
+              <ChevronDown size={9} className={mobileSheet === 'info' ? 'rotate-180' : ''} />
             </span>
           </button>
 
-          {/* 5. lainnya (inventaris, forum, Grisspoin) */}
+          {/* 5. lainnya (inventaris, forum) */}
           <button
             type="button"
             onClick={() => setMobileSheet(mobileSheet === 'lainnya' ? null : 'lainnya')}
             className={`flex flex-col items-center py-1 rounded-xl transition ${
-              ['inventaris', 'forum', 'poin'].includes(activeView)
+              ['inventaris', 'forum'].includes(activeView)
                 ? 'text-emerald-400 font-bold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Menu size={18} />
-            <span className="text-[10px] mt-0.5 flex items-center gap-0.5">
+            <Menu size={17} />
+            <span className="text-[9.5px] mt-0.5 flex items-center gap-0.5">
               lainnya
-              <ChevronDown size={10} className={mobileSheet === 'lainnya' ? 'rotate-180' : ''} />
+              <ChevronDown size={9} className={mobileSheet === 'lainnya' ? 'rotate-180' : ''} />
             </span>
           </button>
         </div>
@@ -580,6 +660,25 @@ export const Navbar: React.FC = () => {
                     <div className="text-[11px] text-slate-400">Peraturan resmi lingkungan perumahan GSS 1</div>
                   </div>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveView('poin');
+                    setMobileSheet(null);
+                  }}
+                  className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
+                    activeView === 'poin'
+                      ? 'bg-blue-600/30 border-emerald-500 text-white font-bold'
+                      : 'bg-slate-800/80 border-slate-700 text-slate-300'
+                  }`}
+                >
+                  <Award size={20} className="text-yellow-400 shrink-0" />
+                  <div>
+                    <div className="text-sm font-bold">Grisspoin</div>
+                    <div className="text-[11px] text-slate-400">Poin keaktifan &amp; katalog reward warga</div>
+                  </div>
+                </button>
               </div>
             )}
 
@@ -621,25 +720,6 @@ export const Navbar: React.FC = () => {
                   <div>
                     <div className="text-sm font-bold">forum</div>
                     <div className="text-[11px] text-slate-400">Ruang diskusi & musyawarah online warga</div>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveView('poin');
-                    setMobileSheet(null);
-                  }}
-                  className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
-                    activeView === 'poin'
-                      ? 'bg-blue-600/30 border-emerald-500 text-white font-bold'
-                      : 'bg-slate-800/80 border-slate-700 text-slate-300'
-                  }`}
-                >
-                  <Award size={20} className="text-yellow-400 shrink-0" />
-                  <div>
-                    <div className="text-sm font-bold">Grisspoin</div>
-                    <div className="text-[11px] text-slate-400">Poin keaktifan & katalog reward warga</div>
                   </div>
                 </button>
 

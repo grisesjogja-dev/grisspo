@@ -14,6 +14,7 @@ import { LoyaltyPointsView } from './components/LoyaltyPointsView';
 import { FasumBookingView } from './components/FasumBookingView';
 import { NotulenDanAbsensiView } from './components/NotulenDanAbsensiView';
 import { KontakPentingView } from './components/KontakPentingView';
+import { PinPortalView } from './components/PinPortalView';
 import { LandingLoginView } from './components/LandingLoginView';
 import { LoginModal } from './components/LoginModal';
 import { NotificationModal } from './components/NotificationModal';
@@ -75,6 +76,8 @@ const MainApp: React.FC = () => {
     switch (activeView) {
       case 'dashboard':
         return <DashboardView />;
+      case 'pin_portal':
+        return <PinPortalView />;
       case 'jimpitan':
         return <JimpitanView onOpenLogin={() => setIsLoginOpen(true)} />;
       case 'fasum':

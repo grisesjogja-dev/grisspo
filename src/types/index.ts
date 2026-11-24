@@ -354,5 +354,18 @@ export interface ImportantContact {
   updatedBy?: string;
 }
 
+export interface PortalPinHistoryItem {
+  pinCode: string;
+  periodLabel: string;
+  updatedAt: string;
+  updatedBy: string;
+}
 
-
+export interface PortalPinConfig {
+  pinCode: string;
+  periodLabel: string;
+  updatedAt: string;
+  updatedBy: string;
+  notes?: string;
+  history?: PortalPinHistoryItem[];
+}

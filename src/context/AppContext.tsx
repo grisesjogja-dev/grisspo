@@ -25,7 +25,8 @@ import {
   PaymentReceiptType,
   PaymentMethodType,
   ImportantContact,
-  InfoBlast
+  InfoBlast,
+  PortalPinConfig
 } from '../types';
 import {
   initialResidents,
@@ -540,6 +541,10 @@ interface AppContextType {
   updateImportantContact: (contact: ImportantContact) => Promise<void>;
   deleteImportantContact: (id: string) => Promise<void>;
 
+  // Portal PIN state & updater
+  portalPin: PortalPinConfig;
+  updatePortalPin: (pinCode: string, periodLabel: string, notes?: string) => Promise<void>;
+
   // Sync state
   isCloudSynced: boolean;
   lastSyncedAt: string;
@@ -614,6 +619,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const [isPengurusOpen, setIsPengurusOpen] = useState<boolean>(false);
+
+  const defaultPortalPin: PortalPinConfig = {
+    pinCode: '2105',
+    periodLabel: 'November 2026',
+    updatedAt: '15 November 2026',
+    updatedBy: 'BAPAK BENI (Superadmin)',
+    notes: 'PIN Portal Gerbang Utama Perum GSS 1. Portal dikunci setiap pukul 21.00 WIB dan wajib dikunci kembali setelah keluar/masuk.',
+    history: []
+  };
+
+  const [portalPin, setPortalPin] = useState<PortalPinConfig>(() => {
+    const saved = localStorage.getItem('grisspo_pin_portal');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.pinCode) return parsed;
+      } catch {}
+    }
+    return defaultPortalPin;
+  });
 
   // Active Sessions & 30-min Inactivity Tracking
   const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
@@ -1576,6 +1601,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let unsubRewards: (() => void) | undefined;
     let unsubImportantContacts: (() => void) | undefined;
     let unsubInfoBlasts: (() => void) | undefined;
+    let unsubPinPortal: (() => void) | undefined;
 
     // Check Cloud Seed Status once so other devices NEVER resurrect deleted documents or burn write quota
     const checkCloudSeedStatus = async () => {
@@ -2014,6 +2040,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }, (err) => {
         console.warn('Firestore info_blasts listener notice:', err.message);
       });
+
+      // 17. PIN Portal Real-Time Listener
+      unsubPinPortal = onSnapshot(doc(db, 'system_settings', 'pin_portal'), (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data() as PortalPinConfig;
+          if (data && data.pinCode) {
+            setPortalPin(data);
+            localStorage.setItem('grisspo_pin_portal', JSON.stringify(data));
+          }
+        }
+      }, (err) => {
+        console.warn('Firestore pin_portal listener notice:', err.message);
+      });
     } catch (e) {
       console.warn('Firebase Firestore initialization notice:', e);
     }
@@ -2036,6 +2075,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubRewards?.();
       unsubImportantContacts?.();
       unsubInfoBlasts?.();
+      unsubPinPortal?.();
     };
   }, []);
 
@@ -5197,6 +5237,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updatePortalPin = async (pinCode: string, periodLabel: string, notes?: string) => {
+    if (!currentUser || currentUser.role !== 'superadmin') {
+      throw new Error('Akses Ditolak: Hanya Superadmin yang dapat memperbarui PIN Portal.');
+    }
+    const cleanPin = pinCode.trim();
+    if (!cleanPin) {
+      throw new Error('PIN Portal tidak boleh kosong.');
+    }
+    const nowStr = new Date().toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+    const updater = `${currentUser.name} (${currentUser.houseNumber})`;
+    const prevHistory = portalPin.history || [];
+    const nextHistory = [
+      {
+        pinCode: portalPin.pinCode,
+        periodLabel: portalPin.periodLabel,
+        updatedAt: portalPin.updatedAt,
+        updatedBy: portalPin.updatedBy
+      },
+      ...prevHistory
+    ].slice(0, 6);
+
+    const nextConfig: PortalPinConfig = {
+      pinCode: cleanPin,
+      periodLabel: periodLabel.trim() || portalPin.periodLabel,
+      updatedAt: nowStr,
+      updatedBy: updater,
+      notes: notes?.trim() || portalPin.notes,
+      history: nextHistory
+    };
+
+    setPortalPin(nextConfig);
+    localStorage.setItem('grisspo_pin_portal', JSON.stringify(nextConfig));
+    try {
+      await setDoc(doc(db, 'system_settings', 'pin_portal'), sanitizeForFirestore(nextConfig));
+    } catch (err) {
+      console.warn('Firestore update pin_portal error:', err);
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -5309,6 +5392,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addInfoBlast,
         updateInfoBlast,
         deleteInfoBlast,
+
+        portalPin,
+        updatePortalPin,
 
         isPengurusOpen,
         setIsPengurusOpen,
