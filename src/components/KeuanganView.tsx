@@ -189,8 +189,8 @@ export const KeuanganView: React.FC = () => {
   // Add Transaction Modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [trxType, setTrxType] = useState<'pemasukan' | 'pengeluaran'>('pemasukan');
-  const [trxCategory, setTrxCategory] = useState<IncomeCategory | ExpenseCategory>('Iuran Bulanan (Rp 25.000)');
-  const [trxAmount, setTrxAmount] = useState<number | ''>(25000);
+  const [trxCategory, setTrxCategory] = useState<IncomeCategory | ExpenseCategory>('Iuran Bulanan + Sampah (Rp 50.000)');
+  const [trxAmount, setTrxAmount] = useState<number | ''>(50000);
   const [trxDate, setTrxDate] = useState<string>(() => getLocalDateString());
   const [trxDesc, setTrxDesc] = useState<string>('');
   const [trxHouse, setTrxHouse] = useState<string>('');
@@ -1148,8 +1148,8 @@ export const KeuanganView: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setTrxType('pemasukan');
-                    setTrxCategory('Iuran Bulanan (Rp 25.000)');
-                    setTrxAmount(25000);
+                    setTrxCategory('Iuran Bulanan + Sampah (Rp 50.000)');
+                    setTrxAmount(50000);
                   }}
                   className={`py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                     trxType === 'pemasukan' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'

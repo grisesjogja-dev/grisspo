@@ -6,17 +6,25 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.1';
+export const APP_VERSION = 'v1.9.2';
 export const APP_BUILD_DATE = '23 November 2026';
-export const APP_BUILD_CODE = '2026.11.23-v1.9.1';
-export const APP_RELEASE_NAME = 'Konfirmasi Pelunasan Langsung ke WhatsApp Bendahara 1';
+export const APP_BUILD_CODE = '2026.11.23-v1.9.2';
+export const APP_RELEASE_NAME = 'Default Pos Pembayaran Iuran Bulanan + Sampah';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.2',
+    releaseDate: '23 November 2026',
+    releaseTitle: 'Default Pos Pembayaran Iuran Bulanan + Sampah',
+    badge: 'Terbaru',
+    highlights: [
+      'Default Jenis Transaksi / Pos Pembayaran: Pilihan bawaan pada menu Jenis Transaksi / Pos Pembayaran di Loket Pembayaran Kas dan Catat Transaksi Keuangan kini otomatis terpilih pada "Iuran Bulanan + Sampah (Rp 50.000)".'
+    ]
+  },
   {
     version: 'v1.9.1',
     releaseDate: '23 November 2026',
     releaseTitle: 'Konfirmasi Pelunasan Langsung ke WhatsApp Bendahara 1',
-    badge: 'Terbaru',
     highlights: [
       'Konfirmasi Pelunasan Terpusat ke WA Bendahara 1: Setiap konfirmasi pelunasan yang dilakukan seluruh pengguna (pelunasan tunggakan iuran, pembayaran kekurangan jimpitan, pelunasan sewa fasum, loket kas, dan tagihan rumah di Dashboard) otomatis diarahkan ke nomor WhatsApp resmi Bendahara 1 (Bpk. Ahmad - Rumah B 02).',
       'Tombol & Rincian Bukti Pelunasan Otomatis: Pesan WhatsApp memuat rincian nama warga, nomor rumah, kategori transaksi, nominal, metode bayar, dan nomor bukti transaksi untuk verifikasi cepat oleh Bendahara 1.'

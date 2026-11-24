@@ -94,9 +94,9 @@ export const DashboardView: React.FC = () => {
 
   // --- LOKET PAYMENT FORM STATES ---
   const [selectedResidentId, setSelectedResidentId] = useState<string>(() => residents[0]?.id || '');
-  const [selectedPaymentType, setSelectedPaymentType] = useState<PaymentReceiptType>('iuran_bulanan');
+  const [selectedPaymentType, setSelectedPaymentType] = useState<PaymentReceiptType>('iuran_bulanan_sampah');
   const [formDate, setFormDate] = useState<string>(() => getLocalDateString());
-  const [formAmount, setFormAmount] = useState<number>(25000);
+  const [formAmount, setFormAmount] = useState<number>(50000);
   const [formPeriod, setFormPeriod] = useState<string>(() => {
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     const d = new Date();
