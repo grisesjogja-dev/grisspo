@@ -6,21 +6,29 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.3';
+export const APP_VERSION = 'v1.9.4';
 export const APP_BUILD_DATE = '23 November 2026';
-export const APP_BUILD_CODE = '2026.11.23-v1.9.3';
-export const APP_RELEASE_NAME = 'Menu PIN Portal & Integrasi Grisspoin ke Menu Info';
+export const APP_BUILD_CODE = '2026.11.23-v1.9.4';
+export const APP_RELEASE_NAME = 'Kapitalisasi Penamaan Seluruh Menu Navigasi';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.4',
+    releaseDate: '23 November 2026',
+    releaseTitle: 'Kapitalisasi Penamaan Seluruh Menu Navigasi',
+    badge: 'Terbaru',
+    highlights: [
+      'Penulisan Huruf Kapital Awal Pada Semua Menu: Seluruh nama menu utama dan submenu di navigasi desktop serta mobile kini diawali huruf kapital (Dashboard, PIN Portal, Jimpit, Info Blast, Keuangan, Sewa Fasum, Kas, Info, Data Warga, Jadwal Ronda, Notulen & Absensi, Tata Tertib, Grisspoin, Inventaris, Forum, dan Lainnya).'
+    ]
+  },
   {
     version: 'v1.9.3',
     releaseDate: '23 November 2026',
     releaseTitle: 'Menu PIN Portal & Integrasi Grisspoin ke Menu Info',
-    badge: 'Terbaru',
     highlights: [
-      'Menu Baru "PIN Portal" di Sebelah Dashboard: Ditambahkan menu "PIN Portal" tepat di samping menu "dashboard" dengan indikator berkedip permanen (selalu berkedip).',
+      'Menu Baru "PIN Portal" di Sebelah Dashboard: Ditambahkan menu "PIN Portal" tepat di samping menu "Dashboard" dengan indikator berkedip permanen (selalu berkedip).',
       'Pembatasan Akses PIN Portal (< 2 Bulan Tunggakan): Menu "PIN Portal" hanya dapat diakses dan menampilkan kode PIN gerbang perumahan bagi pengguna dengan tunggakan iuran kurang dari 2 bulan (pengguna dengan tunggakan >= 2 bulan akan diarahkan ke halaman pembatasan akses & konfirmasi pelunasan).',
-      'Menu "Grisspoin" Masuk ke Menu "Info": Menu "Grisspoin" kini dipindahkan ke dalam dropdown/submenu "info" baik di navigasi desktop maupun mobile.'
+      'Menu "Grisspoin" Masuk ke Menu "Info": Menu "Grisspoin" kini dipindahkan ke dalam dropdown/submenu "Info" baik di navigasi desktop maupun mobile.'
     ]
   },
   {

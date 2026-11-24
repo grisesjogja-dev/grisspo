@@ -83,7 +83,7 @@ export const Navbar: React.FC = () => {
               }`}
             >
               <LayoutDashboard size={15} />
-              <span>dashboard</span>
+              <span>Dashboard</span>
             </button>
 
             {/* 1b. PIN Portal (sebelah dashboard, selalu berkedip, akses khusus tunggakan < 2 bulan) */}
@@ -136,7 +136,7 @@ export const Navbar: React.FC = () => {
               }`}
             >
               <Coins size={15} className={activeView === 'jimpitan' ? 'text-slate-950' : 'text-amber-600'} />
-              <span>jimpit</span>
+              <span>Jimpit</span>
               {activeView !== 'jimpitan' && (
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
               )}
@@ -157,7 +157,7 @@ export const Navbar: React.FC = () => {
                 }`}
               >
                 <Megaphone size={15} />
-                <span>info blast</span>
+                <span>Info Blast</span>
               </button>
             )}
 
@@ -175,7 +175,7 @@ export const Navbar: React.FC = () => {
                 }`}
               >
                 <ReceiptText size={15} />
-                <span>keuangan</span>
+                <span>Keuangan</span>
                 <ChevronDown
                   size={14}
                   className={`transition-transform duration-200 ${openDropdown === 'keuangan' ? 'rotate-180' : ''}`}
@@ -189,7 +189,7 @@ export const Navbar: React.FC = () => {
                     Menu Keuangan
                   </div>
 
-                  {/* sewa fasum */}
+                  {/* Sewa Fasum */}
                   <button
                     type="button"
                     onClick={() => {
@@ -204,12 +204,12 @@ export const Navbar: React.FC = () => {
                   >
                     <Building2 size={16} className={activeView === 'fasum' ? 'text-emerald-700' : 'text-slate-400'} />
                     <div className="flex flex-col">
-                      <span>sewa fasum</span>
+                      <span>Sewa Fasum</span>
                       <span className="text-[10px] font-normal text-slate-400">Balai pertemuan, tenda & kursi</span>
                     </div>
                   </button>
 
-                  {/* kas */}
+                  {/* Kas */}
                   <button
                     type="button"
                     onClick={() => {
@@ -224,7 +224,7 @@ export const Navbar: React.FC = () => {
                   >
                     <ReceiptText size={16} className={activeView === 'keuangan' ? 'text-emerald-700' : 'text-slate-400'} />
                     <div className="flex flex-col">
-                      <span>kas</span>
+                      <span>Kas</span>
                       <span className="text-[10px] font-normal text-slate-400">Buku kas & laporan transaksi</span>
                     </div>
                   </button>
@@ -232,7 +232,7 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* 4. info (dropdown: data warga, jadwal ronda, notulen & absensi, tata tertib) */}
+            {/* 4. Info (dropdown: Data Warga, Jadwal Ronda, Notulen & Absensi, Tata Tertib, Grisspoin) */}
             <div className="relative">
               <button
                 type="button"
@@ -246,7 +246,7 @@ export const Navbar: React.FC = () => {
                 }`}
               >
                 <Users size={15} />
-                <span>info</span>
+                <span>Info</span>
                 <ChevronDown
                   size={14}
                   className={`transition-transform duration-200 ${openDropdown === 'info' ? 'rotate-180' : ''}`}
@@ -275,12 +275,12 @@ export const Navbar: React.FC = () => {
                   >
                     <Users size={16} className={activeView === 'warga' ? 'text-emerald-700' : 'text-slate-400'} />
                     <div className="flex flex-col">
-                      <span>data warga</span>
+                      <span>Data Warga</span>
                       <span className="text-[10px] font-normal text-slate-400">Data 58 warga & status hunian</span>
                     </div>
                   </button>
 
-                  {/* jadwal ronda */}
+                  {/* Jadwal Ronda */}
                   <button
                     type="button"
                     onClick={() => {
@@ -295,12 +295,12 @@ export const Navbar: React.FC = () => {
                   >
                     <Shield size={16} className={activeView === 'ronda' ? 'text-emerald-700' : 'text-slate-400'} />
                     <div className="flex flex-col">
-                      <span>jadwal ronda</span>
+                      <span>Jadwal Ronda</span>
                       <span className="text-[10px] font-normal text-slate-400">Jadwal ronda malam & petugas</span>
                     </div>
                   </button>
 
-                  {/* notulen & absensi */}
+                  {/* Notulen & Absensi */}
                   <button
                     type="button"
                     onClick={() => {
@@ -315,12 +315,12 @@ export const Navbar: React.FC = () => {
                   >
                     <FileText size={16} className={activeView === 'notulen' ? 'text-emerald-700' : 'text-slate-400'} />
                     <div className="flex flex-col">
-                      <span>notulen & absensi</span>
+                      <span>Notulen &amp; Absensi</span>
                       <span className="text-[10px] font-normal text-slate-400">Hasil rapat & presensi warga</span>
                     </div>
                   </button>
 
-                  {/* tata tertib */}
+                  {/* Tata Tertib */}
                   <button
                     type="button"
                     onClick={() => {
@@ -335,7 +335,7 @@ export const Navbar: React.FC = () => {
                   >
                     <BookOpen size={16} className={activeView === 'tatib' ? 'text-emerald-700' : 'text-slate-400'} />
                     <div className="flex flex-col">
-                      <span>tata tertib</span>
+                      <span>Tata Tertib</span>
                       <span className="text-[10px] font-normal text-slate-400">Aturan resmi paguyuban 2026</span>
                     </div>
                   </button>
@@ -363,7 +363,7 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* 5. inventaris */}
+            {/* 5. Inventaris */}
             <button
               type="button"
               onClick={() => {
@@ -377,10 +377,10 @@ export const Navbar: React.FC = () => {
               }`}
             >
               <Package size={15} />
-              <span>inventaris</span>
+              <span>Inventaris</span>
             </button>
 
-            {/* 6. forum */}
+            {/* 6. Forum */}
             <button
               type="button"
               onClick={() => {
@@ -394,7 +394,7 @@ export const Navbar: React.FC = () => {
               }`}
             >
               <MessageSquare size={15} />
-              <span>forum</span>
+              <span>Forum</span>
             </button>
           </div>
         </div>
@@ -417,7 +417,7 @@ export const Navbar: React.FC = () => {
             }`}
           >
             <LayoutDashboard size={17} />
-            <span className="text-[9.5px] mt-0.5">dashboard</span>
+            <span className="text-[9.5px] mt-0.5">Dashboard</span>
           </button>
 
           {/* 1b. PIN Portal (sebelah dashboard, selalu berkedip) */}
@@ -448,7 +448,7 @@ export const Navbar: React.FC = () => {
             <span className="text-[9px] mt-0.5 whitespace-nowrap animate-pulse font-bold">PIN Portal</span>
           </button>
 
-          {/* 2. jimpit */}
+          {/* 2. Jimpit */}
           <button
             type="button"
             onClick={() => {
@@ -460,10 +460,10 @@ export const Navbar: React.FC = () => {
             }`}
           >
             <Coins size={17} className="text-amber-400" />
-            <span className="text-[9.5px] mt-0.5">jimpit</span>
+            <span className="text-[9.5px] mt-0.5">Jimpit</span>
           </button>
 
-          {/* 3. keuangan (dropdown trigger) */}
+          {/* 3. Keuangan (dropdown trigger) */}
           <button
             type="button"
             onClick={() => setMobileSheet(mobileSheet === 'keuangan' ? null : 'keuangan')}
@@ -473,12 +473,12 @@ export const Navbar: React.FC = () => {
           >
             <ReceiptText size={17} />
             <span className="text-[9.5px] mt-0.5 flex items-center gap-0.5">
-              keuangan
+              Keuangan
               <ChevronDown size={9} className={mobileSheet === 'keuangan' ? 'rotate-180' : ''} />
             </span>
           </button>
 
-          {/* 4. info (dropdown trigger) */}
+          {/* 4. Info (dropdown trigger) */}
           <button
             type="button"
             onClick={() => setMobileSheet(mobileSheet === 'info' ? null : 'info')}
@@ -488,12 +488,12 @@ export const Navbar: React.FC = () => {
           >
             <Users size={17} />
             <span className="text-[9.5px] mt-0.5 flex items-center gap-0.5">
-              info
+              Info
               <ChevronDown size={9} className={mobileSheet === 'info' ? 'rotate-180' : ''} />
             </span>
           </button>
 
-          {/* 5. lainnya (inventaris, forum) */}
+          {/* 5. Lainnya (Inventaris, Forum) */}
           <button
             type="button"
             onClick={() => setMobileSheet(mobileSheet === 'lainnya' ? null : 'lainnya')}
@@ -505,7 +505,7 @@ export const Navbar: React.FC = () => {
           >
             <Menu size={17} />
             <span className="text-[9.5px] mt-0.5 flex items-center gap-0.5">
-              lainnya
+              Lainnya
               <ChevronDown size={9} className={mobileSheet === 'lainnya' ? 'rotate-180' : ''} />
             </span>
           </button>
@@ -556,7 +556,7 @@ export const Navbar: React.FC = () => {
                 >
                   <Building2 size={20} className="text-emerald-400 shrink-0" />
                   <div>
-                    <div className="text-sm font-bold">sewa fasum</div>
+                    <div className="text-sm font-bold">Sewa Fasum</div>
                     <div className="text-[11px] text-slate-400">Reservasi balai pertemuan, tenda & kursi</div>
                   </div>
                 </button>
@@ -575,7 +575,7 @@ export const Navbar: React.FC = () => {
                 >
                   <ReceiptText size={20} className="text-emerald-400 shrink-0" />
                   <div>
-                    <div className="text-sm font-bold">kas</div>
+                    <div className="text-sm font-bold">Kas</div>
                     <div className="text-[11px] text-slate-400">Buku kas paguyuban, iuran & laporan keuangan</div>
                   </div>
                 </button>
@@ -599,7 +599,7 @@ export const Navbar: React.FC = () => {
                 >
                   <Users size={20} className="text-emerald-400 shrink-0" />
                   <div>
-                    <div className="text-sm font-bold">data warga</div>
+                    <div className="text-sm font-bold">Data Warga</div>
                     <div className="text-[11px] text-slate-400">Data 58 kepala keluarga & status rumah</div>
                   </div>
                 </button>
@@ -618,7 +618,7 @@ export const Navbar: React.FC = () => {
                 >
                   <Shield size={20} className="text-amber-400 shrink-0" />
                   <div>
-                    <div className="text-sm font-bold">jadwal ronda</div>
+                    <div className="text-sm font-bold">Jadwal Ronda</div>
                     <div className="text-[11px] text-slate-400">Jadwal ronda malam 7 hari seminggu</div>
                   </div>
                 </button>
@@ -637,7 +637,7 @@ export const Navbar: React.FC = () => {
                 >
                   <FileText size={20} className="text-teal-400 shrink-0" />
                   <div>
-                    <div className="text-sm font-bold">notulen & absensi</div>
+                    <div className="text-sm font-bold">Notulen &amp; Absensi</div>
                     <div className="text-[11px] text-slate-400">Catatan musyawarah & presensi warga</div>
                   </div>
                 </button>
@@ -656,7 +656,7 @@ export const Navbar: React.FC = () => {
                 >
                   <BookOpen size={20} className="text-rose-400 shrink-0" />
                   <div>
-                    <div className="text-sm font-bold">tata tertib</div>
+                    <div className="text-sm font-bold">Tata Tertib</div>
                     <div className="text-[11px] text-slate-400">Peraturan resmi lingkungan perumahan GSS 1</div>
                   </div>
                 </button>
@@ -699,7 +699,7 @@ export const Navbar: React.FC = () => {
                 >
                   <Package size={20} className="text-amber-400 shrink-0" />
                   <div>
-                    <div className="text-sm font-bold">inventaris</div>
+                    <div className="text-sm font-bold">Inventaris</div>
                     <div className="text-[11px] text-slate-400">33 barang inventaris paguyuban</div>
                   </div>
                 </button>
@@ -718,7 +718,7 @@ export const Navbar: React.FC = () => {
                 >
                   <MessageSquare size={20} className="text-sky-400 shrink-0" />
                   <div>
-                    <div className="text-sm font-bold">forum</div>
+                    <div className="text-sm font-bold">Forum</div>
                     <div className="text-[11px] text-slate-400">Ruang diskusi & musyawarah online warga</div>
                   </div>
                 </button>
