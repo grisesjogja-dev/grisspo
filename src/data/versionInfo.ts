@@ -6,17 +6,26 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.8.7';
+export const APP_VERSION = 'v1.8.8';
 export const APP_BUILD_DATE = '23 November 2026';
-export const APP_BUILD_CODE = '2026.11.23-v1.8.7';
-export const APP_RELEASE_NAME = 'Pelunasan & Sinkronisasi Otomatis Tunggakan Warga';
+export const APP_BUILD_CODE = '2026.11.23-v1.8.8';
+export const APP_RELEASE_NAME = 'Status Rumah Di Huni Pemilik (Jimpit Bulanan)';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.8.8',
+    releaseDate: '23 November 2026',
+    releaseTitle: 'Status Rumah Di Huni Pemilik (Jimpit Bulanan)',
+    badge: 'Terbaru',
+    highlights: [
+      'Pilihan Status Rumah Baru: Ditambahkan opsi status rumah "DI HUNI PEMILIK (JIMPIT BULANAN)" pada menu filter dan formulir Tambah/Edit Data Warga.',
+      'Filter Otomatis Kartu Jimpit Online: Warga dengan status "DI HUNI PEMILIK (JIMPIT BULANAN)" secara otomatis tidak dimunculkan pada daftar checklist Kartu Jimpit Online harian.'
+    ]
+  },
   {
     version: 'v1.8.7',
     releaseDate: '23 November 2026',
     releaseTitle: 'Pelunasan & Sinkronisasi Otomatis Tunggakan Warga',
-    badge: 'Terbaru',
     highlights: [
       'Pelunasan Tunggakan Otomatis Real-Time: Setiap transaksi pembayaran iuran/pelunasan tunggakan warga (baik melalui Catat Transaksi Keuangan maupun Loket Pembayaran Kas, termasuk pembayaran multi-bulan sekaligus seperti Rp 75.000 untuk tunggakan 3 bulan) otomatis memotong atau melunasi seluruh tunggakan di Dashboard, Loket Kas, Data Warga, Tab Tunggakan Iuran, dan Modal Peringatan.',
       'Rekonsiliasi & Rollback Pembayaran Akurat: Pencocokan transaksi kini mendukung identifikasi berdasarkan nomor rumah maupun nama warga pada deskripsi transaksi, serta otomatis menyesuaikan kembali apabila nominal pembayaran diedit atau dihapus oleh Superadmin.'

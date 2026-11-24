@@ -6,6 +6,7 @@ export type UserRole = 'superadmin' | 'sekretaris' | 'bendahara1' | 'bendahara2'
 
 export type StatusRumah =
   | 'DI HUNI PEMILIK'
+  | 'DI HUNI PEMILIK (JIMPIT BULANAN)'
   | 'DI HUNI KONTRAK'
   | 'KOSONG (MEMBAYAR IURAN)'
   | 'KOSONG (DIJIMPIT)'

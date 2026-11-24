@@ -111,7 +111,11 @@ export const DataWargaView: React.FC = () => {
 
   // Statistics
   const totalCount = residents.length;
-  const dihuniPemilik = residents.filter((r) => r.statusRumah === 'DI HUNI PEMILIK').length;
+  const dihuniPemilikJimpitBulanan = residents.filter(
+    (r) => r.statusRumah === 'DI HUNI PEMILIK (JIMPIT BULANAN)'
+  ).length;
+  const dihuniPemilik =
+    residents.filter((r) => r.statusRumah === 'DI HUNI PEMILIK').length + dihuniPemilikJimpitBulanan;
   const dihuniKontrak = residents.filter((r) => r.statusRumah === 'DI HUNI KONTRAK').length;
   const kosongDijimpit = residents.filter((r) => r.statusRumah === 'KOSONG (DIJIMPIT)').length;
   const kosongBayar = residents.filter((r) => r.statusRumah === 'KOSONG (MEMBAYAR IURAN)').length;
@@ -124,6 +128,8 @@ export const DataWargaView: React.FC = () => {
     switch (status) {
       case 'DI HUNI PEMILIK':
         return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+      case 'DI HUNI PEMILIK (JIMPIT BULANAN)':
+        return 'bg-teal-100 text-teal-800 border-teal-300 font-bold';
       case 'DI HUNI KONTRAK':
         return 'bg-sky-100 text-sky-800 border-sky-300';
       case 'KOSONG (DIJIMPIT)':
@@ -359,7 +365,11 @@ export const DataWargaView: React.FC = () => {
         <div className="bg-white p-4 rounded-2xl border border-emerald-100 shadow-xs">
           <span className="text-[11px] font-bold text-emerald-700 uppercase">Dihuni Pemilik</span>
           <div className="text-2xl font-black text-emerald-600 mt-1">{dihuniPemilik}</div>
-          <div className="text-[10px] text-emerald-700">Warga tetap aktif</div>
+          <div className="text-[10px] text-emerald-700">
+            {dihuniPemilikJimpitBulanan > 0
+              ? `${dihuniPemilikJimpitBulanan} jimpit bulanan`
+              : 'Warga tetap aktif'}
+          </div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-sky-100 shadow-xs">
@@ -617,6 +627,7 @@ export const DataWargaView: React.FC = () => {
                 >
                   <option value="ALL">Semua Status Hunian</option>
                   <option value="DI HUNI PEMILIK">DI HUNI PEMILIK</option>
+                  <option value="DI HUNI PEMILIK (JIMPIT BULANAN)">DI HUNI PEMILIK (JIMPIT BULANAN)</option>
                   <option value="DI HUNI KONTRAK">DI HUNI KONTRAK</option>
                   <option value="KOSONG (DIJIMPIT)">KOSONG (DIJIMPIT)</option>
                   <option value="KOSONG (MEMBAYAR IURAN)">KOSONG (MEMBAYAR IURAN)</option>
@@ -921,6 +932,7 @@ export const DataWargaView: React.FC = () => {
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold"
                 >
                   <option value="DI HUNI PEMILIK">DI HUNI PEMILIK</option>
+                  <option value="DI HUNI PEMILIK (JIMPIT BULANAN)">DI HUNI PEMILIK (JIMPIT BULANAN)</option>
                   <option value="DI HUNI KONTRAK">DI HUNI KONTRAK</option>
                   <option value="KOSONG (DIJIMPIT)">KOSONG (DIJIMPIT)</option>
                   <option value="KOSONG (MEMBAYAR IURAN)">KOSONG (MEMBAYAR IURAN)</option>

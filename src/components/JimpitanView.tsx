@@ -48,6 +48,7 @@ import { DetailToggle } from './DetailToggle';
 export const isStatusEligibleForJimpitan = (status?: string): boolean => {
   if (!status) return false;
   const s = status.trim().toUpperCase();
+  if (s === 'DI HUNI PEMILIK (JIMPIT BULANAN)') return false;
   return (
     s === 'DI HUNI PEMILIK' ||
     s === 'DI HUNI KONTRAK' ||
@@ -1312,7 +1313,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 Rp {currentTotalRevenue.toLocaleString('id-ID')}
               </div>
               <div className="text-xs text-slate-400 mt-0.5">
-                {totalSelectedCount} dari {wajibJimpitResidents.length} rumah wajib jimpit (Pemilik, Kontrak &amp; Kosong Dijimpit) &bull; Min. Rp 500 (Bebas Nominal)
+                {totalSelectedCount} dari {wajibJimpitResidents.length} rumah kartu jimpit harian (kecuali Jimpit Bulanan &amp; Kosong Non-Jimpit) &bull; Min. Rp 500 (Bebas Nominal)
               </div>
             </div>
 
