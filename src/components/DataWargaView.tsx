@@ -152,7 +152,7 @@ export const DataWargaView: React.FC = () => {
 
   // Delinquent residents (>= 2 consecutive months of unpaid dues)
   const delinquentResidents = useMemo(() => {
-    return residents.filter((r) => (r.iuranUnpaidMonths || 0) >= 2);
+    return residents.filter((r) => (r.iuranUnpaidMonths || 0) >= 2 && getResidentMonthlyFee(r) > 0);
   }, [residents]);
 
   const handleSendWhatsAppWarning = async (res: Resident) => {
@@ -299,6 +299,8 @@ export const DataWargaView: React.FC = () => {
                     setFormPhone('');
                     setFormRole('warga');
                     setFormFamily(3);
+                    setFormMonthlyFee(50000);
+                    setFormBerkasKependudukan(false);
                     setShowAddModal(true);
                   }}
                   className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/30 flex items-center gap-1.5 transition"
@@ -463,7 +465,7 @@ export const DataWargaView: React.FC = () => {
                 Daftar Warga dengan Tunggakan Iuran &ge; 2 Bulan Berturut-turut
               </h3>
               <p className="text-xs text-slate-300 max-w-2xl">
-                Sesuai instruksi dan Tata Tertib 2026, warga yang terlambat membayar iuran bulanan (Rp 25.000/bln) selama 2 bulan berturut-turut memperoleh warning saat login dan notifikasi otomatis ke nomor WhatsApp.
+                Sesuai instruksi dan Tata Tertib 2026, warga yang terlambat membayar iuran bulanan (sesuai tarif iuran masing-masing warga) selama 2 bulan berturut-turut memperoleh warning saat login dan notifikasi otomatis ke nomor WhatsApp.
               </p>
             </div>
 
@@ -473,7 +475,7 @@ export const DataWargaView: React.FC = () => {
                 {delinquentResidents.length} <span className="text-xs text-slate-300">Rumah</span>
               </div>
               <span className="text-[10px] text-red-200">
-                Rp {(delinquentResidents.reduce((acc, r) => acc + (r.iuranUnpaidMonths || 0) * 25000, 0)).toLocaleString('id-ID')}
+                Rp {(delinquentResidents.reduce((acc, r) => acc + (r.iuranUnpaidMonths || 0) * getResidentMonthlyFee(r), 0)).toLocaleString('id-ID')}
               </span>
             </div>
           </div>
@@ -485,7 +487,7 @@ export const DataWargaView: React.FC = () => {
                 <span>Rincian Warga Menunggak & Kirim Notifikasi WhatsApp</span>
               </h4>
               <span className="text-xs font-semibold text-slate-500">
-                Tarif Iuran: Rp 25.000 / KK / bulan
+                Tarif Iuran: Sesuai Tarif Warga (Rp 25.000 / Rp 50.000 / bln)
               </span>
             </div>
 
@@ -515,7 +517,7 @@ export const DataWargaView: React.FC = () => {
                   ) : (
                     delinquentResidents.map((r, idx) => {
                       const unpaidCount = r.iuranUnpaidMonths || 2;
-                      const arrears = unpaidCount * 25000;
+                      const arrears = unpaidCount * getResidentMonthlyFee(r);
                       const monthList = r.unpaidMonthNames && r.unpaidMonthNames.length > 0
                         ? r.unpaidMonthNames.join(', ')
                         : `${unpaidCount} bulan`;
@@ -699,10 +701,28 @@ export const DataWargaView: React.FC = () => {
                   <td className="py-3 px-4">
                     {(() => {
                       const payInfo = getResidentPaymentType(r);
+                      const fee = getResidentMonthlyFee(r);
+                      const unpaid = r.iuranUnpaidMonths || 0;
+                      const arrearsNominal = unpaid * fee;
                       return (
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${payInfo.badge}`}>
-                          {payInfo.label}
-                        </span>
+                        <div className="space-y-1">
+                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${payInfo.badge}`}>
+                            {payInfo.label}
+                          </span>
+                          {fee > 0 && (
+                            <div>
+                              {unpaid > 0 ? (
+                                <span className="inline-block px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200 text-[10px] font-bold">
+                                  Tunggakan: {unpaid} bln (Rp {arrearsNominal.toLocaleString('id-ID')})
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                                  Iuran Lunas
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       );
                     })()}
                   </td>

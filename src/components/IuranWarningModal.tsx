@@ -22,7 +22,7 @@ interface IuranWarningModalProps {
 }
 
 export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, onClose }) => {
-  const { currentUser: authUser, residents, updateResident, addTransaction, awardPoints, addAnnouncement } = useApp();
+  const { currentUser: authUser, residents, addTransaction, awardPoints, addAnnouncement } = useApp();
   const currentUser = authUser || defaultGuestUser;
   const [isPayingNow, setIsPayingNow] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'transfer' | 'cash'>('transfer');
@@ -39,11 +39,11 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
   );
 
   const unpaidMonths = resident?.iuranUnpaidMonths || 0;
-  const isOverdue = unpaidMonths >= 2;
+  const monthlyFee = resident ? getResidentMonthlyFee(resident) : 0;
+  const isOverdue = unpaidMonths >= 2 && monthlyFee > 0;
 
   if (!isOpen || !resident || !isOverdue) return null;
 
-  const monthlyFee = getResidentMonthlyFee(resident);
   const totalDue = unpaidMonths * monthlyFee;
   const monthListStr =
     resident.unpaidMonthNames && resident.unpaidMonthNames.length > 0
@@ -60,24 +60,21 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
     try {
       const dateStr = getLocalDateString();
 
-      // Record transaction into kas paguyuban
+      const dynamicCategory =
+        monthlyFee >= 50000
+          ? 'Iuran Bulanan + Sampah (Rp 50.000)'
+          : 'Iuran Bulanan (Rp 25.000)';
+
+      // Record transaction into kas paguyuban (automatically clears proportional arrears & tracks appliedIuranCredits)
       await addTransaction({
         type: 'pemasukan',
-        category: 'Iuran Bulanan (Rp 25.000)',
+        category: dynamicCategory,
         amount: totalDue,
         date: dateStr,
         description: `Pelunasan Tunggakan Iuran Bulanan (${unpaidMonths} Bulan: ${monthListStr}) oleh ${resident.name} (${resident.houseNumber}) via ${paymentMethod === 'transfer' ? 'Transfer Bank BRI' : 'Tunai Bendahara'}`,
         recordedBy: `${currentUser.name} (Mandiri via Portal)`,
         userRole: currentUser.role,
         sourceHouse: resident.houseNumber
-      });
-
-      // Update resident record to clear arrears
-      await updateResident({
-        ...resident,
-        iuranUnpaidMonths: 0,
-        unpaidMonthNames: [],
-        monthlyIuranPaid: true
       });
 
       // Award loyalty points
@@ -314,7 +311,7 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
                   <span>Ketentuan Tata Tertib Warga Perum GSS 2026:</span>
                 </div>
                 <p className="text-slate-600 leading-relaxed text-[11px]">
-                  Berdasarkan Tata Tertib 2026, tanggal jatuh tempo pembayaran iuran bulanan (Rp 25.000), iuran sampah, dan sewa lahan parkir adalah <strong>tanggal 28 setiap bulannya</strong>. Warga dengan tunggakan &ge; 2 bulan berturut-turut akan menerima notifikasi otomatis ke nomor WhatsApp dan dikenakan pembatasan sementara peminjaman aset inventaris serta fasilitas umum hingga seluruh tunggakan diselesaikan.
+                  Berdasarkan Tata Tertib 2026, tanggal jatuh tempo pembayaran iuran bulanan (Rp {monthlyFee.toLocaleString('id-ID')}/bln sesuai kategori warga) dan sewa lahan parkir adalah <strong>tanggal 28 setiap bulannya</strong>. Warga dengan tunggakan &ge; 2 bulan berturut-turut akan menerima notifikasi otomatis ke nomor WhatsApp dan dikenakan pembatasan sementara peminjaman aset inventaris serta fasilitas umum hingga seluruh tunggakan diselesaikan.
                 </p>
               </div>
 

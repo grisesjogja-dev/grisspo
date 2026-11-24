@@ -1,4 +1,4 @@
-import { UserRole, Transaction } from '../types';
+import { UserRole, Transaction, Resident } from '../types';
 
 /**
  * Computes a standard SHA-256 hash string for transaction end-to-end integrity
@@ -181,4 +181,232 @@ export function getResidentMonthlyFee(r: { name?: string; statusRumah?: string; 
     return 25000;
   }
   return 0;
+}
+
+/**
+ * Determines whether a transaction or receipt represents an iuran / monthly dues payment
+ * (excluding expenses, jimpitan, saldo kas awal, pure fasum, or pure sumbangan).
+ */
+export function isIuranPaymentRecord(options: {
+  type?: string;
+  category?: string;
+  paymentType?: string;
+  paymentTypeName?: string;
+  description?: string;
+  notes?: string;
+}): boolean {
+  const cleanType = String(options.type || '').trim().toLowerCase();
+  if (cleanType === 'pengeluaran' || cleanType === 'expense') return false;
+
+  const pType = String(options.paymentType || '').trim().toLowerCase();
+  const catL = String(options.category || options.paymentTypeName || '').toLowerCase();
+  const descL = String(options.description || options.notes || '').toLowerCase();
+
+  if (
+    catL.includes('jimpit') ||
+    descL.includes('jimpit') ||
+    pType === 'jimpitan' ||
+    catL.includes('saldo') ||
+    descL.includes('saldo kas awal')
+  ) {
+    return false;
+  }
+
+  if (
+    pType === 'iuran_bulanan' ||
+    pType === 'iuran_sampah' ||
+    pType === 'iuran_bulanan_sampah' ||
+    catL.includes('iuran') ||
+    catL.includes('sampah')
+  ) {
+    return true;
+  }
+
+  if (pType === 'sewa_fasum' || catL.includes('fasum') || pType === 'sumbangan_sukarela' || catL.includes('sumbangan')) {
+    return descL.includes('iuran') || descL.includes('tunggakan');
+  }
+
+  // For 'Lain-lain Pemasukan' or 'pemasukan_lain', detect iuran/payment/arrears settlements
+  return (
+    descL.includes('iuran') ||
+    descL.includes('tunggakan') ||
+    descL.includes('pelunasan') ||
+    descL.includes('lunas') ||
+    descL.includes('bayar') ||
+    descL.includes('sampah')
+  );
+}
+
+/**
+ * Matches a resident from a payment record using residentId, houseNumber, or description/notes.
+ */
+export function findResidentForPayment<T extends { id: string; name: string; houseNumber: string }>(
+  residents: T[],
+  options: { residentId?: string; houseNumber?: string; description?: string }
+): T | undefined {
+  if (options.residentId) {
+    const byId = residents.find((r) => r.id === options.residentId);
+    if (byId) return byId;
+  }
+
+  const rawHouse = (options.houseNumber || '').trim();
+  if (rawHouse && rawHouse.toLowerCase() !== 'paguyuban gss') {
+    const cleanHouse = rawHouse.replace(/\s+/g, '').toUpperCase();
+    const byHouse = residents.find(
+      (r) => r.houseNumber.replace(/\s+/g, '').toUpperCase() === cleanHouse
+    );
+    if (byHouse) return byHouse;
+  }
+
+  const desc = (options.description || '').trim();
+  if (!desc) return undefined;
+
+  // Try matching house number pattern in description (e.g. "B 09", "B09", "A-5", "C 15")
+  const houseMatches = desc.match(/\b([A-C])\s*[-.]?\s*0?(\d{1,2})\b/gi);
+  if (houseMatches) {
+    for (const hm of houseMatches) {
+      const m = hm.match(/([A-C])\s*[-.]?\s*0?(\d{1,2})/i);
+      if (m) {
+        const normalizedTarget = `${m[1].toUpperCase()}${m[2].padStart(2, '0')}`;
+        const byDescHouse = residents.find(
+          (r) => r.houseNumber.replace(/\s+/g, '').toUpperCase() === normalizedTarget
+        );
+        if (byDescHouse) return byDescHouse;
+      }
+    }
+  }
+
+  // Match resident by unique name tokens in description
+  const descClean = desc.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
+  const descWords = new Set(descClean.split(/\s+/).filter(Boolean));
+  const stopWords = new Set([
+    'bapak', 'bpk', 'ibu', 'mas', 'mbak', 'kosong', 'blok', 'warga', 'rumah',
+    'iuran', 'sampah', 'bulanan', 'lunas', 'bayar', 'pembayaran', 'tunggakan', 'kas'
+  ]);
+
+  let bestScore = 0;
+  let bestMatches: T[] = [];
+
+  for (const r of residents) {
+    const nameClean = r.name
+      .toLowerCase()
+      .replace(/\([a-c]\s*\d+\)/gi, ' ')
+      .replace(/[^a-z0-9\s]/g, ' ');
+    const tokens = nameClean
+      .split(/\s+/)
+      .filter((t) => t.length >= 3 && !stopWords.has(t));
+
+    if (tokens.length === 0) continue;
+
+    let matchedChars = 0;
+    let matchedCount = 0;
+    for (const tok of tokens) {
+      if (descWords.has(tok)) {
+        matchedCount += 1;
+        matchedChars += tok.length;
+      }
+    }
+
+    if (matchedCount > 0) {
+      const score = matchedCount * 100 + matchedChars;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatches = [r];
+      } else if (score === bestScore) {
+        bestMatches.push(r);
+      }
+    }
+  }
+
+  if (bestMatches.length === 1) {
+    return bestMatches[0];
+  }
+
+  return undefined;
+}
+
+/**
+ * Applies an iuran payment to a resident's unpaid months proportionally to their monthly fee.
+ * Idempotent per paymentId via appliedIuranCredits (supports create and edit).
+ */
+export function applyIuranPaymentToResident(
+  resident: Resident,
+  paymentId: string,
+  paidAmount: number,
+  fallbackFee?: number
+): { updatedResident: Resident; paidMonths: number; changed: boolean } {
+  const monthlyFee = getResidentMonthlyFee(resident) || fallbackFee || 25000;
+  const existingCredits = { ...(resident.appliedIuranCredits || {}) };
+  const prevCredit = existingCredits[paymentId] || 0;
+  const currentUnpaid = resident.iuranUnpaidMonths ?? (resident.monthlyIuranPaid ? 0 : 1);
+  const baseUnpaid = currentUnpaid + prevCredit;
+
+  let newCredit = 0;
+  if (paidAmount > 0 && monthlyFee > 0 && baseUnpaid > 0) {
+    const totalBaseArrears = baseUnpaid * monthlyFee;
+    if (paidAmount >= totalBaseArrears) {
+      newCredit = baseUnpaid;
+    } else {
+      newCredit = Math.min(baseUnpaid, Math.floor(paidAmount / monthlyFee));
+    }
+  }
+
+  const nextUnpaid = Math.max(0, baseUnpaid - newCredit);
+  const currentNames = resident.unpaidMonthNames || [];
+  let nextNames: string[] = [];
+  if (nextUnpaid > 0) {
+    if (currentNames.length >= nextUnpaid) {
+      nextNames = currentNames.slice(currentNames.length - nextUnpaid);
+    } else {
+      nextNames = currentNames;
+    }
+  }
+
+  if (newCredit > 0) {
+    existingCredits[paymentId] = newCredit;
+  } else {
+    delete existingCredits[paymentId];
+  }
+
+  const nextPaidFlag = nextUnpaid === 0 ? true : paidAmount >= monthlyFee && baseUnpaid === 0 ? true : false;
+  const changed =
+    nextUnpaid !== (resident.iuranUnpaidMonths ?? 0) ||
+    nextPaidFlag !== resident.monthlyIuranPaid ||
+    prevCredit !== newCredit ||
+    nextNames.length !== currentNames.length;
+
+  const updatedResident: Resident = {
+    ...resident,
+    monthlyIuranPaid: nextPaidFlag,
+    iuranUnpaidMonths: nextUnpaid,
+    unpaidMonthNames: nextNames,
+    appliedIuranCredits: existingCredits
+  };
+
+  return { updatedResident, paidMonths: newCredit, changed };
+}
+
+/**
+ * Reverts a previously applied iuran payment from a resident (e.g. when receipt/transaction is deleted).
+ */
+export function revertIuranPaymentFromResident(
+  resident: Resident,
+  paymentId: string
+): { updatedResident: Resident; changed: boolean } {
+  const existingCredits = { ...(resident.appliedIuranCredits || {}) };
+  const prevCredit = existingCredits[paymentId] || 0;
+  if (prevCredit <= 0) {
+    return { updatedResident: resident, changed: false };
+  }
+
+  delete existingCredits[paymentId];
+  const nextUnpaid = (resident.iuranUnpaidMonths || 0) + prevCredit;
+  const updatedResident: Resident = {
+    ...resident,
+    iuranUnpaidMonths: nextUnpaid,
+    monthlyIuranPaid: nextUnpaid === 0,
+    appliedIuranCredits: existingCredits
+  };
+
+  return { updatedResident, changed: true };
 }

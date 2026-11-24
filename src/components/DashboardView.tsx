@@ -830,7 +830,18 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                       <span>&bull;</span>
                       <span>Status: <strong className="text-emerald-800">{selectedResident.statusRumah}</strong></span>
                       <span>&bull;</span>
-                      <span>Tunggakan Iuran: <strong className="text-red-600">{selectedResident.iuranUnpaidMonths || 0} Bulan</strong></span>
+                      <span>Tarif: <strong className="text-slate-800">Rp {getResidentMonthlyFee(selectedResident).toLocaleString('id-ID')}/bln</strong></span>
+                      <span>&bull;</span>
+                      <span>
+                        Tunggakan Iuran:{' '}
+                        {(selectedResident.iuranUnpaidMonths || 0) > 0 && getResidentMonthlyFee(selectedResident) > 0 ? (
+                          <strong className="text-red-600">
+                            {selectedResident.iuranUnpaidMonths} Bulan (Rp {((selectedResident.iuranUnpaidMonths || 0) * getResidentMonthlyFee(selectedResident)).toLocaleString('id-ID')})
+                          </strong>
+                        ) : (
+                          <strong className="text-emerald-700">0 Bulan (LUNAS)</strong>
+                        )}
+                      </span>
                     </div>
                   )}
                 </div>

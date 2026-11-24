@@ -33,6 +33,7 @@ export interface Resident {
   points: number;
   password?: string;
   monthlyFee?: number; // e.g. 50000, 25000, 0
+  appliedIuranCredits?: Record<string, number>; // maps transactionId -> months deducted for safe reconciliation/edit/delete
 }
 
 export interface WhatsAppNotificationLog {

@@ -46,7 +46,11 @@ import {
   detectFinancialAnomaly,
   sendAnomalyEmailAlert,
   EmailAlertLog,
-  getResidentMonthlyFee
+  getResidentMonthlyFee,
+  isIuranPaymentRecord,
+  findResidentForPayment,
+  applyIuranPaymentToResident,
+  revertIuranPaymentFromResident
 } from '../utils/security';
 import { db } from '../services/firebase';
 import {
@@ -2152,6 +2156,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [transactions, paymentReceipts, jimpitReports, deletedIds, fasumBookings]
   );
 
+  // Automatic synchronization of legacy/unapplied iuran payments (e.g., multi-month or name-matched payments)
+  const reconciledPaymentKeysRef = useRef<Set<string>>((() => {
+    try {
+      const saved = localStorage.getItem('grisspo_reconciled_payment_ids_v1');
+      return saved ? new Set(JSON.parse(saved)) : new Set<string>();
+    } catch {
+      return new Set<string>();
+    }
+  })());
+
+  useEffect(() => {
+    if (residents.length === 0 || reconciledTransactions.length === 0) return;
+
+    let anyUpdated = false;
+    const updatedResidentsMap = new Map<string, Resident>();
+    const workingList = residents.map((r) => ({ ...r }));
+
+    for (const trx of reconciledTransactions) {
+      const cleanType = String(trx.type || '').trim().toLowerCase();
+      const amt = Number(trx.amount) || 0;
+      if ((cleanType !== 'pemasukan' && cleanType !== 'income') || amt <= 0) continue;
+      if (!isIuranPaymentRecord({ type: cleanType, category: trx.category, description: trx.description })) continue;
+
+      const matched = findResidentForPayment(workingList, {
+        houseNumber: trx.sourceHouse,
+        description: trx.description
+      });
+      if (!matched) continue;
+
+      const curUnpaid = matched.iuranUnpaidMonths || 0;
+      if (curUnpaid <= 0) continue;
+
+      if (matched.appliedIuranCredits && matched.appliedIuranCredits[trx.id] !== undefined) continue;
+      const trackKey = `${matched.id}:${trx.id}`;
+      if (reconciledPaymentKeysRef.current.has(trackKey)) continue;
+
+      const catL = String(trx.category || '').toLowerCase();
+      const fallbackFee = catL.includes('sampah') && catL.includes('bulanan') ? 50000 : 25000;
+      const fee = getResidentMonthlyFee(matched) || fallbackFee;
+      if (fee <= 0) continue;
+
+      const hasExplicitHouse = Boolean((trx.sourceHouse || '').trim() && (trx.sourceHouse || '').trim().toLowerCase() !== 'paguyuban gss');
+      // Reconcile if payment had no sourceHouse (previously never matched) OR covers >= 2 months (previously only deducted 1 month)
+      if (!hasExplicitHouse || amt >= 2 * fee) {
+        const res = applyIuranPaymentToResident(matched, trx.id, amt, fallbackFee);
+        reconciledPaymentKeysRef.current.add(trackKey);
+        if (res.changed) {
+          const idx = workingList.findIndex((w) => w.id === matched.id);
+          if (idx >= 0) workingList[idx] = res.updatedResident;
+          updatedResidentsMap.set(matched.id, res.updatedResident);
+          anyUpdated = true;
+        }
+      }
+    }
+
+    if (reconciledPaymentKeysRef.current.size > 0) {
+      try {
+        localStorage.setItem(
+          'grisspo_reconciled_payment_ids_v1',
+          JSON.stringify(Array.from(reconciledPaymentKeysRef.current))
+        );
+      } catch {}
+    }
+
+    if (anyUpdated) {
+      residentsRef.current = workingList;
+      setResidents(workingList);
+      localStorage.setItem('grisspo_residents', JSON.stringify(workingList));
+      updatedResidentsMap.forEach((uRes) => {
+        safeCloudWrite('warga', uRes.id, uRes).catch(() => {});
+      });
+    }
+  }, [reconciledTransactions, residents]);
+
   const totalIncome = useMemo(
     () =>
       reconciledTransactions
@@ -3232,9 +3310,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const pType = mapCategoryToPaymentType(normalizedCategory);
 
       const house = trxData.sourceHouse || '';
-      const matchedRes = residentsRef.current.find(
-        (r) => house && r.houseNumber.replace(/\s+/g, '').toUpperCase() === house.replace(/\s+/g, '').toUpperCase()
-      );
+      const matchedRes = findResidentForPayment(residentsRef.current, {
+        houseNumber: house,
+        description: trxData.description
+      });
+      const resolvedHouse = matchedRes?.houseNumber || house || 'Paguyuban GSS';
 
       const rId = `receipt-${newTrx.id}`;
       const newR: PaymentReceipt = {
@@ -3243,7 +3323,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         date: dateStr,
         residentId: matchedRes ? matchedRes.id : (house ? `w-${house.replace(/\s+/g, '').toLowerCase()}` : 'gss-paguyuban'),
         residentName: matchedRes ? matchedRes.name : (house ? `Warga ${house}` : trxData.recordedBy || 'Warga GSS'),
-        residentHouse: house || 'Paguyuban GSS',
+        residentHouse: resolvedHouse,
         residentPhone: matchedRes?.phone || '0812-3456-7800',
         paymentType: pType,
         paymentTypeName: normalizedCategory,
@@ -3263,23 +3343,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('grisspo_payment_receipts', JSON.stringify(nextReceipts));
       await safeCloudWrite('pembayaran_kwitansi', newR.id, newR);
 
-      // Update resident payment status if iuran
-      if (matchedRes && (pType === 'iuran_bulanan' || pType === 'iuran_bulanan_sampah' || pType === 'iuran_sampah')) {
-        const curUnpaid = matchedRes.iuranUnpaidMonths || 0;
-        const nextUnpaid = Math.max(0, curUnpaid - 1);
-        const nextUnpaidNames = (matchedRes.unpaidMonthNames || []).slice(1);
-        const updatedRes = {
-          ...matchedRes,
-          monthlyIuranPaid: true,
-          iuranUnpaidMonths: nextUnpaid,
-          unpaidMonthNames: nextUnpaidNames,
-          points: (matchedRes.points || 0) + 10
+      // Update resident payment status proportionally if iuran/arrears payment
+      if (
+        matchedRes &&
+        isIuranPaymentRecord({
+          type: cleanType,
+          category: normalizedCategory,
+          paymentType: pType,
+          description: trxData.description
+        })
+      ) {
+        const fallbackFee = pType === 'iuran_bulanan_sampah' ? 50000 : 25000;
+        const { updatedResident, paidMonths } = applyIuranPaymentToResident(
+          matchedRes,
+          newTrx.id,
+          numericAmount,
+          fallbackFee
+        );
+        const finalRes: Resident = {
+          ...updatedResident,
+          points: (updatedResident.points || 0) + (paidMonths > 0 || numericAmount > 0 ? 10 : 0)
         };
-        const nextRes = residentsRef.current.map((r) => (r.id === matchedRes.id ? updatedRes : r));
+        reconciledPaymentKeysRef.current.add(`${matchedRes.id}:${newTrx.id}`);
+        const nextRes = residentsRef.current.map((r) => (r.id === matchedRes.id ? finalRes : r));
         residentsRef.current = nextRes;
         setResidents(nextRes);
         localStorage.setItem('grisspo_residents', JSON.stringify(nextRes));
-        safeCloudWrite('warga', matchedRes.id, updatedRes).catch(() => {});
+        safeCloudWrite('warga', matchedRes.id, finalRes).catch(() => {});
       }
     }
 
@@ -3342,6 +3432,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         await deleteDoc(doc(db, 'jimpitan_records', linkedJimpit.id));
       } catch {}
+    }
+
+    // Revert any iuran credits that were applied by this deleted transaction
+    const residentsToRevert = residentsRef.current.filter(
+      (r) => r.appliedIuranCredits && r.appliedIuranCredits[id]
+    );
+    for (const r of residentsToRevert) {
+      const { updatedResident, changed } = revertIuranPaymentFromResident(r, id);
+      if (changed) {
+        await updateResident(updatedResident);
+      }
     }
   };
 
@@ -3440,6 +3541,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setJimpitReports(nextJimpit);
       localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(nextJimpit));
       await safeCloudWrite('jimpitan_records', linkedJimpit.id, updatedJimpit);
+    }
+
+    // Synchronize resident iuran arrears if this transaction is/was an iuran payment
+    const matchedRes = findResidentForPayment(residentsRef.current, {
+      houseNumber: trx.sourceHouse,
+      description: trx.description
+    });
+    const isIuran = isIuranPaymentRecord({
+      type: cleanType,
+      category: normalizedCategory,
+      description: trx.description
+    });
+    if (matchedRes && isIuran) {
+      const { updatedResident, changed } = applyIuranPaymentToResident(
+        matchedRes,
+        trx.id,
+        numericAmount,
+        normalizedCategory.toLowerCase().includes('sampah') && normalizedCategory.toLowerCase().includes('bulanan')
+          ? 50000
+          : 25000
+      );
+      if (changed) {
+        await updateResident(updatedResident);
+      }
+    } else {
+      const creditedResidents = residentsRef.current.filter(
+        (r) => r.appliedIuranCredits && r.appliedIuranCredits[trx.id]
+      );
+      for (const r of creditedResidents) {
+        const { updatedResident, changed } = revertIuranPaymentFromResident(r, trx.id);
+        if (changed) {
+          await updateResident(updatedResident);
+        }
+      }
     }
   };
 
@@ -3955,23 +4090,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       { skipReceiptCreation: true }
     );
 
-    // 2. If iuran, update resident arrears
-    const res = residentsRef.current.find(
-      (r) =>
-        r.id === data.residentId ||
-        r.houseNumber.replace(/\s+/g, '').toUpperCase() === data.residentHouse.replace(/\s+/g, '').toUpperCase()
-    );
+    // 2. If iuran/arrears payment, update resident arrears proportionally
+    const res = findResidentForPayment(residentsRef.current, {
+      residentId: data.residentId,
+      houseNumber: data.residentHouse,
+      description: data.notes
+    });
     if (res) {
-      if (data.paymentType === 'iuran_bulanan' || data.paymentType === 'iuran_bulanan_sampah' || data.paymentType === 'iuran_sampah') {
-        const currentUnpaid = res.iuranUnpaidMonths || 0;
-        const newUnpaid = Math.max(0, currentUnpaid - 1);
-        const newUnpaidNames = (res.unpaidMonthNames || []).slice(1);
+      if (
+        isIuranPaymentRecord({
+          type: 'pemasukan',
+          paymentType: data.paymentType,
+          paymentTypeName: data.paymentTypeName,
+          notes: data.notes
+        })
+      ) {
+        const fallbackFee = data.paymentType === 'iuran_bulanan_sampah' ? 50000 : 25000;
+        const { updatedResident } = applyIuranPaymentToResident(res, createdTrx.id, numAmount, fallbackFee);
+        reconciledPaymentKeysRef.current.add(`${res.id}:${createdTrx.id}`);
         await updateResident({
-          ...res,
-          monthlyIuranPaid: true,
-          iuranUnpaidMonths: newUnpaid,
-          unpaidMonthNames: newUnpaidNames,
-          points: (res.points || 0) + 10
+          ...updatedResident,
+          points: (updatedResident.points || 0) + 10
         });
       } else if (data.paymentType === 'sumbangan_sukarela') {
         const bonusPts = numAmount >= 100000 ? 50 : 20;
@@ -4094,6 +4233,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTransactions(nextTrx);
       localStorage.setItem('grisspo_transactions', JSON.stringify(nextTrx));
       await safeCloudWrite('keuangan_transaksi', newLinkedTrx.id, newLinkedTrx);
+
+      const matchedRes = findResidentForPayment(residentsRef.current, {
+        residentId: finalReceipt.residentId,
+        houseNumber: finalReceipt.residentHouse,
+        description: desc
+      });
+      if (
+        matchedRes &&
+        isIuranPaymentRecord({
+          type: 'pemasukan',
+          paymentType: finalReceipt.paymentType,
+          paymentTypeName: finalReceipt.paymentTypeName,
+          notes: finalReceipt.notes
+        })
+      ) {
+        const { updatedResident, changed } = applyIuranPaymentToResident(
+          matchedRes,
+          targetTrxId,
+          numericAmount,
+          finalReceipt.paymentType === 'iuran_bulanan_sampah' ? 50000 : 25000
+        );
+        if (changed) {
+          await updateResident(updatedResident);
+        }
+      }
     }
   };
 
@@ -4141,6 +4305,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await deleteDoc(doc(db, 'keuangan_transaksi', linkedTrxId));
       } catch (err) {
         console.warn('Delete linked transaction error:', err);
+      }
+
+      const residentsToRevert = residentsRef.current.filter(
+        (r) =>
+          r.appliedIuranCredits &&
+          (r.appliedIuranCredits[linkedTrxId] || r.appliedIuranCredits[id])
+      );
+      for (const r of residentsToRevert) {
+        let cur = r;
+        let dirty = false;
+        const r1 = revertIuranPaymentFromResident(cur, linkedTrxId);
+        if (r1.changed) {
+          cur = r1.updatedResident;
+          dirty = true;
+        }
+        const r2 = revertIuranPaymentFromResident(cur, id);
+        if (r2.changed) {
+          cur = r2.updatedResident;
+          dirty = true;
+        }
+        if (dirty) {
+          await updateResident(cur);
+        }
       }
     }
   };
