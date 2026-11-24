@@ -3,7 +3,7 @@ import { useApp, defaultGuestUser, getLocalDateString } from '../context/AppCont
 import { Transaction, IncomeCategory, ExpenseCategory } from '../types';
 import { DetailToggle } from './DetailToggle';
 import { exportFinanceToPDF, exportFinanceToExcel, exportMonthlyKasSummaryPDF } from '../utils/exportUtils';
-import { permissions, verifyTransactionIntegrity } from '../utils/security';
+import { permissions, verifyTransactionIntegrity, getResidentJimpitanTarget, isResidentJimpitanObliged, findResidentForPayment } from '../utils/security';
 import {
   ReceiptText,
   TrendingUp,
@@ -35,6 +35,7 @@ import {
 
 export const KeuanganView: React.FC = () => {
   const {
+    residents,
     transactions,
     addTransaction,
     deleteTransaction,
@@ -306,6 +307,41 @@ export const KeuanganView: React.FC = () => {
     };
   }, [auditedTotals]);
 
+  // Rekap integrasi Jimpitan (termasuk Jimpit Bulanan Rp 25.000 & Jimpit Harian Rp 15.000) dengan Kas
+  const jimpitanFinanceSummary = useMemo(() => {
+    const obliged = residents.filter((r) => isResidentJimpitanObliged(r));
+    const bulananCount = obliged.filter((r) => r.statusRumah === 'DI HUNI PEMILIK (JIMPIT BULANAN)').length;
+    const totalTargetBulan = obliged.reduce((acc, r) => acc + getResidentJimpitanTarget(r), 0);
+    const totalTerkumpulBulan = obliged.reduce((acc, r) => acc + (r.jimpitanPaidMonth || 0), 0);
+    const totalPiutangBulan = obliged.reduce((acc, r) => {
+      const target = getResidentJimpitanTarget(r);
+      return acc + Math.max(0, target - (r.jimpitanPaidMonth || 0)) + (r.previousMonthsJimpitanDeficit || 0);
+    }, 0);
+
+    const totalPemasukanJimpitanKas = transactions
+      .filter((t) => {
+        const cleanType = String(t.type || '').trim().toLowerCase();
+        const catL = String(t.category || '').toLowerCase();
+        return (cleanType === 'pemasukan' || cleanType === 'income') && catL.includes('jimpit');
+      })
+      .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+
+    return {
+      obligedCount: obliged.length,
+      bulananCount,
+      totalTargetBulan,
+      totalTerkumpulBulan,
+      totalPiutangBulan,
+      totalPemasukanJimpitanKas
+    };
+  }, [residents, transactions]);
+
+  const matchedJimpitAddResident = useMemo(() => {
+    if (trxType !== 'pemasukan' || trxCategory !== 'Pemasukan Jimpitan Bulanan') return null;
+    if (!trxHouse.trim() && !trxDesc.trim()) return null;
+    return findResidentForPayment(residents, { houseNumber: trxHouse, description: trxDesc });
+  }, [residents, trxType, trxCategory, trxHouse, trxDesc]);
+
   // Handle submit new transaction
   const handleCreateTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -481,6 +517,43 @@ export const KeuanganView: React.FC = () => {
           </div>
           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-emerald-800 flex items-center justify-center">
             <Wallet size={24} />
+          </div>
+        </div>
+      </div>
+
+      {/* Rekap Integrasi Jimpitan & Keuangan (Sinkron Harian Rp 15rb + Jimpit Bulanan Rp 25rb) */}
+      <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-extrabold uppercase tracking-wider mb-1">
+            <Sparkles size={12} className="text-amber-700" />
+            <span>Integrasi Laporan Jimpitan &amp; Buku Kas</span>
+          </div>
+          <h3 className="text-sm font-black text-slate-900">
+            Sinkronisasi Tagihan Jimpitan ({jimpitanFinanceSummary.obligedCount} Rumah Wajib &bull; {jimpitanFinanceSummary.bulananCount} Rumah Jimpit Bulanan Rp 25rb)
+          </h3>
+          <p className="text-[11px] text-slate-600 mt-0.5">
+            Target tagihan bulanan otomatis menghitung Rp 15.000 (harian) dan Rp 25.000 (Jimpit Bulanan) serta terhubung ke pemasukan kas.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3 shrink-0">
+          <div className="bg-white px-3 py-2.5 rounded-xl border border-amber-200/80">
+            <span className="text-[10px] font-bold text-slate-500 block">Target Jimpitan/Bln</span>
+            <span className="text-xs sm:text-sm font-black text-slate-900">
+              Rp {jimpitanFinanceSummary.totalTargetBulan.toLocaleString('id-ID')}
+            </span>
+          </div>
+          <div className="bg-white px-3 py-2.5 rounded-xl border border-emerald-200">
+            <span className="text-[10px] font-bold text-emerald-700 block">Masuk Kas Jimpitan</span>
+            <span className="text-xs sm:text-sm font-black text-emerald-700">
+              Rp {jimpitanFinanceSummary.totalPemasukanJimpitanKas.toLocaleString('id-ID')}
+            </span>
+          </div>
+          <div className="bg-white px-3 py-2.5 rounded-xl border border-rose-200">
+            <span className="text-[10px] font-bold text-rose-700 block">Sisa Tagihan Warga</span>
+            <span className="text-xs sm:text-sm font-black text-rose-600">
+              Rp {jimpitanFinanceSummary.totalPiutangBulan.toLocaleString('id-ID')}
+            </span>
           </div>
         </div>
       </div>
@@ -1117,7 +1190,11 @@ export const KeuanganView: React.FC = () => {
                     else if (cat === 'Sewa Fasum' || cat === 'Sewa Fasum (Rp 30.000/bln)') setTrxAmount(30000);
                     else if (cat === 'Sumbangan Sukarela') setTrxAmount(50000);
                     else if (cat === 'Lain-lain Pemasukan') setTrxAmount(50000);
-                    else if (cat === 'Pemasukan Jimpitan Bulanan') setTrxAmount(15000);
+                    else if (cat === 'Pemasukan Jimpitan Bulanan') {
+                      const matched = findResidentForPayment(residents, { houseNumber: trxHouse, description: trxDesc });
+                      const resTarget = matched ? getResidentJimpitanTarget(matched) : 15000;
+                      setTrxAmount(resTarget > 0 ? resTarget : 15000);
+                    }
                   }}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
@@ -1140,6 +1217,15 @@ export const KeuanganView: React.FC = () => {
                     Opsi khusus <strong>Superadmin</strong> untuk memasukkan saldo awal kas paguyuban agar perhitungan total pemasukan dan saldo kas akurat.
                   </p>
                 )}
+                {trxCategory === 'Pemasukan Jimpitan Bulanan' && matchedJimpitAddResident && (() => {
+                  const resTarget = getResidentJimpitanTarget(matchedJimpitAddResident);
+                  const deficit = (resTarget > 0 ? Math.max(0, resTarget - (matchedJimpitAddResident.jimpitanPaidMonth || 0)) : 0) + (matchedJimpitAddResident.previousMonthsJimpitanDeficit || 0);
+                  return (
+                    <p className="text-[11px] text-teal-800 bg-teal-50 p-2 rounded-lg mt-1 border border-teal-200">
+                      Terdeteksi: <strong>{matchedJimpitAddResident.name} ({matchedJimpitAddResident.houseNumber})</strong> &bull; Tarif Jimpitan: <strong>Rp {resTarget.toLocaleString('id-ID')}/bln</strong> &bull; Sisa Tagihan: <strong>Rp {deficit.toLocaleString('id-ID')}</strong>
+                    </p>
+                  );
+                })()}
               </div>
 
               {/* Amount */}
@@ -1176,7 +1262,19 @@ export const KeuanganView: React.FC = () => {
                   <input
                     type="text"
                     value={trxHouse}
-                    onChange={(e) => setTrxHouse(e.target.value.toUpperCase())}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase();
+                      setTrxHouse(val);
+                      if (trxType === 'pemasukan' && trxCategory === 'Pemasukan Jimpitan Bulanan') {
+                        const matched = findResidentForPayment(residents, { houseNumber: val, description: trxDesc });
+                        if (matched) {
+                          const target = getResidentJimpitanTarget(matched);
+                          if (target > 0 && (trxAmount === 15000 || trxAmount === 25000)) {
+                            setTrxAmount(target);
+                          }
+                        }
+                      }
+                    }}
                     placeholder="Contoh: B 24, A 01"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold uppercase"
                   />

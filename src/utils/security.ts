@@ -410,3 +410,137 @@ export function revertIuranPaymentFromResident(
 
   return { updatedResident, changed: true };
 }
+
+/**
+ * Returns monthly Jimpitan target for a resident based on house status:
+ * - 'DI HUNI PEMILIK (JIMPIT BULANAN)': Rp 25.000 / bulan
+ * - 'DI HUNI PEMILIK', 'DI HUNI KONTRAK', 'KOSONG (DIJIMPIT)': Rp 15.000 / bulan
+ * - Others ('KOSONG (MEMBAYAR IURAN)', 'KOSONG (ADA PEMILIK)', 'BELUM ADA PEMILIK'): Rp 0 / bulan
+ */
+export function getResidentJimpitanTarget(r?: { statusRumah?: string } | null): number {
+  if (!r || !r.statusRumah) return 0;
+  const s = r.statusRumah.trim().toUpperCase();
+  if (s === 'DI HUNI PEMILIK (JIMPIT BULANAN)') return 25000;
+  if (
+    s === 'DI HUNI PEMILIK' ||
+    s === 'DI HUNI KONTRAK' ||
+    s === 'KOSONG (DIJIMPIT)' ||
+    s === 'KOSONG (DI JIMPIT)'
+  ) {
+    return 15000;
+  }
+  return 0;
+}
+
+/**
+ * Returns true if the house should appear in the daily Kartu Jimpit Online checklist.
+ * Explicitly excludes 'DI HUNI PEMILIK (JIMPIT BULANAN)'.
+ */
+export function isResidentDailyJimpitCardEligible(status?: string): boolean {
+  if (!status) return false;
+  const s = status.trim().toUpperCase();
+  if (s === 'DI HUNI PEMILIK (JIMPIT BULANAN)') return false;
+  return (
+    s === 'DI HUNI PEMILIK' ||
+    s === 'DI HUNI KONTRAK' ||
+    s === 'KOSONG (DIJIMPIT)' ||
+    s === 'KOSONG (DI JIMPIT)'
+  );
+}
+
+/**
+ * Returns true if the resident has a monthly Jimpitan obligation (Rp 15.000 daily OR Rp 25.000 monthly).
+ */
+export function isResidentJimpitanObliged(r?: { statusRumah?: string } | null): boolean {
+  return getResidentJimpitanTarget(r) > 0;
+}
+
+/**
+ * Identifies an individual resident jimpitan payment transaction (excluding daily batch ronda collections).
+ */
+export function isIndividualJimpitanPaymentRecord(options: {
+  type?: string;
+  category?: string;
+  description?: string;
+}): boolean {
+  const cleanType = String(options.type || '').trim().toLowerCase();
+  if (cleanType === 'pengeluaran' || cleanType === 'expense') return false;
+  const catL = String(options.category || '').trim().toLowerCase();
+  const descL = String(options.description || '').trim().toLowerCase();
+  const isJimpit = catL.includes('jimpit') || descL.includes('jimpit');
+  if (!isJimpit) return false;
+  if (descL.startsWith('pemasukan jimpitan ronda')) return false;
+  return true;
+}
+
+/**
+ * Applies a jimpitan payment to a resident's previous deficit & jimpitanPaidMonth idempotently per paymentId.
+ */
+export function applyJimpitanPaymentToResident(
+  resident: Resident,
+  paymentId: string,
+  paidAmount: number
+): { updatedResident: Resident; changed: boolean } {
+  const cleanAmount = Math.max(0, Number(paidAmount) || 0);
+  const existingCredits = { ...(resident.appliedJimpitanCredits || {}) };
+  const prevEntry = existingCredits[paymentId];
+
+  let basePrevDeficit = (resident.previousMonthsJimpitanDeficit || 0) + (prevEntry?.prevDeducted || 0);
+  let baseCurPaid = Math.max(0, (resident.jimpitanPaidMonth || 0) - (prevEntry?.paidAdded || 0));
+
+  let remaining = cleanAmount;
+  const deductPrev = Math.min(basePrevDeficit, remaining);
+  basePrevDeficit -= deductPrev;
+  remaining -= deductPrev;
+  const nextCurPaid = baseCurPaid + remaining;
+
+  if (cleanAmount > 0) {
+    existingCredits[paymentId] = { paidAdded: remaining, prevDeducted: deductPrev };
+  } else {
+    delete existingCredits[paymentId];
+  }
+
+  const changed =
+    basePrevDeficit !== (resident.previousMonthsJimpitanDeficit || 0) ||
+    nextCurPaid !== (resident.jimpitanPaidMonth || 0) ||
+    !prevEntry ||
+    prevEntry.paidAdded !== remaining ||
+    prevEntry.prevDeducted !== deductPrev;
+
+  const updatedResident: Resident = {
+    ...resident,
+    previousMonthsJimpitanDeficit: basePrevDeficit,
+    jimpitanPaidMonth: nextCurPaid,
+    appliedJimpitanCredits: existingCredits
+  };
+
+  return { updatedResident, changed };
+}
+
+/**
+ * Reverts a previously applied individual jimpitan payment from a resident.
+ */
+export function revertJimpitanPaymentFromResident(
+  resident: Resident,
+  paymentId: string
+): { updatedResident: Resident; changed: boolean } {
+  const existingCredits = { ...(resident.appliedJimpitanCredits || {}) };
+  const prevEntry = existingCredits[paymentId];
+  if (!prevEntry) {
+    return { updatedResident: resident, changed: false };
+  }
+
+  delete existingCredits[paymentId];
+  const nextCurPaid = Math.max(0, (resident.jimpitanPaidMonth || 0) - (prevEntry.paidAdded || 0));
+  const nextPrevDeficit = (resident.previousMonthsJimpitanDeficit || 0) + (prevEntry.prevDeducted || 0);
+
+  const updatedResident: Resident = {
+    ...resident,
+    jimpitanPaidMonth: nextCurPaid,
+    previousMonthsJimpitanDeficit: nextPrevDeficit,
+    appliedJimpitanCredits: existingCredits
+  };
+
+  return { updatedResident, changed: true };
+}
+

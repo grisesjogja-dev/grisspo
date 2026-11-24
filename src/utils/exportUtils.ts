@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
 import { Transaction, JimpitDailyReport, Resident } from '../types';
+import { getResidentJimpitanTarget } from './security';
 
 /**
  * Export Financial Transactions to clean PDF
@@ -221,10 +222,10 @@ export function exportFinanceToExcel(transactions: Transaction[], currentBalance
  * Export Jimpitan Monthly Deficit & Report to Excel
  */
 export function exportJimpitanReportToExcel(residents: Resident[], reports: JimpitDailyReport[]) {
-  const targetMonthly = 15000;
   const data = residents.map((r, idx) => {
+    const targetMonthly = getResidentJimpitanTarget(r);
     const paid = r.jimpitanPaidMonth || 0;
-    const deficit = Math.max(0, targetMonthly - paid);
+    const deficit = targetMonthly > 0 ? Math.max(0, targetMonthly - paid) : 0;
     return {
       No: idx + 1,
       'No Rumah': r.houseNumber,
@@ -234,7 +235,12 @@ export function exportJimpitanReportToExcel(residents: Resident[], reports: Jimp
       'Target Bulanan (Rp)': targetMonthly,
       'Sudah Masuk (Rp)': paid,
       'Kekurangan (Rp)': deficit,
-      'Status Jimpitan': deficit === 0 ? 'LUNAS (Rp 15.000)' : `KURANG Rp ${deficit.toLocaleString('id-ID')}`
+      'Status Jimpitan':
+        targetMonthly === 0
+          ? 'Non-Wajib Jimpit (Rp 0)'
+          : deficit === 0
+          ? `LUNAS (Rp ${targetMonthly.toLocaleString('id-ID')})`
+          : `KURANG Rp ${deficit.toLocaleString('id-ID')}`
     };
   });
 
@@ -394,15 +400,17 @@ export function exportMonthlyJimpitanToPDF(
 ) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const targetMonthly = 15000;
 
-  const totalResidents = residents.length;
-  const lunasCount = residents.filter((r) => (r.jimpitanPaidMonth || 0) >= targetMonthly).length;
-  const totalTerkumpul = residents.reduce((acc, r) => acc + (r.jimpitanPaidMonth || 0), 0);
-  const totalTarget = totalResidents * targetMonthly;
-  const totalKekurangan = residents.reduce((acc, r) => {
+  const obligedResidents = residents.filter((r) => getResidentJimpitanTarget(r) > 0);
+  const targetList = obligedResidents.length > 0 ? obligedResidents : residents;
+  const totalResidents = targetList.length;
+  const lunasCount = targetList.filter((r) => (r.jimpitanPaidMonth || 0) >= getResidentJimpitanTarget(r)).length;
+  const totalTerkumpul = targetList.reduce((acc, r) => acc + (r.jimpitanPaidMonth || 0), 0);
+  const totalTarget = targetList.reduce((acc, r) => acc + getResidentJimpitanTarget(r), 0);
+  const totalKekurangan = targetList.reduce((acc, r) => {
+    const t = getResidentJimpitanTarget(r);
     const paid = r.jimpitanPaidMonth || 0;
-    return acc + Math.max(0, targetMonthly - paid);
+    return acc + (t > 0 ? Math.max(0, t - paid) : 0);
   }, 0);
 
   // Header Banner
@@ -412,11 +420,11 @@ export function exportMonthlyJimpitanToPDF(
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('GRISSPO - REKAPITULASI JIMPITAN BULANAN (58 WARGA)', pageWidth / 2, 11, { align: 'center' });
+  doc.text(`GRISSPO - REKAPITULASI JIMPITAN BULANAN (${totalResidents} RUMAH)`, pageWidth / 2, 11, { align: 'center' });
 
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Periode: ${monthTitle} | Target Standar: Rp 15.000 / KK / Bulan`, pageWidth / 2, 17, { align: 'center' });
+  doc.text(`Periode: ${monthTitle} | Target: Rp 15.000 (Harian) / Rp 25.000 (Jimpit Bulanan)`, pageWidth / 2, 17, { align: 'center' });
   doc.text('Perumahan Griya Sedayu Selaras 1 - Bantul, D.I. Yogyakarta', pageWidth / 2, 22, { align: 'center' });
 
   // 3 Summary Boxes
@@ -476,7 +484,7 @@ export function exportMonthlyJimpitanToPDF(
   y += 9.5;
   doc.setFont('helvetica', 'normal');
 
-  residents.forEach((r, idx) => {
+  targetList.forEach((r, idx) => {
     if (y > 272) {
       doc.addPage();
       y = 18;
@@ -497,8 +505,9 @@ export function exportMonthlyJimpitanToPDF(
       doc.setFont('helvetica', 'normal');
     }
 
+    const resTarget = getResidentJimpitanTarget(r);
     const paid = r.jimpitanPaidMonth || 0;
-    const deficit = Math.max(0, targetMonthly - paid);
+    const deficit = resTarget > 0 ? Math.max(0, resTarget - paid) : 0;
     const isLunas = deficit === 0;
 
     doc.setFontSize(7.5);
@@ -512,11 +521,14 @@ export function exportMonthlyJimpitanToPDF(
     const nameText = r.name.length > 25 ? r.name.substring(0, 25) + '...' : r.name;
     doc.text(nameText, 44, y);
     doc.text(`Blok ${r.block}`, 105, y);
-    doc.text(`Rp 15.000`, 123, y);
+    doc.text(`Rp ${resTarget.toLocaleString('id-ID')}`, 123, y);
     doc.text(`Rp ${paid.toLocaleString('id-ID')}`, 152, y);
 
     doc.setFont('helvetica', 'bold');
-    if (isLunas) {
+    if (resTarget === 0) {
+      doc.setTextColor(100, 116, 139);
+      doc.text('NON-WAJIB', 193, y, { align: 'right' });
+    } else if (isLunas) {
       doc.setTextColor(22, 101, 52);
       doc.text('LUNAS', 193, y, { align: 'right' });
     } else {

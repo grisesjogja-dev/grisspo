@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp, defaultGuestUser, getLocalDateString, LEGACY_FAKE_SEED_IDS } from '../context/AppContext';
 import { DayOfWeek, PaymentReceipt, PaymentReceiptType, PaymentMethodType, Resident } from '../types';
-import { getResidentMonthlyFee } from '../utils/security';
+import { getResidentMonthlyFee, getResidentJimpitanTarget } from '../utils/security';
 import { DetailToggle } from './DetailToggle';
 import {
   Coins,
@@ -133,7 +133,8 @@ export const DashboardView: React.FC = () => {
 
   // Resident's own personal arrears calculations
   const userJimpitanPaid = currentResidentRecord?.jimpitanPaidMonth || 0;
-  const userCurrentMonthJimpitanDeficit = Math.max(0, 15000 - userJimpitanPaid);
+  const userJimpitanTarget = currentResidentRecord ? getResidentJimpitanTarget(currentResidentRecord) : 15000;
+  const userCurrentMonthJimpitanDeficit = userJimpitanTarget > 0 ? Math.max(0, userJimpitanTarget - userJimpitanPaid) : 0;
   const userPrevMonthJimpitanDeficit = currentResidentRecord?.previousMonthsJimpitanDeficit || 0;
   const userTotalJimpitanDeficit = userCurrentMonthJimpitanDeficit + userPrevMonthJimpitanDeficit;
 
@@ -146,7 +147,8 @@ export const DashboardView: React.FC = () => {
   // Paguyuban overall totals (for Bendahara & Superadmin view)
   const totalPaguyubanJimpitanDeficit = useMemo(() => {
     return residents.reduce((acc, r) => {
-      const cur = Math.max(0, 15000 - (r.jimpitanPaidMonth || 0));
+      const target = getResidentJimpitanTarget(r);
+      const cur = target > 0 ? Math.max(0, target - (r.jimpitanPaidMonth || 0)) : 0;
       const prev = r.previousMonthsJimpitanDeficit || 0;
       return acc + cur + prev;
     }, 0);
@@ -842,6 +844,23 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                           <strong className="text-emerald-700">0 Bulan (LUNAS)</strong>
                         )}
                       </span>
+                      {getResidentJimpitanTarget(selectedResident) > 0 && (() => {
+                        const jTarget = getResidentJimpitanTarget(selectedResident);
+                        const jDef = Math.max(0, jTarget - (selectedResident.jimpitanPaidMonth || 0)) + (selectedResident.previousMonthsJimpitanDeficit || 0);
+                        return (
+                          <>
+                            <span>&bull;</span>
+                            <span>
+                              Jimpitan (Rp {(jTarget / 1000).toLocaleString('id-ID')}rb/bln):{' '}
+                              {jDef > 0 ? (
+                                <strong className="text-amber-700">Kurang Rp {jDef.toLocaleString('id-ID')}</strong>
+                              ) : (
+                                <strong className="text-emerald-700">LUNAS</strong>
+                              )}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -1113,7 +1132,11 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   </li>
                   <li className="pt-1.5 flex justify-between items-center">
                     <span>Jimpitan Ronda Malam</span>
-                    <strong className="text-amber-700">Rp 500 / rumah / hari</strong>
+                    <strong className="text-amber-700">Rp 500 / hari (Rp 15rb/bln)</strong>
+                  </li>
+                  <li className="pt-1.5 flex justify-between items-center">
+                    <span>Jimpitan Bulanan (Pemilik)</span>
+                    <strong className="text-teal-700">Rp 25.000 / KK / bln</strong>
                   </li>
                   <li className="pt-1.5 flex justify-between items-center">
                     <span>Denda Tidak Hadir Ronda</span>
@@ -1718,10 +1741,14 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
               </div>
               <div className="text-2xl font-black text-slate-900 mt-2">
                 Rp {userJimpitanPaid.toLocaleString('id-ID')}{' '}
-                <span className="text-xs font-normal text-slate-400">/ 15rb</span>
+                <span className="text-xs font-normal text-slate-400">
+                  {userJimpitanTarget > 0 ? `/ ${(userJimpitanTarget / 1000).toLocaleString('id-ID')}rb` : '• Non-Wajib'}
+                </span>
               </div>
               <div className="text-[11px] mt-1 font-bold">
-                {userCurrentMonthJimpitanDeficit === 0 ? (
+                {userJimpitanTarget === 0 ? (
+                  <span className="text-slate-500">Status Rumah Non-Wajib Jimpitan</span>
+                ) : userCurrentMonthJimpitanDeficit === 0 ? (
                   <span className="text-emerald-600 flex items-center gap-1">
                     <CheckCircle2 size={12} /> LUNAS BULAN INI
                   </span>

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { Resident, StatusRumah, UserRole } from '../types';
-import { permissions, getResidentMonthlyFee } from '../utils/security';
+import { permissions, getResidentMonthlyFee, getResidentJimpitanTarget } from '../utils/security';
 import { DetailToggle } from './DetailToggle';
 import {
   Users,
@@ -715,6 +715,10 @@ export const DataWargaView: React.FC = () => {
                       const fee = getResidentMonthlyFee(r);
                       const unpaid = r.iuranUnpaidMonths || 0;
                       const arrearsNominal = unpaid * fee;
+                      const isJimpitBulanan = r.statusRumah === 'DI HUNI PEMILIK (JIMPIT BULANAN)';
+                      const jTarget = getResidentJimpitanTarget(r);
+                      const jPaid = r.jimpitanPaidMonth || 0;
+                      const jDeficit = (jTarget > 0 ? Math.max(0, jTarget - jPaid) : 0) + (r.previousMonthsJimpitanDeficit || 0);
                       return (
                         <div className="space-y-1">
                           <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${payInfo.badge}`}>
@@ -731,6 +735,20 @@ export const DataWargaView: React.FC = () => {
                                   Iuran Lunas
                                 </span>
                               )}
+                            </div>
+                          )}
+                          {isJimpitBulanan && (
+                            <div className="flex flex-wrap gap-1 pt-0.5">
+                              <span className="inline-block px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200 text-[10px] font-extrabold">
+                                Jimpit Bulanan: Rp 25.000/bln
+                              </span>
+                              <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                                jDeficit > 0
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              }`}>
+                                {jDeficit > 0 ? `Kurang Jimpitan: Rp ${jDeficit.toLocaleString('id-ID')}` : 'Jimpitan Lunas'}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -1095,6 +1113,9 @@ export const DataWargaView: React.FC = () => {
                         onChange={(e) => setFormJimpitanPaid(Number(e.target.value))}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-emerald-600"
                       />
+                      <span className="text-[10px] text-slate-500 mt-0.5 block">
+                        Target: Rp {getResidentJimpitanTarget({ ...editingResident, statusRumah: formStatus }).toLocaleString('id-ID')}/bln
+                      </span>
                     </div>
 
                     <div>

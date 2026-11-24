@@ -47,10 +47,14 @@ import {
   sendAnomalyEmailAlert,
   EmailAlertLog,
   getResidentMonthlyFee,
+  getResidentJimpitanTarget,
   isIuranPaymentRecord,
+  isIndividualJimpitanPaymentRecord,
   findResidentForPayment,
   applyIuranPaymentToResident,
-  revertIuranPaymentFromResident
+  revertIuranPaymentFromResident,
+  applyJimpitanPaymentToResident,
+  revertJimpitanPaymentFromResident
 } from '../utils/security';
 import { db } from '../services/firebase';
 import {
@@ -2177,7 +2181,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const cleanType = String(trx.type || '').trim().toLowerCase();
       const amt = Number(trx.amount) || 0;
       if ((cleanType !== 'pemasukan' && cleanType !== 'income') || amt <= 0) continue;
-      if (!isIuranPaymentRecord({ type: cleanType, category: trx.category, description: trx.description })) continue;
 
       const matched = findResidentForPayment(workingList, {
         houseNumber: trx.sourceHouse,
@@ -2185,22 +2188,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (!matched) continue;
 
-      const curUnpaid = matched.iuranUnpaidMonths || 0;
-      if (curUnpaid <= 0) continue;
-
-      if (matched.appliedIuranCredits && matched.appliedIuranCredits[trx.id] !== undefined) continue;
       const trackKey = `${matched.id}:${trx.id}`;
       if (reconciledPaymentKeysRef.current.has(trackKey)) continue;
 
-      const catL = String(trx.category || '').toLowerCase();
-      const fallbackFee = catL.includes('sampah') && catL.includes('bulanan') ? 50000 : 25000;
-      const fee = getResidentMonthlyFee(matched) || fallbackFee;
-      if (fee <= 0) continue;
+      if (isIuranPaymentRecord({ type: cleanType, category: trx.category, description: trx.description })) {
+        const curUnpaid = matched.iuranUnpaidMonths || 0;
+        if (curUnpaid <= 0) continue;
+        if (matched.appliedIuranCredits && matched.appliedIuranCredits[trx.id] !== undefined) continue;
 
-      const hasExplicitHouse = Boolean((trx.sourceHouse || '').trim() && (trx.sourceHouse || '').trim().toLowerCase() !== 'paguyuban gss');
-      // Reconcile if payment had no sourceHouse (previously never matched) OR covers >= 2 months (previously only deducted 1 month)
-      if (!hasExplicitHouse || amt >= 2 * fee) {
-        const res = applyIuranPaymentToResident(matched, trx.id, amt, fallbackFee);
+        const catL = String(trx.category || '').toLowerCase();
+        const fallbackFee = catL.includes('sampah') && catL.includes('bulanan') ? 50000 : 25000;
+        const fee = getResidentMonthlyFee(matched) || fallbackFee;
+        if (fee <= 0) continue;
+
+        const hasExplicitHouse = Boolean((trx.sourceHouse || '').trim() && (trx.sourceHouse || '').trim().toLowerCase() !== 'paguyuban gss');
+        // Reconcile if payment had no sourceHouse (previously never matched) OR covers >= 2 months (previously only deducted 1 month)
+        if (!hasExplicitHouse || amt >= 2 * fee) {
+          const res = applyIuranPaymentToResident(matched, trx.id, amt, fallbackFee);
+          reconciledPaymentKeysRef.current.add(trackKey);
+          if (res.changed) {
+            const idx = workingList.findIndex((w) => w.id === matched.id);
+            if (idx >= 0) workingList[idx] = res.updatedResident;
+            updatedResidentsMap.set(matched.id, res.updatedResident);
+            anyUpdated = true;
+          }
+        }
+      } else if (
+        isIndividualJimpitanPaymentRecord({ type: cleanType, category: trx.category, description: trx.description }) &&
+        !trx.id.startsWith('trx-jimpit-') &&
+        !trx.id.startsWith('trx-sync-')
+      ) {
+        if (matched.appliedJimpitanCredits && matched.appliedJimpitanCredits[trx.id] !== undefined) continue;
+        const alreadyLinkedReport = jimpitReportsRef.current.some(
+          (j) => j.transactionId === trx.id || `trx-${j.id}` === trx.id
+        );
+        if (alreadyLinkedReport) {
+          reconciledPaymentKeysRef.current.add(trackKey);
+          continue;
+        }
+        const res = applyJimpitanPaymentToResident(matched, trx.id, amt);
         reconciledPaymentKeysRef.current.add(trackKey);
         if (res.changed) {
           const idx = workingList.findIndex((w) => w.id === matched.id);
@@ -2650,7 +2676,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           unpaidMonthNames: [],
           monthlyIuranPaid: true,
           previousMonthsJimpitanDeficit: 0,
-          jimpitanPaidMonth: 15000
+          jimpitanPaidMonth: getResidentJimpitanTarget(r),
+          appliedIuranCredits: {},
+          appliedJimpitanCredits: {}
         }));
         setResidents(resetRes);
         localStorage.setItem('grisspo_residents', JSON.stringify(resetRes));
@@ -3053,6 +3081,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Nominal pembayaran harus lebih besar dari Rp 0!' };
     }
 
+    const nowDate = new Date();
+    const dateStr = getLocalDateString(nowDate);
+    const daysList: DayOfWeek[] = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const dayName: DayOfWeek = daysList[nowDate.getDay()] || 'Senin';
+    const now = Date.now();
+    const newTrxId = `trx-jimpit-pay-${now}`;
+
     // 1. Deduct deficit: deduct previousMonthsJimpitanDeficit first, then surplus to jimpitanPaidMonth
     let remaining = cleanAmount;
     let prevDeficit = resident.previousMonthsJimpitanDeficit || 0;
@@ -3066,8 +3101,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...resident,
       previousMonthsJimpitanDeficit: prevDeficit,
       jimpitanPaidMonth: curPaid,
-      points: (resident.points || 0) + 15
+      points: (resident.points || 0) + 15,
+      appliedJimpitanCredits: {
+        ...(resident.appliedJimpitanCredits || {}),
+        [newTrxId]: { paidAdded: remaining, prevDeducted: deductPrev }
+      }
     };
+    reconciledPaymentKeysRef.current.add(`${resident.id}:${newTrxId}`);
 
     const nextRes = residentsRef.current.map((r) => (r.id === residentId ? updatedRes : r));
     residentsRef.current = nextRes;
@@ -3076,11 +3116,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await safeCloudWrite('warga', resident.id, updatedRes);
 
     // 2. Automatically record income transaction in Keuangan Kas Paguyuban (NOT in Riwayat Pembayaran Kas)
-    const nowDate = new Date();
-    const dateStr = getLocalDateString(nowDate);
-    const daysList: DayOfWeek[] = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    const dayName: DayOfWeek = daysList[nowDate.getDay()] || 'Senin';
-    const now = Date.now();
     const currentName = currentUser?.name || 'Petugas Jimpit';
     const userRole = currentUser?.role || 'warga';
     const hash = await computeTransactionHash(
@@ -3095,7 +3130,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const methodLabel = method === 'transfer' ? 'Transfer Bank BRI' : 'Tunai';
 
     const newTrx: Transaction = {
-      id: `trx-jimpit-pay-${now}`,
+      id: newTrxId,
       type: 'pemasukan',
       category: 'Pemasukan Jimpitan Bulanan',
       amount: cleanAmount,
@@ -3371,6 +3406,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem('grisspo_residents', JSON.stringify(nextRes));
         safeCloudWrite('warga', matchedRes.id, finalRes).catch(() => {});
       }
+    } else if (
+      cleanType === 'pemasukan' &&
+      !options?.skipReceiptCreation &&
+      isIndividualJimpitanPaymentRecord({
+        type: cleanType,
+        category: normalizedCategory,
+        description: trxData.description
+      }) &&
+      numericAmount > 0
+    ) {
+      const matchedJimpitRes = findResidentForPayment(residentsRef.current, {
+        houseNumber: trxData.sourceHouse,
+        description: trxData.description
+      });
+      if (matchedJimpitRes) {
+        const { updatedResident, changed } = applyJimpitanPaymentToResident(
+          matchedJimpitRes,
+          newTrx.id,
+          numericAmount
+        );
+        if (changed) {
+          const finalRes: Resident = {
+            ...updatedResident,
+            points: (updatedResident.points || 0) + 15
+          };
+          reconciledPaymentKeysRef.current.add(`${matchedJimpitRes.id}:${newTrx.id}`);
+          const nextRes = residentsRef.current.map((r) => (r.id === matchedJimpitRes.id ? finalRes : r));
+          residentsRef.current = nextRes;
+          setResidents(nextRes);
+          localStorage.setItem('grisspo_residents', JSON.stringify(nextRes));
+          safeCloudWrite('warga', matchedJimpitRes.id, finalRes).catch(() => {});
+        }
+
+        const dateStr = trxData.date || getLocalDateString(new Date(effectiveTimestamp));
+        const dObj = new Date(`${dateStr}T12:00:00`);
+        const daysList: DayOfWeek[] = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const dayName: DayOfWeek = daysList[dObj.getDay()] || 'Senin';
+        const jimpitReport: JimpitDailyReport = sanitizeForFirestore({
+          id: `jimpit-pay-${newTrx.id}`,
+          date: dateStr,
+          day: dayName,
+          collectedBy: trxData.recordedBy || (currentUser ? `${currentUser.name} (${currentUser.houseNumber})` : 'Bendahara Kas'),
+          reportType: 'pelunasan',
+          transactionId: newTrx.id,
+          entries: [
+            {
+              houseNumber: matchedJimpitRes.houseNumber,
+              residentName: matchedJimpitRes.name,
+              nominal: numericAmount,
+              paymentMethod: descL.includes('transfer') ? 'transfer' : 'cash',
+              timestamp: new Date(effectiveTimestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+              collectedBy: trxData.recordedBy
+            }
+          ],
+          totalNominal: numericAmount,
+          notes: trxData.description || `Pembayaran Jimpitan Bulanan ${matchedJimpitRes.name} (${matchedJimpitRes.houseNumber})`,
+          createdAt: new Date(effectiveTimestamp).toISOString()
+        });
+        const nextJimpit = [jimpitReport, ...jimpitReportsRef.current];
+        jimpitReportsRef.current = nextJimpit;
+        setJimpitReports(nextJimpit);
+        localStorage.setItem('grisspo_jimpit_reports', JSON.stringify(nextJimpit));
+        safeCloudWrite('jimpitan_records', jimpitReport.id, jimpitReport).catch(() => {});
+      }
     }
 
     if (trxData.sourceHouse) {
@@ -3434,12 +3533,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {}
     }
 
-    // Revert any iuran credits that were applied by this deleted transaction
-    const residentsToRevert = residentsRef.current.filter(
+    // Revert any iuran or individual jimpitan credits that were applied by this deleted transaction
+    const residentsToRevertIuran = residentsRef.current.filter(
       (r) => r.appliedIuranCredits && r.appliedIuranCredits[id]
     );
-    for (const r of residentsToRevert) {
+    for (const r of residentsToRevertIuran) {
       const { updatedResident, changed } = revertIuranPaymentFromResident(r, id);
+      if (changed) {
+        await updateResident(updatedResident);
+      }
+    }
+
+    const residentsToRevertJimpit = residentsRef.current.filter(
+      (r) => r.appliedJimpitanCredits && r.appliedJimpitanCredits[id]
+    );
+    for (const r of residentsToRevertJimpit) {
+      const { updatedResident, changed } = revertJimpitanPaymentFromResident(r, id);
       if (changed) {
         await updateResident(updatedResident);
       }
@@ -3571,6 +3680,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
       for (const r of creditedResidents) {
         const { updatedResident, changed } = revertIuranPaymentFromResident(r, trx.id);
+        if (changed) {
+          await updateResident(updatedResident);
+        }
+      }
+    }
+
+    // Synchronize individual jimpitan payment credits if applicable
+    const isIndividualJimpit = isIndividualJimpitanPaymentRecord({
+      type: cleanType,
+      category: normalizedCategory,
+      description: trx.description
+    });
+    if (
+      matchedRes &&
+      isIndividualJimpit &&
+      !(trx.id.startsWith('trx-jimpit-') && !trx.id.startsWith('trx-jimpit-pay-'))
+    ) {
+      const previouslyCreditedOthers = residentsRef.current.filter(
+        (r) => r.id !== matchedRes.id && r.appliedJimpitanCredits && r.appliedJimpitanCredits[trx.id]
+      );
+      for (const other of previouslyCreditedOthers) {
+        const rev = revertJimpitanPaymentFromResident(other, trx.id);
+        if (rev.changed) await updateResident(rev.updatedResident);
+      }
+      const freshMatched = residentsRef.current.find((r) => r.id === matchedRes.id) || matchedRes;
+      const { updatedResident, changed } = applyJimpitanPaymentToResident(freshMatched, trx.id, numericAmount);
+      if (changed) {
+        await updateResident(updatedResident);
+      }
+    } else {
+      const jimpitCreditedResidents = residentsRef.current.filter(
+        (r) => r.appliedJimpitanCredits && r.appliedJimpitanCredits[trx.id]
+      );
+      for (const r of jimpitCreditedResidents) {
+        const { updatedResident, changed } = revertJimpitanPaymentFromResident(r, trx.id);
         if (changed) {
           await updateResident(updatedResident);
         }

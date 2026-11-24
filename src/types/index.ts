@@ -35,6 +35,7 @@ export interface Resident {
   password?: string;
   monthlyFee?: number; // e.g. 50000, 25000, 0
   appliedIuranCredits?: Record<string, number>; // maps transactionId -> months deducted for safe reconciliation/edit/delete
+  appliedJimpitanCredits?: Record<string, { paidAdded: number; prevDeducted: number }>; // maps transactionId -> jimpitan payment applied
 }
 
 export interface WhatsAppNotificationLog {

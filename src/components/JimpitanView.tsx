@@ -6,6 +6,11 @@ import {
   exportDailyJimpitanToPDF,
   exportMonthlyJimpitanToPDF
 } from '../utils/exportUtils';
+import {
+  getResidentJimpitanTarget,
+  isResidentDailyJimpitCardEligible,
+  isResidentJimpitanObliged
+} from '../utils/security';
 import confetti from 'canvas-confetti';
 import {
   Coins,
@@ -46,15 +51,7 @@ import {
 import { DetailToggle } from './DetailToggle';
 
 export const isStatusEligibleForJimpitan = (status?: string): boolean => {
-  if (!status) return false;
-  const s = status.trim().toUpperCase();
-  if (s === 'DI HUNI PEMILIK (JIMPIT BULANAN)') return false;
-  return (
-    s === 'DI HUNI PEMILIK' ||
-    s === 'DI HUNI KONTRAK' ||
-    s === 'KOSONG (DIJIMPIT)' ||
-    s === 'KOSONG (DI JIMPIT)'
-  );
+  return isResidentDailyJimpitCardEligible(status);
 };
 
 interface JimpitanViewProps {
@@ -354,18 +351,21 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     });
   };
 
+  // Daftar rumah yang muncul di Kartu Jimpit Online harian (mengecualikan DI HUNI PEMILIK (JIMPIT BULANAN) dan rumah kosong non-jimpit)
+  const dailyCardResidents = useMemo(() => {
+    return residents.filter((r) => isStatusEligibleForJimpitan(r.statusRumah));
+  }, [residents]);
+
   // Filter residents for Input Tab: Rumah dengan status "DI HUNI PEMILIK", "DI HUNI KONTRAK", dan "KOSONG (DIJIMPIT)" muncul dalam kartu
   const filteredResidents = useMemo(() => {
-    return residents.filter((r) => {
-      const isEligible = isStatusEligibleForJimpitan(r.statusRumah);
-      if (!isEligible) return false;
+    return dailyCardResidents.filter((r) => {
       const matchBlock = blockFilter === 'ALL' || r.block === blockFilter;
       const matchSearch =
         r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.houseNumber.toLowerCase().includes(searchQuery.toLowerCase());
       return matchBlock && matchSearch;
     });
-  }, [residents, blockFilter, searchQuery]);
+  }, [dailyCardResidents, blockFilter, searchQuery]);
 
   // Calculations for current input
   const totalSelectedCount = useMemo(() => {
@@ -413,7 +413,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
       return;
     }
 
-    const invalidEntry = wajibJimpitResidents.find((r) => {
+    const invalidEntry = dailyCardResidents.find((r) => {
       const data = selectedMap[r.houseNumber];
       return data && data.selected && (Number(data.nominal) || 0) < 500;
     });
@@ -507,20 +507,19 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   const [monthlyStatusFilter, setMonthlyStatusFilter] = useState<'ALL' | 'LUNAS' | 'KURANG'>('ALL');
   const [monthlySearch, setMonthlySearch] = useState<string>('');
 
-  const targetMonthly = 15000; // Rp 15.000 / KK / bulan
-
-  // Daftar warga WAJIB jimpitan (mengecualikan rumah kosong ada pemilik & belum ada pemilik)
+  // Daftar warga WAJIB jimpitan (termasuk DI HUNI PEMILIK (JIMPIT BULANAN) Rp 25.000/bln; mengecualikan rumah kosong non-jimpit)
   const wajibJimpitResidents = useMemo(() => {
-    return residents.filter((r) => isStatusEligibleForJimpitan(r.statusRumah));
+    return residents.filter((r) => isResidentJimpitanObliged(r));
   }, [residents]);
 
   const totalResidentsCount = wajibJimpitResidents.length;
-  const lunasCount = wajibJimpitResidents.filter((r) => (r.jimpitanPaidMonth || 0) >= targetMonthly).length;
+  const lunasCount = wajibJimpitResidents.filter((r) => (r.jimpitanPaidMonth || 0) >= getResidentJimpitanTarget(r)).length;
   const totalJimpitanBulanIni = wajibJimpitResidents.reduce((acc, r) => acc + (r.jimpitanPaidMonth || 0), 0);
-  const totalTargetBulanan = totalResidentsCount * targetMonthly;
+  const totalTargetBulanan = wajibJimpitResidents.reduce((acc, r) => acc + getResidentJimpitanTarget(r), 0);
   const totalDefisitBulanIni = wajibJimpitResidents.reduce((acc, r) => {
     const paid = r.jimpitanPaidMonth || 0;
-    return acc + Math.max(0, targetMonthly - paid);
+    const resTarget = getResidentJimpitanTarget(r);
+    return acc + Math.max(0, resTarget - paid);
   }, 0);
   const monthlyAchievementPercent = totalTargetBulanan > 0
     ? Math.min(100, Math.round((totalJimpitanBulanIni / totalTargetBulanan) * 100))
@@ -530,7 +529,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   const filteredMonthlyResidents = useMemo(() => {
     return wajibJimpitResidents.filter((r) => {
       const matchBlock = monthlyBlockFilter === 'ALL' || r.block === monthlyBlockFilter;
-      const isLunas = (r.jimpitanPaidMonth || 0) >= targetMonthly;
+      const isLunas = (r.jimpitanPaidMonth || 0) >= getResidentJimpitanTarget(r);
       const matchStatus =
         monthlyStatusFilter === 'ALL' ||
         (monthlyStatusFilter === 'LUNAS' && isLunas) ||
@@ -560,7 +559,8 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
   const totalAkumulasiDefisit = useMemo(() => {
     return wajibJimpitResidents.reduce((acc, r) => {
-      const curDef = Math.max(0, targetMonthly - (r.jimpitanPaidMonth || 0));
+      const resTarget = getResidentJimpitanTarget(r);
+      const curDef = Math.max(0, resTarget - (r.jimpitanPaidMonth || 0));
       const prevDef = r.previousMonthsJimpitanDeficit || 0;
       return acc + curDef + prevDef;
     }, 0);
@@ -571,9 +571,9 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     return blocks.map((blk) => {
       const blockResidents = wajibJimpitResidents.filter((r) => r.block === blk);
       const count = blockResidents.length;
-      const target = count * targetMonthly;
+      const target = blockResidents.reduce((acc, r) => acc + getResidentJimpitanTarget(r), 0);
       const collected = blockResidents.reduce((acc, r) => acc + (r.jimpitanPaidMonth || 0), 0);
-      const lunas = blockResidents.filter((r) => (r.jimpitanPaidMonth || 0) >= targetMonthly).length;
+      const lunas = blockResidents.filter((r) => (r.jimpitanPaidMonth || 0) >= getResidentJimpitanTarget(r)).length;
       const percent = target > 0 ? Math.min(100, Math.round((collected / target) * 100)) : 0;
       return {
         block: blk,
@@ -588,12 +588,14 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
   }, [wajibJimpitResidents]);
 
   const handleOpenPayModal = (resident?: Resident) => {
-    const target = resident || (currentUser ? residents.find((r) => r.houseNumber === currentUser.houseNumber) : undefined) || residents[0];
+    const target = resident || (currentUser ? residents.find((r) => r.houseNumber === currentUser.houseNumber) : undefined) || wajibJimpitResidents[0] || residents[0];
+    if (!target) return;
     setSelectedResidentForPay(target);
-    const curDef = Math.max(0, targetMonthly - (target.jimpitanPaidMonth || 0));
+    const resTarget = getResidentJimpitanTarget(target) || 15000;
+    const curDef = Math.max(0, resTarget - (target.jimpitanPaidMonth || 0));
     const prevDef = target.previousMonthsJimpitanDeficit || 0;
     const totalDef = curDef + prevDef;
-    setPayAmountInput(totalDef > 0 ? totalDef : 15000);
+    setPayAmountInput(totalDef > 0 ? totalDef : resTarget);
     setPayNotes(`Pelunasan kekurangan jimpitan ${selectedMonth}`);
     setPaySuccessReceipt(null);
     setIsPayModalOpen(true);
@@ -603,10 +605,11 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     const target = residents.find((r) => r.id === resId);
     if (!target) return;
     setSelectedResidentForPay(target);
-    const curDef = Math.max(0, targetMonthly - (target.jimpitanPaidMonth || 0));
+    const resTarget = getResidentJimpitanTarget(target) || 15000;
+    const curDef = Math.max(0, resTarget - (target.jimpitanPaidMonth || 0));
     const prevDef = target.previousMonthsJimpitanDeficit || 0;
     const totalDef = curDef + prevDef;
-    setPayAmountInput(totalDef > 0 ? totalDef : 15000);
+    setPayAmountInput(totalDef > 0 ? totalDef : resTarget);
   };
 
   const handleExecutePay = async (e: React.FormEvent) => {
@@ -677,7 +680,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
             Jimpitan Ronda Online Perum GSS
           </h2>
           <p className="mt-2 text-amber-100 text-xs sm:text-sm leading-relaxed">
-            Pencatatan jimpitan malam keliling real-time terhubung jadwal ronda. Standar jimpitan harian minimal Rp 500 (bebas nominal), target 1 bulan Rp 15.000 per warga wajib jimpit untuk kemaslahatan kas paguyuban.
+            Pencatatan jimpitan malam keliling real-time terhubung jadwal ronda. Standar jimpitan harian minimal Rp 500 (bebas nominal), target 1 bulan Rp 15.000 (Harian) &amp; Rp 25.000 (Jimpit Bulanan) untuk kemaslahatan kas paguyuban.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs">
@@ -691,7 +694,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
             </span>
             <span className="px-3 py-1.5 rounded-xl bg-amber-900/40 border border-amber-300/30 text-amber-200 font-bold flex items-center gap-1.5">
               <Award size={13} className="text-amber-300" />
-              <span>Target: Rp 15.000 / Bulan / Warga</span>
+              <span>Target: Rp 15rb (Harian) / Rp 25rb (Jimpit Bulanan)</span>
             </span>
             {isSuperadmin && (
               <span className="px-3 py-1.5 rounded-xl bg-red-950/60 border border-red-400/40 text-red-200 font-bold flex items-center gap-1.5">
@@ -1313,7 +1316,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 Rp {currentTotalRevenue.toLocaleString('id-ID')}
               </div>
               <div className="text-xs text-slate-400 mt-0.5">
-                {totalSelectedCount} dari {wajibJimpitResidents.length} rumah kartu jimpit harian (kecuali Jimpit Bulanan &amp; Kosong Non-Jimpit) &bull; Min. Rp 500 (Bebas Nominal)
+                {totalSelectedCount} dari {dailyCardResidents.length} rumah kartu jimpit harian (kecuali Jimpit Bulanan &amp; Kosong Non-Jimpit) &bull; Min. Rp 500 (Bebas Nominal)
               </div>
             </div>
 
@@ -1347,7 +1350,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  {b === 'ALL' ? `Semua (${wajibJimpitResidents.length})` : `Blok ${b}`}
+                  {b === 'ALL' ? `Semua (${dailyCardResidents.length})` : `Blok ${b}`}
                 </button>
               ))}
             </div>
@@ -1423,7 +1426,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                           </span>
                           <span
                             className={`text-[8px] font-bold px-1 py-0.2 rounded truncate ${
-                              (resident.jimpitanPaidMonth || 0) >= targetMonthly
+                              (resident.jimpitanPaidMonth || 0) >= getResidentJimpitanTarget(resident)
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : 'bg-slate-100 text-slate-600'
                             }`}
@@ -1804,10 +1807,10 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <TrendingUp size={16} className="text-amber-600" />
-                <span>Rekapitulasi Jimpitan Bulanan (Target Rp 15.000 / KK)</span>
+                <span>Rekapitulasi Jimpitan Bulanan (Rp 15.000 Harian / Rp 25.000 Jimpit Bulanan)</span>
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Total 58 unit rumah mencakup Blok A (16 rumah), Blok B (27 rumah), dan Blok C (15 rumah).
+                Total {totalResidentsCount} rumah wajib jimpit mencakup Blok A, Blok B, dan Blok C (termasuk rumah status Jimpit Bulanan Rp 25.000/bln).
               </p>
             </div>
 
@@ -1831,7 +1834,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
               </button>
 
               <button
-                onClick={() => exportMonthlyJimpitanToPDF(residents, jimpitReports, selectedMonth)}
+                onClick={() => exportMonthlyJimpitanToPDF(wajibJimpitResidents, jimpitReports, selectedMonth)}
                 className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
               >
                 <Printer size={14} />
@@ -1839,7 +1842,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
               </button>
 
               <button
-                onClick={() => exportJimpitanReportToExcel(residents, jimpitReports)}
+                onClick={() => exportJimpitanReportToExcel(wajibJimpitResidents, jimpitReports)}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
               >
                 <FileSpreadsheet size={14} />
@@ -1855,7 +1858,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
               <div className="text-xl font-black text-slate-900 mt-1">
                 Rp {totalTargetBulanan.toLocaleString('id-ID')}
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">{totalResidentsCount} Rumah Wajib Jimpit &times; Rp 15.000 / bulan</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">{totalResidentsCount} Rumah Wajib Jimpit (Rp 15rb / Rp 25rb)</p>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-xs">
@@ -2014,7 +2017,7 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 </p>
               </div>
               <span className="text-xs text-amber-800 bg-amber-100 px-3 py-1 rounded-full font-bold">
-                Kewajiban: Rp 15.000 / KK / bulan
+                Kewajiban: Rp 15.000 (Harian) / Rp 25.000 (Jimpit Bulanan)
               </span>
             </div>
 
@@ -2036,20 +2039,28 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredMonthlyResidents.map((r, idx) => {
+                    const resTarget = getResidentJimpitanTarget(r);
+                    const isJimpitBulanan = r.statusRumah === 'DI HUNI PEMILIK (JIMPIT BULANAN)';
                     const paid = r.jimpitanPaidMonth || 0;
-                    const curDeficit = Math.max(0, targetMonthly - paid);
+                    const curDeficit = Math.max(0, resTarget - paid);
                     const prevDeficit = r.previousMonthsJimpitanDeficit || 0;
                     const totalDeficit = curDeficit + prevDeficit;
-                    const isLunas = totalDeficit === 0;
 
                     return (
                       <tr key={r.id} className="hover:bg-slate-50/80 transition">
                         <td className="py-3 px-3 text-center font-bold text-slate-400">{idx + 1}</td>
                         <td className="py-3 px-3 font-mono font-bold text-emerald-800">{r.houseNumber}</td>
-                        <td className="py-3 px-3 font-semibold text-slate-800">{getResidentNameByHouse(r.houseNumber, r.name)}</td>
+                        <td className="py-3 px-3 font-semibold text-slate-800">
+                          <div>{getResidentNameByHouse(r.houseNumber, r.name)}</div>
+                          {isJimpitBulanan && (
+                            <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200 text-[9px] font-extrabold">
+                              Jimpit Bulanan (Rp 25rb)
+                            </span>
+                          )}
+                        </td>
                         <td className="py-3 px-3 font-bold text-slate-600">Blok {r.block}</td>
-                        <td className="py-3 px-3 text-right font-medium text-slate-600">
-                          Rp {targetMonthly.toLocaleString('id-ID')}
+                        <td className="py-3 px-3 text-right font-bold text-slate-700">
+                          Rp {resTarget.toLocaleString('id-ID')}
                         </td>
                         <td className="py-3 px-3 text-right font-bold text-emerald-600">
                           Rp {paid.toLocaleString('id-ID')}
@@ -2485,7 +2496,8 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
                       {wajibJimpitResidents.map((r) => {
-                        const cur = Math.max(0, targetMonthly - (r.jimpitanPaidMonth || 0));
+                        const resTarget = getResidentJimpitanTarget(r);
+                        const cur = Math.max(0, resTarget - (r.jimpitanPaidMonth || 0));
                         const prev = r.previousMonthsJimpitanDeficit || 0;
                         const tot = cur + prev;
                         return (
@@ -2499,16 +2511,19 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
 
                   {/* Arrears Breakdown Card */}
                   {(() => {
+                    const resTarget = getResidentJimpitanTarget(selectedResidentForPay);
                     const paid = selectedResidentForPay.jimpitanPaidMonth || 0;
-                    const curDef = Math.max(0, targetMonthly - paid);
+                    const curDef = Math.max(0, resTarget - paid);
                     const prevDef = selectedResidentForPay.previousMonthsJimpitanDeficit || 0;
                     const totDef = curDef + prevDef;
 
                     return (
                       <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
                         <div className="flex justify-between items-center">
-                          <span className="text-slate-500">Target Bulanan ({totalResidentsCount} Rumah Wajib Jimpit):</span>
-                          <span className="font-semibold text-slate-700">Rp 15.000 / bulan</span>
+                          <span className="text-slate-500">
+                            Target Bulanan ({selectedResidentForPay.statusRumah === 'DI HUNI PEMILIK (JIMPIT BULANAN)' ? 'Jimpit Bulanan' : 'Jimpit Harian'}):
+                          </span>
+                          <span className="font-semibold text-slate-700">Rp {resTarget.toLocaleString('id-ID')} / bulan</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-slate-500">Jimpitan Masuk Bulan Ini:</span>
@@ -2547,12 +2562,12 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                         onChange={(e) => setPayAmountInput(e.target.value === '' ? '' : Number(e.target.value))}
                         required
                         className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        placeholder="Contoh: 15000"
+                        placeholder="Contoh: 25000"
                       />
                     </div>
 
                     <div className="flex flex-wrap gap-1.5 mt-2">
-                      {[5000, 10000, 15000, 20000].map((preset) => (
+                      {[5000, 10000, 15000, 20000, 25000].map((preset) => (
                         <button
                           key={preset}
                           type="button"
@@ -2563,7 +2578,8 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                         </button>
                       ))}
                       {(() => {
-                        const cur = Math.max(0, targetMonthly - (selectedResidentForPay.jimpitanPaidMonth || 0));
+                        const resTarget = getResidentJimpitanTarget(selectedResidentForPay);
+                        const cur = Math.max(0, resTarget - (selectedResidentForPay.jimpitanPaidMonth || 0));
                         const prev = selectedResidentForPay.previousMonthsJimpitanDeficit || 0;
                         const tot = cur + prev;
                         if (tot > 0) {
