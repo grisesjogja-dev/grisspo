@@ -6,17 +6,26 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.8.9';
+export const APP_VERSION = 'v1.9.0';
 export const APP_BUILD_DATE = '23 November 2026';
-export const APP_BUILD_CODE = '2026.11.23-v1.8.9';
-export const APP_RELEASE_NAME = 'Tarif Jimpit Bulanan Rp 25.000 & Sinkronisasi Laporan Keuangan';
+export const APP_BUILD_CODE = '2026.11.23-v1.9.0';
+export const APP_RELEASE_NAME = 'Otorisasi Notif WA Penunggak Iuran & View-Only Daftar Warga';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.0',
+    releaseDate: '23 November 2026',
+    releaseTitle: 'Otorisasi Notif WA Penunggak Iuran & View-Only Daftar Warga',
+    badge: 'Terbaru',
+    highlights: [
+      'Khusus Pengurus untuk Notif WA Tunggakan Iuran: Fitur kirim notifikasi WhatsApp kepada warga penunggak iuran kini hanya dapat diakses dan dieksekusi oleh akun Pengurus (Superadmin, Sekretaris, Bendahara 1/2, dan Admin Inventaris).',
+      'Mode View-Only Role Warga di Daftar Warga: Akun dengan role "warga" kini bersifat view-only pada seluruh menu Daftar Warga (tanpa tombol kirim WA langsung, tanpa aksi penagihan WA, dan tanpa akses edit/hapus).'
+    ]
+  },
   {
     version: 'v1.8.9',
     releaseDate: '23 November 2026',
     releaseTitle: 'Tarif Jimpit Bulanan Rp 25.000 & Sinkronisasi Laporan Keuangan',
-    badge: 'Terbaru',
     highlights: [
       'Kewajiban Jimpitan Rp 25.000/Bulan: Warga dengan status rumah "DI HUNI PEMILIK (JIMPIT BULANAN)" otomatis memiliki tagihan jimpitan sebesar Rp 25.000/bulan di Dashboard, Data Warga, Rekap Bulanan Jimpit, Modal Pelunasan Jimpitan, serta ekspor PDF & Excel.',
       'Sinkronisasi Laporan Keuangan & Kas: Pembayaran serta tagihan jimpitan bulanan Rp 25.000 terhitung penuh pada seluruh laporan keuangan kas, ringkasan integrasi jimpitan, dan rekonsiliasi otomatis transaksi kas.'

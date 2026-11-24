@@ -126,9 +126,18 @@ export function sendAnomalyEmailAlert(trx: Partial<Transaction>, reason: string)
  * Rule from user:
  * "selain superadmin, bendahara 1, bendahara 2 dan admin inventaris tidak dapat akses untuk menhapus dan mengedit data yang ada. Berikan hak akses hanya kepada superadmin untuk melakukan perubahan data tersebut."
  */
+export const isPengurusRole = (role?: UserRole | null): boolean =>
+  Boolean(
+    role &&
+      ['superadmin', 'sekretaris', 'bendahara1', 'bendahara2', 'admin_inventaris'].includes(role)
+  );
+
 export const permissions = {
   // Resident management: only Superadmin can edit/delete
   canManageResidents: (role: UserRole) => role === 'superadmin',
+
+  // WhatsApp notification for unpaid iuran: Pengurus only (Superadmin, Sekretaris, Bendahara 1/2, Admin Inventaris)
+  canSendIuranWhatsApp: (role?: UserRole | null) => isPengurusRole(role),
 
   // Finance: Superadmin, Bendahara 1, Bendahara 2 can record/edit transactions
   canManageFinance: (role: UserRole) =>

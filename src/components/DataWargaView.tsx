@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { Resident, StatusRumah, UserRole } from '../types';
-import { permissions, getResidentMonthlyFee, getResidentJimpitanTarget } from '../utils/security';
+import { permissions, getResidentMonthlyFee, getResidentJimpitanTarget, isPengurusRole } from '../utils/security';
 import { DetailToggle } from './DetailToggle';
 import {
   Users,
@@ -77,9 +77,11 @@ export const DataWargaView: React.FC = () => {
   const [formMonthlyFee, setFormMonthlyFee] = useState<number>(50000);
 
   // Permission checks
+  const isPengurus = isPengurusRole(currentUser?.role);
   const canEditOrDelete = currentUser ? currentUser.role === 'superadmin' : false;
   // Hak akses checklist berkas kependudukan hanya dimiliki oleh superadmin dan sekretaris
   const canManageBerkas = currentUser ? (currentUser.role === 'superadmin' || currentUser.role === 'sekretaris') : false;
+  const canSendWhatsAppWarning = permissions.canSendIuranWhatsApp(currentUser?.role);
 
   // Filtered residents list with enhanced quick search (name, house number e.g. "B 24" or "B24", block, phone, berkas)
   const filteredResidents = useMemo(() => {
@@ -162,6 +164,10 @@ export const DataWargaView: React.FC = () => {
   }, [residents]);
 
   const handleSendWhatsAppWarning = async (res: Resident) => {
+    if (!canSendWhatsAppWarning) {
+      alert('Akses Ditolak: Hanya pengurus yang dapat mengirim notifikasi WhatsApp kepada warga penunggak iuran.');
+      return;
+    }
     try {
       const result = await sendWhatsAppIuranWarning(res.id);
       window.open(result.url, '_blank');
@@ -345,9 +351,13 @@ export const DataWargaView: React.FC = () => {
                 </button>
               </>
             ) : (
-              <div className="text-xs bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700 text-slate-400 flex items-center gap-2">
-                <Lock size={13} className="text-amber-400" />
-                <span>Mode View-Only: Perubahan data warga hanya diizinkan untuk Superadmin</span>
+              <div className="text-xs bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700 text-slate-300 flex items-center gap-2">
+                <Lock size={13} className="text-amber-400 shrink-0" />
+                <span>
+                  {isPengurus
+                    ? 'Mode Lihat Pengurus: Perubahan master data warga hanya diizinkan untuk Superadmin'
+                    : 'Mode View-Only (Warga): Anda hanya dapat melihat daftar warga. Kirim notif WA & perubahan data khusus Pengurus.'}
+                </span>
               </div>
             )}
           </div>
@@ -494,7 +504,11 @@ export const DataWargaView: React.FC = () => {
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-2">
                 <AlertTriangle size={15} className="text-red-600" />
-                <span>Rincian Warga Menunggak & Kirim Notifikasi WhatsApp</span>
+                <span>
+                  {canSendWhatsAppWarning
+                    ? 'Rincian Warga Menunggak & Kirim Notifikasi WhatsApp'
+                    : 'Rincian Warga Menunggak Iuran (View Only)'}
+                </span>
               </h4>
               <span className="text-xs font-semibold text-slate-500">
                 Tarif Iuran: Sesuai Tarif Warga (Rp 25.000 / Rp 50.000 / bln)
@@ -514,13 +528,13 @@ export const DataWargaView: React.FC = () => {
                     <th className="py-3 px-3 text-center">Lama Tunggakan</th>
                     <th className="py-3 px-3">Bulan Menunggak</th>
                     <th className="py-3 px-3 text-right">Total Tagihan</th>
-                    <th className="py-3 px-3 text-center">Aksi Superadmin / Bendahara</th>
+                    {canSendWhatsAppWarning && <th className="py-3 px-3 text-center">Aksi Pengurus</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {delinquentResidents.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-8 text-center text-slate-500 font-medium">
+                      <td colSpan={canSendWhatsAppWarning ? 10 : 9} className="py-8 text-center text-slate-500 font-medium">
                         Tidak ada warga dengan tunggakan iuran &ge; 2 bulan. Semua warga tertib!
                       </td>
                     </tr>
@@ -559,30 +573,32 @@ export const DataWargaView: React.FC = () => {
                           <td className="py-3 px-3 text-right font-black text-red-600 whitespace-nowrap">
                             Rp {arrears.toLocaleString('id-ID')}
                           </td>
-                          <td className="py-3 px-3 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => handleSendWhatsAppWarning(r)}
-                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-xs"
-                                title="Kirim Notifikasi Peringatan Otomatis ke WhatsApp Warga"
-                              >
-                                <Send size={11} />
-                                <span>Kirim Notif WhatsApp</span>
-                              </button>
-
-                              {canEditOrDelete && (
+                          {canSendWhatsAppWarning && (
+                            <td className="py-3 px-3 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
                                 <button
                                   type="button"
-                                  onClick={() => handleOpenEdit(r)}
-                                  className="p-1.5 text-emerald-700 hover:bg-blue-50 rounded-lg transition"
-                                  title="Edit Master Data Warga (Superadmin)"
+                                  onClick={() => handleSendWhatsAppWarning(r)}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-xs"
+                                  title="Kirim Notifikasi Peringatan Otomatis ke WhatsApp Warga (Khusus Pengurus)"
                                 >
-                                  <Edit2 size={13} />
+                                  <Send size={11} />
+                                  <span>Kirim Notif WhatsApp</span>
                                 </button>
-                              )}
-                            </div>
-                          </td>
+
+                                {canEditOrDelete && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEdit(r)}
+                                    className="p-1.5 text-emerald-700 hover:bg-blue-50 rounded-lg transition"
+                                    title="Edit Master Data Warga (Superadmin)"
+                                  >
+                                    <Edit2 size={13} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       );
                     })
@@ -811,26 +827,33 @@ export const DataWargaView: React.FC = () => {
                   </td>
                   <td className="py-3 px-4">
                     {r.phone && r.phone !== '-' ? (
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={`https://wa.me/62${r.phone.replace(/[^0-9]/g, '').slice(1)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-semibold"
-                        >
-                          <Phone size={12} />
+                      isPengurus ? (
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`https://wa.me/62${r.phone.replace(/[^0-9]/g, '').slice(1)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-semibold"
+                          >
+                            <Phone size={12} />
+                            <span>{r.phone}</span>
+                          </a>
+                          <a
+                            href={`https://wa.me/62${r.phone.replace(/[^0-9]/g, '').slice(1)}?text=Halo%20Bpk/Ibu%20${encodeURIComponent(r.name)},%20berikut%20informasi%20terkait%20data%20warga%20Griya%20Sedayu%20Selaras%201.`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs transition inline-flex items-center justify-center"
+                            title="Kirim Pesan WhatsApp Langsung (Pengurus)"
+                          >
+                            <MessageSquare size={13} />
+                          </a>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
+                          <Phone size={12} className="text-slate-400" />
                           <span>{r.phone}</span>
-                        </a>
-                        <a
-                          href={`https://wa.me/62${r.phone.replace(/[^0-9]/g, '').slice(1)}?text=Halo%20Bpk/Ibu%20${encodeURIComponent(r.name)},%20berikut%20informasi%20terkait%20data%20warga%20Griya%20Sedayu%20Selaras%201.`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs transition inline-flex items-center justify-center"
-                          title="Kirim Pesan WhatsApp Langsung"
-                        >
-                          <MessageSquare size={13} />
-                        </a>
-                      </div>
+                        </span>
+                      )
                     ) : (
                       <span className="text-slate-400">-</span>
                     )}

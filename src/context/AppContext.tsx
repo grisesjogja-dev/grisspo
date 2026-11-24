@@ -54,7 +54,8 @@ import {
   applyIuranPaymentToResident,
   revertIuranPaymentFromResident,
   applyJimpitanPaymentToResident,
-  revertJimpitanPaymentFromResident
+  revertJimpitanPaymentFromResident,
+  isPengurusRole
 } from '../utils/security';
 import { db } from '../services/firebase';
 import {
@@ -3195,10 +3196,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  // Feature: Automated WhatsApp Notification for >= 2 months unpaid iuran
+  // Feature: Automated WhatsApp Notification for >= 2 months unpaid iuran (Pengurus Only)
   const sendWhatsAppIuranWarning = async (
     residentId: string
   ): Promise<{ success: boolean; url: string; log: WhatsAppNotificationLog }> => {
+    if (!currentUser || !isPengurusRole(currentUser.role)) {
+      throw new Error('Akses Ditolak: Hanya pengurus yang dapat mengirim notifikasi WhatsApp kepada warga penunggak iuran.');
+    }
     const resident = residents.find((r) => r.id === residentId);
     if (!resident) throw new Error('Data warga tidak ditemukan!');
 
