@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { useApp, defaultGuestUser, getLocalDateString } from '../context/AppContext';
-import { getResidentMonthlyFee } from '../utils/security';
+import {
+  getResidentMonthlyFee,
+  getBendahara1Contact,
+  buildBendahara1WhatsAppUrl,
+  openWhatsAppLink
+} from '../utils/security';
 import {
   AlertTriangle,
   X,
   Phone,
   CreditCard,
   CheckCircle2,
-  Calendar,
   DollarSign,
   ShieldAlert,
   ArrowRight,
-  ExternalLink,
-  QrCode
+  Send
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -28,6 +31,11 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
   const [paymentMethod, setPaymentMethod] = useState<'transfer' | 'cash'>('transfer');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [settlementInfo, setSettlementInfo] = useState<{
+    unpaidMonths: number;
+    totalDue: number;
+    waUrl: string;
+  } | null>(null);
 
   if (!isOpen || !authUser) return null;
 
@@ -42,23 +50,33 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
   const monthlyFee = resident ? getResidentMonthlyFee(resident) : 0;
   const isOverdue = unpaidMonths >= 2 && monthlyFee > 0;
 
-  if (!isOpen || !resident || !isOverdue) return null;
+  if (!isOpen || !resident || (!isOverdue && !paymentSuccess)) return null;
 
+  const ben1 = getBendahara1Contact(residents);
   const totalDue = unpaidMonths * monthlyFee;
   const monthListStr =
     resident.unpaidMonthNames && resident.unpaidMonthNames.length > 0
       ? resident.unpaidMonthNames.join(', ')
       : `${unpaidMonths} bulan terakhir`;
 
-  // Pre-generate WhatsApp message for Bendahara
-  const waMessage = encodeURIComponent(
-    `Halo Bendahara Paguyuban GSS, saya ${resident.name} (Rumah ${resident.houseNumber}) ingin mengonfirmasi/melunasi tunggakan iuran bulanan saya sebesar Rp ${totalDue.toLocaleString('id-ID')} (${unpaidMonths} bulan: ${monthListStr}) via Transfer Bank BRI 155801007310503 a/n Benisius Rahmat Basuki / Tunai. Mohon konfirmasi kas. Terima kasih.`
-  );
+  // Pre-generate WhatsApp confirmation message for Bendahara 1
+  const preWaText =
+    `*KONFIRMASI PELUNASAN IURAN WARGA GSS 1*\n` +
+    `Kepada Yth. Bendahara 1 (${ben1.name} - Rumah ${ben1.houseNumber})\n\n` +
+    `Saya *${resident.name}* (Rumah *${resident.houseNumber}*) mengonfirmasi rencana/pembayaran pelunasan tunggakan iuran bulanan:\n` +
+    `• Periode: ${unpaidMonths} Bulan (${monthListStr})\n` +
+    `• Total Nominal: *Rp ${totalDue.toLocaleString('id-ID')}*\n` +
+    `• Metode: Transfer Bank BRI 155801007310503 a/n Benisius Rahmat Basuki / Tunai\n\n` +
+    `Mohon konfirmasi kas. Terima kasih.`;
+  const preWaUrl = buildBendahara1WhatsAppUrl(residents, preWaText);
 
   const handlePayNow = async () => {
     setIsProcessing(true);
     try {
       const dateStr = getLocalDateString();
+      const paidMonthsCount = unpaidMonths;
+      const paidTotalAmount = totalDue;
+      const paidMonthList = monthListStr;
 
       const dynamicCategory =
         monthlyFee >= 50000
@@ -69,23 +87,41 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
       await addTransaction({
         type: 'pemasukan',
         category: dynamicCategory,
-        amount: totalDue,
+        amount: paidTotalAmount,
         date: dateStr,
-        description: `Pelunasan Tunggakan Iuran Bulanan (${unpaidMonths} Bulan: ${monthListStr}) oleh ${resident.name} (${resident.houseNumber}) via ${paymentMethod === 'transfer' ? 'Transfer Bank BRI' : 'Tunai Bendahara'}`,
+        description: `Pelunasan Tunggakan Iuran Bulanan (${paidMonthsCount} Bulan: ${paidMonthList}) oleh ${resident.name} (${resident.houseNumber}) via ${paymentMethod === 'transfer' ? 'Transfer Bank BRI' : 'Tunai Bendahara'}`,
         recordedBy: `${currentUser.name} (Mandiri via Portal)`,
         userRole: currentUser.role,
         sourceHouse: resident.houseNumber
       });
 
       // Award loyalty points
-      awardPoints(resident.id, 25, `Pelunasan tunggakan iuran ${unpaidMonths} bulan via ${paymentMethod === 'transfer' ? 'Transfer Bank BRI' : 'Tunai Bendahara'}`);
+      awardPoints(resident.id, 25, `Pelunasan tunggakan iuran ${paidMonthsCount} bulan via ${paymentMethod === 'transfer' ? 'Transfer Bank BRI' : 'Tunai Bendahara'}`);
 
       addAnnouncement(
         `Pelunasan Iuran Paguyuban: ${resident.name} (${resident.houseNumber})`,
-        `Warga ${resident.name} (${resident.houseNumber}) telah melunasi kewajiban iuran bulanan sebesar Rp ${totalDue.toLocaleString('id-ID')} (${unpaidMonths} bulan). Status warga kini TERTIB & LUNAS.`,
+        `Warga ${resident.name} (${resident.houseNumber}) telah melunasi kewajiban iuran bulanan sebesar Rp ${paidTotalAmount.toLocaleString('id-ID')} (${paidMonthsCount} bulan). Status warga kini TERTIB & LUNAS.`,
         'Keuangan',
         false
       );
+
+      const settlementMsg =
+        `*KONFIRMASI PELUNASAN IURAN WARGA GSS 1*\n` +
+        `Kepada Yth. Bendahara 1 (${ben1.name} - Rumah ${ben1.houseNumber})\n\n` +
+        `Saya *${resident.name}* (Rumah *${resident.houseNumber}*) mengonfirmasi telah melunasi tunggakan iuran melalui Portal GRISSPO:\n` +
+        `• Kategori: ${dynamicCategory}\n` +
+        `• Periode: ${paidMonthsCount} Bulan (${paidMonthList})\n` +
+        `• Total Nominal: *Rp ${paidTotalAmount.toLocaleString('id-ID')}*\n` +
+        `• Metode: ${paymentMethod === 'transfer' ? 'Transfer Bank BRI (155801007310503)' : 'Tunai Bendahara'}\n` +
+        `• Tanggal: ${dateStr}\n\n` +
+        `Status tagihan di portal telah tercatat LUNAS. Mohon verifikasi kas. Terima kasih.`;
+
+      const waUrl = buildBendahara1WhatsAppUrl(residents, settlementMsg);
+      setSettlementInfo({
+        unpaidMonths: paidMonthsCount,
+        totalDue: paidTotalAmount,
+        waUrl
+      });
 
       confetti({
         particleCount: 80,
@@ -94,6 +130,7 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
       });
 
       setPaymentSuccess(true);
+      openWhatsAppLink(waUrl);
     } catch (err: any) {
       alert('Terjadi kesalahan saat memproses pembayaran: ' + err.message);
     } finally {
@@ -139,18 +176,31 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
               <div>
                 <h3 className="text-lg font-black text-slate-900">Alhamdulillah! Pembayaran Berhasil</h3>
                 <p className="text-xs text-slate-600 max-w-sm mx-auto mt-1">
-                  Tunggakan iuran {unpaidMonths} bulan Anda (Rp {totalDue.toLocaleString('id-ID')}) telah lunas dan tercatat otomatis di Buku Kas Paguyuban.
+                  Tunggakan iuran {settlementInfo?.unpaidMonths ?? unpaidMonths} bulan Anda (Rp {(settlementInfo?.totalDue ?? totalDue).toLocaleString('id-ID')}) telah lunas dan tercatat otomatis di Buku Kas Paguyuban.
                 </p>
                 <div className="mt-3 inline-block px-3 py-1 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-full border border-emerald-200">
-                  Status Akun: Tertib & Bebas Sanksi Tata Tertib
+                  Konfirmasi dikirim ke WA Bendahara 1 ({ben1.name} &bull; {ben1.houseNumber})
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition"
-              >
-                Tutup Peringatan & Lanjutkan ke Portal
-              </button>
+              <div className="space-y-2">
+                {settlementInfo?.waUrl && (
+                  <a
+                    href={settlementInfo.waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-md"
+                  >
+                    <Send size={14} />
+                    <span>Kirim Konfirmasi ke WA Bendahara 1 ({ben1.houseNumber})</span>
+                  </a>
+                )}
+                <button
+                  onClick={onClose}
+                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition"
+                >
+                  Tutup Peringatan & Lanjutkan ke Portal
+                </button>
+              </div>
             </div>
           ) : isPayingNow ? (
             /* Inline Quick Payment Flow */
@@ -229,7 +279,7 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
                     </button>
                   </div>
                   <p className="text-[11px] text-emerald-800">
-                    Setelah transfer, simpan struk atau kirimkan notifikasi pelunasan ke Bendahara.
+                    Setelah klik Konfirmasi Pelunasan, notifikasi konfirmasi otomatis diarahkan ke WhatsApp <strong>Bendahara 1 ({ben1.name} - {ben1.houseNumber})</strong>.
                   </p>
                 </div>
               )}
@@ -327,27 +377,15 @@ export const IuranWarningModal: React.FC<IuranWarningModalProps> = ({ isOpen, on
                   <ArrowRight size={14} />
                 </button>
 
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <a
-                    href={`https://api.whatsapp.com/send?phone=6281234567802&text=${waMessage}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl font-bold flex items-center justify-center gap-1.5 transition text-center"
-                  >
-                    <Phone size={13} className="text-emerald-600" />
-                    <span>WA Bendahara 1 (B02)</span>
-                  </a>
-
-                  <a
-                    href={`https://api.whatsapp.com/send?phone=6281234567815&text=${waMessage}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl font-bold flex items-center justify-center gap-1.5 transition text-center"
-                  >
-                    <Phone size={13} className="text-emerald-600" />
-                    <span>WA Bendahara 2 (C15)</span>
-                  </a>
-                </div>
+                <a
+                  href={preWaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full p-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl font-bold flex items-center justify-center gap-2 transition text-xs text-center"
+                >
+                  <Phone size={14} className="text-emerald-600" />
+                  <span>Konfirmasi Pelunasan ke WA Bendahara 1 ({ben1.name} &bull; {ben1.houseNumber})</span>
+                </a>
 
                 <button
                   type="button"

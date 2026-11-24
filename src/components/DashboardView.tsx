@@ -1,7 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useApp, defaultGuestUser, getLocalDateString, LEGACY_FAKE_SEED_IDS } from '../context/AppContext';
 import { DayOfWeek, PaymentReceipt, PaymentReceiptType, PaymentMethodType, Resident } from '../types';
-import { getResidentMonthlyFee, getResidentJimpitanTarget } from '../utils/security';
+import {
+  getResidentMonthlyFee,
+  getResidentJimpitanTarget,
+  getBendahara1Contact,
+  buildBendahara1WhatsAppUrl,
+  openWhatsAppLink
+} from '../utils/security';
 import { DetailToggle } from './DetailToggle';
 import {
   Coins,
@@ -84,6 +90,7 @@ export const DashboardView: React.FC = () => {
   // Permission flags
   const isBendaharaOrAdmin = ['superadmin', 'sekretaris', 'bendahara1', 'bendahara2', 'admin_inventaris'].includes(currentUser.role);
   const isSuperadmin = currentUser.role === 'superadmin';
+  const ben1Contact = useMemo(() => getBendahara1Contact(residents), [residents]);
 
   // --- LOKET PAYMENT FORM STATES ---
   const [selectedResidentId, setSelectedResidentId] = useState<string>(() => residents[0]?.id || '');
@@ -374,8 +381,9 @@ _Pengurus Paguyuban Griya Sedayu Selaras 1_`;
 
           // Reset form notes
           setFormNotes('');
-          // Open digital receipt modal immediately for sharing
+          // Open digital receipt modal immediately for sharing & notify Bendahara 1 via WA
           setActiveReceiptModal(newReceipt);
+          openWhatsAppLink(buildReceiptBendahara1WaUrl(newReceipt));
         } catch (err: any) {
           alert('Gagal memproses transaksi kas: ' + err.message);
         } finally {
@@ -383,6 +391,37 @@ _Pengurus Paguyuban Griya Sedayu Selaras 1_`;
         }
       }
     });
+  };
+
+  // WhatsApp settlement confirmation URL addressed to Bendahara 1
+  const buildReceiptBendahara1WaUrl = (receipt: PaymentReceipt) => {
+    const paymentMethodText = receipt.paymentMethod === 'transfer_bank'
+      ? 'Transfer BANK BRI (Rek. 155801007310503 a/n Benisius Rahmat Basuki)'
+      : 'Tunai ke Bendahara Paguyuban';
+    const receiptDateFormatted = receipt.date
+      ? new Date(`${receipt.date}T12:00:00`).toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        })
+      : new Date(receipt.createdAt).toLocaleDateString('id-ID');
+
+    const msg =
+      `*KONFIRMASI PELUNASAN KAS PAGUYUBAN GSS 1*\n` +
+      `Kepada Yth. Bendahara 1 (${ben1Contact.name} - Rumah ${ben1Contact.houseNumber})\n\n` +
+      `Konfirmasi pelunasan kas melalui Portal GRISSPO:\n` +
+      `• No. Kwitansi: *#${receipt.receiptNumber}*\n` +
+      `• Nama Warga: *${receipt.residentName}* (Rumah *${receipt.residentHouse}*)\n` +
+      `• Jenis Pembayaran: *${receipt.paymentTypeName}*\n` +
+      `• Periode: *${receipt.periodMonth || '-'}*\n` +
+      `• Nominal: *Rp ${receipt.amount.toLocaleString('id-ID')}*\n` +
+      `• Metode: *${paymentMethodText}*\n` +
+      `• Tanggal: ${receiptDateFormatted}\n` +
+      `• Dikonfirmasi Oleh: ${currentUser.name} (${currentUser.houseNumber})\n` +
+      `${receipt.notes ? `• Catatan: ${receipt.notes}\n` : ''}\n` +
+      `Status: *LUNAS / TERCATAT DI BUKU KAS*. Mohon verifikasi. Terima kasih.`;
+
+    return buildBendahara1WhatsAppUrl(residents, msg);
   };
 
   // WhatsApp share generator
@@ -421,7 +460,7 @@ Dokumen ini sah sebagai tanda terima resmi Paguyuban Griya Sedayu Selaras 1.
 Email Resmi Pengurus: grises.jogja@gmail.com`;
 
     const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    openWhatsAppLink(url);
   };
 
   // Email Notification via grises.jogja@gmail.com
@@ -1589,19 +1628,56 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                   </div>
                 </div>
 
-                {(userTotalIuranSampahDeficit > 0 || userCurrentMonthJimpitanDeficit > 0) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDashboardTab('loket');
-                      setSelectedResidentId(currentUser.id);
-                    }}
-                    className="w-full py-2.5 bg-blue-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 shadow-md"
-                  >
-                    <Wallet size={14} />
-                    <span>Bayar Tagihan via Loket Kas</span>
-                  </button>
-                )}
+                {(() => {
+                  const residentDisplayName = getResidentNameByHouse(currentUser.houseNumber, currentUser.name);
+                  const totalAllBills = userTotalIuranSampahDeficit + userTotalJimpitanDeficit;
+                  const personalConfirmMsg =
+                    `*KONFIRMASI PELUNASAN TAGIHAN WARGA GSS 1*\n` +
+                    `Kepada Yth. Bendahara 1 (${ben1Contact.name} - Rumah ${ben1Contact.houseNumber})\n\n` +
+                    `Saya *${residentDisplayName}* (Rumah *${currentUser.houseNumber}*) mengonfirmasi pelunasan kewajiban rumah:\n` +
+                    `• Kekurangan Jimpitan: Rp ${userTotalJimpitanDeficit.toLocaleString('id-ID')}\n` +
+                    `• Tunggakan Iuran & Sampah (${userUnpaidMonthsCount} bln): Rp ${userTotalIuranSampahDeficit.toLocaleString('id-ID')}\n` +
+                    `• Total Tagihan: *Rp ${totalAllBills.toLocaleString('id-ID')}*\n\n` +
+                    `Pembayaran melalui Transfer Bank BRI 155801007310503 a/n Benisius Rahmat Basuki / Tunai. Mohon verifikasi kas. Terima kasih.`;
+                  const personalWaUrl = buildBendahara1WhatsAppUrl(residents, personalConfirmMsg);
+
+                  return (
+                    <div className="space-y-2">
+                      {(userTotalIuranSampahDeficit > 0 || userTotalJimpitanDeficit > 0) && isBendaharaOrAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDashboardTab('loket');
+                            setSelectedResidentId(currentUser.id);
+                          }}
+                          className="w-full py-2.5 bg-blue-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 shadow-md"
+                        >
+                          <Wallet size={14} />
+                          <span>Bayar Tagihan via Loket Kas</span>
+                        </button>
+                      )}
+                      {userTotalJimpitanDeficit > 0 && !isBendaharaOrAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveView('jimpitan')}
+                          className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 shadow-md"
+                        >
+                          <Coins size={14} />
+                          <span>Bayar Kekurangan Jimpitan</span>
+                        </button>
+                      )}
+                      <a
+                        href={personalWaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 shadow-md"
+                      >
+                        <Send size={14} />
+                        <span>Konfirmasi Pelunasan ke WA Bendahara 1 ({ben1Contact.houseNumber})</span>
+                      </a>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Quick Actions Shortcuts */}
@@ -2313,15 +2389,26 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
 
               {/* Action Buttons: WhatsApp, Email, Cetak */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={buildReceiptBendahara1WaUrl(activeReceiptModal)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-xs"
+                    title={`Kirim konfirmasi pelunasan ke WhatsApp Bendahara 1 (${ben1Contact.name} - ${ben1Contact.houseNumber})`}
+                  >
+                    <Send size={13} />
+                    <span>Konfirmasi WA Bendahara 1 ({ben1Contact.houseNumber})</span>
+                  </a>
+
                   <button
                     type="button"
                     onClick={() => handleShareWhatsApp(activeReceiptModal)}
-                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-xs"
+                    className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-xs"
                     title="Kirim ke WhatsApp Warga"
                   >
                     <Send size={13} />
-                    <span>Kirim ke WhatsApp Warga</span>
+                    <span>Kirim ke WA Warga</span>
                   </button>
 
                   <button

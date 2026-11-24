@@ -9,7 +9,10 @@ import {
 import {
   getResidentJimpitanTarget,
   isResidentDailyJimpitCardEligible,
-  isResidentJimpitanObliged
+  isResidentJimpitanObliged,
+  getBendahara1Contact,
+  buildBendahara1WhatsAppUrl,
+  openWhatsAppLink
 } from '../utils/security';
 import confetti from 'canvas-confetti';
 import {
@@ -554,8 +557,10 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     method: string;
     date: string;
     trxId?: string;
+    waConfirmUrl?: string;
   } | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const ben1Contact = useMemo(() => getBendahara1Contact(residents), [residents]);
 
   const totalAkumulasiDefisit = useMemo(() => {
     return wajibJimpitResidents.reduce((acc, r) => {
@@ -644,14 +649,38 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
               origin: { y: 0.6 }
             });
 
+            const todayFormatted = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            const payerLabel = currentUser
+              ? `${currentUser.name} (${currentUser.houseNumber})`
+              : `${selectedResidentForPay.name} (${selectedResidentForPay.houseNumber})`;
+
+            const confirmMsg =
+              `*KONFIRMASI PELUNASAN JIMPITAN WARGA GSS 1*\n` +
+              `Kepada Yth. Bendahara 1 (${ben1Contact.name} - Rumah ${ben1Contact.houseNumber})\n\n` +
+              `Konfirmasi pelunasan kekurangan jimpitan warga:\n` +
+              `• Nama Warga: *${selectedResidentForPay.name}*\n` +
+              `• No. Rumah: *${selectedResidentForPay.houseNumber}*\n` +
+              `• Nominal: *Rp ${amt.toLocaleString('id-ID')}*\n` +
+              `• Metode: ${payMethod === 'transfer' ? 'Transfer Bank BRI (155801007310503)' : 'Tunai'}\n` +
+              `• Tanggal: ${todayFormatted}\n` +
+              `• No. Transaksi: ${result.transactionId || '-'}\n` +
+              `• Dikonfirmasi Oleh: ${payerLabel}\n` +
+              `${payNotes ? `• Catatan: ${payNotes}\n` : ''}\n` +
+              `Dana tercatat masuk ke Kas Paguyuban GSS 1. Mohon verifikasi. Terima kasih.`;
+
+            const waConfirmUrl = buildBendahara1WhatsAppUrl(residents, confirmMsg);
+
             setPaySuccessReceipt({
               residentName: selectedResidentForPay.name,
               residentHouse: selectedResidentForPay.houseNumber,
               amount: amt,
               method: payMethod.toUpperCase(),
-              date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-              trxId: result.transactionId
+              date: todayFormatted,
+              trxId: result.transactionId,
+              waConfirmUrl
             });
+
+            openWhatsAppLink(waConfirmUrl);
           } else {
             alert('Gagal: ' + result.message);
           }
@@ -2461,25 +2490,42 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition"
-                    >
-                      <Printer size={13} />
-                      <span>Cetak Kuitansi</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsPayModalOpen(false);
-                        setPaySuccessReceipt(null);
-                      }}
-                      className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition"
-                    >
-                      Selesai & Tutup
-                    </button>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-[11px] text-emerald-800 font-semibold">
+                    Konfirmasi pelunasan diarahkan ke WhatsApp Bendahara 1 ({ben1Contact.name} &bull; {ben1Contact.houseNumber})
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    {paySuccessReceipt.waConfirmUrl && (
+                      <a
+                        href={paySuccessReceipt.waConfirmUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition"
+                      >
+                        <Send size={14} />
+                        <span>Kirim Konfirmasi ke WA Bendahara 1 ({ben1Contact.houseNumber})</span>
+                      </a>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => window.print()}
+                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition"
+                      >
+                        <Printer size={13} />
+                        <span>Cetak Kuitansi</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPayModalOpen(false);
+                          setPaySuccessReceipt(null);
+                        }}
+                        className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition"
+                      >
+                        Selesai & Tutup
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -2671,8 +2717,12 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                     />
                   </div>
 
+                  <p className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 font-medium">
+                    Setelah konfirmasi pembayaran diproses, notifikasi pelunasan otomatis diarahkan ke WhatsApp <strong>Bendahara 1 ({ben1Contact.name} &bull; {ben1Contact.houseNumber})</strong>.
+                  </p>
+
                   {/* Actions */}
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex gap-2 pt-1">
                     <button
                       type="button"
                       onClick={() => setIsPayModalOpen(false)}

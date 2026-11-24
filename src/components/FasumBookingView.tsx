@@ -8,6 +8,11 @@ import {
   FasumTimeSlot,
   FasumPaymentMethod
 } from '../types';
+import {
+  getBendahara1Contact,
+  buildBendahara1WhatsAppUrl,
+  openWhatsAppLink
+} from '../utils/security';
 import { DetailToggle } from './DetailToggle';
 import {
   Building2,
@@ -38,7 +43,8 @@ import {
   Plus,
   Copy,
   Check,
-  Settings
+  Settings,
+  Send
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -114,6 +120,27 @@ export const FasumBookingView: React.FC = () => {
   // Privileges
   const isBendaharaOrAdmin = ['superadmin', 'bendahara1', 'bendahara2'].includes(currentUser.role);
   const isSuperadmin = currentUser.role === 'superadmin';
+  const ben1Contact = useMemo(() => getBendahara1Contact(residents), [residents]);
+
+  const buildFasumSettlementWaUrl = (booking: FasumBooking) => {
+    const methodLabel =
+      booking.paymentMethod === 'transfer_bank'
+        ? 'Transfer Bank BRI (155801007310503)'
+        : 'Tunai ke Bendahara Paguyuban';
+    const msg =
+      `*KONFIRMASI PELUNASAN SEWA FASUM GSS 1*\n` +
+      `Kepada Yth. Bendahara 1 (${ben1Contact.name} - Rumah ${ben1Contact.houseNumber})\n\n` +
+      `Konfirmasi pelunasan sewa fasilitas umum:\n` +
+      `• Penyewa: *${booking.residentName}* (Rumah *${booking.residentHouse}*)\n` +
+      `• Fasilitas: *${booking.facilityName}*\n` +
+      `• Tanggal & Sesi: ${booking.date} (${booking.startTime} - ${booking.endTime} WIB)\n` +
+      `• Keperluan: ${booking.purpose}\n` +
+      `• Nominal Sewa: *Rp ${booking.rentalFee.toLocaleString('id-ID')}*\n` +
+      `• Metode: ${methodLabel}\n` +
+      `• Dikonfirmasi Oleh: ${currentUser.name} (${currentUser.houseNumber})\n\n` +
+      `Dana tercatat masuk ke Kas Paguyuban GSS 1. Mohon verifikasi. Terima kasih.`;
+    return buildBendahara1WhatsAppUrl(residents, msg);
+  };
 
   // Compute facility configuration map
   const facilityConfigMap = useMemo(() => {
@@ -336,6 +363,7 @@ export const FasumBookingView: React.FC = () => {
         approvedBy: `${currentUser.name} (Kas Masuk)`
       };
       setReceiptModalBooking(updated);
+      openWhatsAppLink(buildFasumSettlementWaUrl(updated));
     } catch (err) {
       alert('Gagal memproses pembayaran fasum: ' + err);
     }
@@ -1030,7 +1058,10 @@ export const FasumBookingView: React.FC = () => {
                                 confirmLabel: 'Setuju',
                                 cancelLabel: 'Batal',
                                 variant: 'primary',
-                                onConfirm: () => confirmFasumPayment(booking.id, `${currentUser.name} (${currentUser.role})`)
+                                onConfirm: async () => {
+                                  await confirmFasumPayment(booking.id, `${currentUser.name} (${currentUser.role})`);
+                                  openWhatsAppLink(buildFasumSettlementWaUrl(booking));
+                                }
                               });
                             }}
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition"
@@ -1418,7 +1449,7 @@ export const FasumBookingView: React.FC = () => {
                 </button>
 
                 <p className="text-[10px] text-slate-400 text-center">
-                  Mengklik tombol di atas akan menyelesaikan pelunasan sewa, otomatis mencatat pemasukan kas Rp {paymentModalBooking.rentalFee.toLocaleString('id-ID')} dan menerbitkan kuitansi.
+                  Mengklik tombol di atas akan menyelesaikan pelunasan sewa, mencatat pemasukan kas Rp {paymentModalBooking.rentalFee.toLocaleString('id-ID')}, menerbitkan kuitansi, dan mengarahkan konfirmasi ke WhatsApp Bendahara 1 ({ben1Contact.name} &bull; {ben1Contact.houseNumber}).
                 </p>
               </div>
             </div>
@@ -1519,20 +1550,31 @@ export const FasumBookingView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  onClick={() => window.print()}
-                  className="px-4 py-2 bg-blue-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                <a
+                  href={buildFasumSettlementWaUrl(receiptModalBooking)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
                 >
-                  <Printer size={15} />
-                  <span>Cetak Dokumen</span>
-                </button>
-                <button
-                  onClick={() => setReceiptModalBooking(null)}
-                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition"
-                >
-                  Tutup
-                </button>
+                  <Send size={14} />
+                  <span>Kirim Konfirmasi ke WA Bendahara 1 ({ben1Contact.houseNumber})</span>
+                </a>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-blue-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
+                  >
+                    <Printer size={15} />
+                    <span>Cetak Dokumen</span>
+                  </button>
+                  <button
+                    onClick={() => setReceiptModalBooking(null)}
+                    className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition"
+                  >
+                    Tutup
+                  </button>
+                </div>
               </div>
             </div>
           </div>

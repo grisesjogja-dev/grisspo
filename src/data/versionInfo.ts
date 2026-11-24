@@ -6,17 +6,26 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.0';
+export const APP_VERSION = 'v1.9.1';
 export const APP_BUILD_DATE = '23 November 2026';
-export const APP_BUILD_CODE = '2026.11.23-v1.9.0';
-export const APP_RELEASE_NAME = 'Otorisasi Notif WA Penunggak Iuran & View-Only Daftar Warga';
+export const APP_BUILD_CODE = '2026.11.23-v1.9.1';
+export const APP_RELEASE_NAME = 'Konfirmasi Pelunasan Langsung ke WhatsApp Bendahara 1';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.1',
+    releaseDate: '23 November 2026',
+    releaseTitle: 'Konfirmasi Pelunasan Langsung ke WhatsApp Bendahara 1',
+    badge: 'Terbaru',
+    highlights: [
+      'Konfirmasi Pelunasan Terpusat ke WA Bendahara 1: Setiap konfirmasi pelunasan yang dilakukan seluruh pengguna (pelunasan tunggakan iuran, pembayaran kekurangan jimpitan, pelunasan sewa fasum, loket kas, dan tagihan rumah di Dashboard) otomatis diarahkan ke nomor WhatsApp resmi Bendahara 1 (Bpk. Ahmad - Rumah B 02).',
+      'Tombol & Rincian Bukti Pelunasan Otomatis: Pesan WhatsApp memuat rincian nama warga, nomor rumah, kategori transaksi, nominal, metode bayar, dan nomor bukti transaksi untuk verifikasi cepat oleh Bendahara 1.'
+    ]
+  },
   {
     version: 'v1.9.0',
     releaseDate: '23 November 2026',
     releaseTitle: 'Otorisasi Notif WA Penunggak Iuran & View-Only Daftar Warga',
-    badge: 'Terbaru',
     highlights: [
       'Khusus Pengurus untuk Notif WA Tunggakan Iuran: Fitur kirim notifikasi WhatsApp kepada warga penunggak iuran kini hanya dapat diakses dan dieksekusi oleh akun Pengurus (Superadmin, Sekretaris, Bendahara 1/2, dan Admin Inventaris).',
       'Mode View-Only Role Warga di Daftar Warga: Akun dengan role "warga" kini bersifat view-only pada seluruh menu Daftar Warga (tanpa tombol kirim WA langsung, tanpa aksi penagihan WA, dan tanpa akses edit/hapus).'

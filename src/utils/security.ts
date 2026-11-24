@@ -553,3 +553,71 @@ export function revertJimpitanPaymentFromResident(
   return { updatedResident, changed: true };
 }
 
+/**
+ * Normalizes an Indonesian phone number to WhatsApp international format (62...).
+ */
+export function normalizeWhatsAppPhone(phone?: string | null, fallback = '0812-3456-7818'): string {
+  const digits = (phone || '').replace(/[^0-9]/g, '') || fallback.replace(/[^0-9]/g, '');
+  if (!digits) return '6281234567818';
+  if (digits.startsWith('0')) return `62${digits.slice(1)}`;
+  if (digits.startsWith('62')) return digits;
+  return `62${digits}`;
+}
+
+/**
+ * Dynamically resolves Bendahara 1 contact details from the residents registry
+ * (falls back to Bpk. Ahmad Rumah B 02 / 0812-3456-7818).
+ */
+export function getBendahara1Contact(residents: Resident[]): {
+  name: string;
+  houseNumber: string;
+  displayPhone: string;
+  waPhone: string;
+} {
+  const ben =
+    residents.find((r) => r.role === 'bendahara1') ||
+    residents.find((r) => r.houseNumber.replace(/\s+/g, '').toUpperCase() === 'B02');
+
+  const displayPhone = ben?.phone || '0812-3456-7818';
+  return {
+    name: ben?.name || 'BAPAK AHMAD',
+    houseNumber: ben?.houseNumber || 'B 02',
+    displayPhone,
+    waPhone: normalizeWhatsAppPhone(displayPhone, '0812-3456-7818')
+  };
+}
+
+/**
+ * Builds a standard WhatsApp API URL with pre-encoded message text.
+ */
+export function buildWhatsAppSendUrl(phone: string, message: string): string {
+  const waPhone = normalizeWhatsAppPhone(phone);
+  return `https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent(message)}`;
+}
+
+/**
+ * Builds a WhatsApp confirmation URL directed to Bendahara 1.
+ */
+export function buildBendahara1WhatsAppUrl(residents: Resident[], message: string): string {
+  const ben1 = getBendahara1Contact(residents);
+  return buildWhatsAppSendUrl(ben1.waPhone, message);
+}
+
+/**
+ * Opens a WhatsApp URL in a new tab using a temporary anchor element (avoids window.open).
+ */
+export function openWhatsAppLink(url: string): void {
+  if (typeof document === 'undefined' || !url) return;
+  try {
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch {
+    // Fallback handled by visible clickable link in confirmation modal/receipt
+  }
+}
