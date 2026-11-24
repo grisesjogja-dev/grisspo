@@ -6,12 +6,22 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.5';
-export const APP_BUILD_DATE = '23 November 2026';
-export const APP_BUILD_CODE = '2026.11.23-v1.9.5';
-export const APP_RELEASE_NAME = 'Penguncian Otomatis Seluruh Menu (Kecuali Jimpit) Penunggak >= 2 Bulan';
+export const APP_VERSION = 'v1.9.6';
+export const APP_BUILD_DATE = '24 November 2026';
+export const APP_BUILD_CODE = '2026.11.24-v1.9.6';
+export const APP_RELEASE_NAME = 'Penambahan Role Koordinator Kamtibmas & Hak Akses Ganti PIN Portal';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.6',
+    releaseDate: '24 November 2026',
+    releaseTitle: 'Penambahan Role Koordinator Kamtibmas & Hak Akses Ganti PIN Portal',
+    badge: 'Terbaru',
+    highlights: [
+      'Role Baru "Koordinator Kamtibmas": Ditambahkan role resmi pengurus Koordinator Kamtibmas (dijabat oleh Bpk. Joko Tri - Rumah C 12) yang terintegrasi penuh dalam struktur pengurus dan hak akses sistem.',
+      'Hak Akses Penggantian PIN Portal: Kode/PIN Portal gerbang perumahan kini tidak hanya dapat diganti dan dikelola oleh Superadmin, tetapi juga secara resmi dapat diubah dan dikelola oleh Koordinator Kamtibmas.'
+    ]
+  },
   {
     version: 'v1.9.5',
     releaseDate: '23 November 2026',

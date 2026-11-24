@@ -42,6 +42,8 @@ export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({ isOpen
         return { label: 'BENDAHARA 2', bg: 'bg-teal-50 text-teal-700 border-teal-200' };
       case 'admin_inventaris':
         return { label: 'ADMIN INVENTARIS', bg: 'bg-amber-50 text-amber-700 border-amber-200' };
+      case 'koordinator_kamtibmas':
+        return { label: 'KOORDINATOR KAMTIBMAS', bg: 'bg-cyan-50 text-cyan-700 border-cyan-200' };
       default:
         return { label: 'WARGA GSS', bg: 'bg-blue-50 text-emerald-800 border-emerald-200' };
     }

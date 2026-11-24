@@ -57,7 +57,7 @@ export const PinPortalView: React.FC = () => {
 
   const unpaidMonths = getResidentUnpaidMonthsCount(currentResident);
   const hasAccess = canAccessPinPortal(currentResident);
-  const isSuperadmin = currentUser.role === 'superadmin';
+  const canManagePin = currentUser.role === 'superadmin' || currentUser.role === 'koordinator_kamtibmas';
   const ben1Contact = useMemo(() => getBendahara1Contact(residents), [residents]);
 
   const monthlyFee = currentResident ? getResidentMonthlyFee(currentResident) : 50000;
@@ -79,7 +79,7 @@ export const PinPortalView: React.FC = () => {
 
   const handleSavePin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isSuperadmin) return;
+    if (!canManagePin) return;
     const cleanPin = editPinCode.trim();
     if (!cleanPin) {
       alert('PIN Portal tidak boleh kosong!');
@@ -219,21 +219,21 @@ export const PinPortalView: React.FC = () => {
             </p>
           </div>
 
-          {isSuperadmin && !isEditing && (
+          {canManagePin && !isEditing && (
             <button
               type="button"
               onClick={handleOpenEdit}
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-2xl text-xs shadow-lg transition shrink-0"
             >
               <Edit2 size={15} />
-              <span>Ubah PIN Portal (Superadmin)</span>
+              <span>Ubah PIN Portal (Superadmin & Kamtibmas)</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Superadmin Edit Panel */}
-      {isSuperadmin && isEditing && (
+      {/* Superadmin / Kamtibmas Edit Panel */}
+      {canManagePin && isEditing && (
         <form
           onSubmit={handleSavePin}
           className="bg-white rounded-3xl border-2 border-amber-300 p-6 shadow-md space-y-4 text-xs"
@@ -241,7 +241,7 @@ export const PinPortalView: React.FC = () => {
           <div className="flex items-center justify-between pb-3 border-b border-slate-200">
             <h2 className="text-sm font-black text-slate-900 flex items-center gap-2">
               <Edit2 size={16} className="text-amber-600" />
-              <span>Perbarui PIN Portal Resmi (Khusus Superadmin)</span>
+              <span>Perbarui PIN Portal Resmi (Superadmin & Koordinator Kamtibmas)</span>
             </h2>
             <button
               type="button"
@@ -395,11 +395,11 @@ export const PinPortalView: React.FC = () => {
             )}
           </div>
 
-          {isSuperadmin && portalPin.history && portalPin.history.length > 0 && (
+          {canManagePin && portalPin.history && portalPin.history.length > 0 && (
             <div className="bg-white border border-slate-200 rounded-3xl p-5 space-y-3">
               <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <History size={14} className="text-emerald-600" />
-                <span>Riwayat Perubahan PIN (Superadmin)</span>
+                <span>Riwayat Perubahan PIN (Superadmin &amp; Kamtibmas)</span>
               </h4>
               <div className="space-y-2 max-h-40 overflow-y-auto text-xs">
                 {portalPin.history.map((item, idx) => (

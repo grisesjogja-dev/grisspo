@@ -117,6 +117,8 @@ export const Header: React.FC<HeaderProps> = ({
         return { label: 'BENDAHARA 2', bg: 'bg-teal-100 text-teal-800 border-teal-300' };
       case 'admin_inventaris':
         return { label: 'ADMIN INVENTARIS', bg: 'bg-amber-100 text-amber-800 border-amber-300' };
+      case 'koordinator_kamtibmas':
+        return { label: 'KOORDINATOR KAMTIBMAS', bg: 'bg-cyan-100 text-cyan-800 border-cyan-300' };
       default:
         return { label: 'WARGA GSS', bg: 'bg-blue-100 text-blue-800 border-emerald-300' };
     }

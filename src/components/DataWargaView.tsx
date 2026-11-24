@@ -1068,6 +1068,7 @@ export const DataWargaView: React.FC = () => {
                     <option value="bendahara1">Bendahara 1 (Bpk. Ahmad - B 02)</option>
                     <option value="bendahara2">Bendahara 2 (Bpk. Robi - C 15)</option>
                     <option value="admin_inventaris">Admin Inventaris (Bpk. Sony - B 23)</option>
+                    <option value="koordinator_kamtibmas">Koordinator Kamtibmas (Bpk. Joko Tri - C 12)</option>
                     <option value="superadmin">Superadmin (Bpk. Beni - B 24)</option>
                   </select>
                 </div>

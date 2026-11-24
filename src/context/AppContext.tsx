@@ -978,6 +978,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (r.houseNumber === 'B 02') return { ...r, role: 'bendahara1' };
             if (r.houseNumber === 'C 15') return { ...r, role: 'bendahara2' };
             if (r.houseNumber === 'B 23') return { ...r, role: 'admin_inventaris' };
+            if (r.houseNumber === 'C 12') return { ...r, role: 'koordinator_kamtibmas' };
             if (r.houseNumber === 'A 11' && r.role === 'bendahara1') return { ...r, role: 'warga' };
             if (r.houseNumber === 'B 26' && r.role === 'admin_inventaris') return { ...r, role: 'warga' };
             if (r.houseNumber === 'C 10' && r.role === 'superadmin') return { ...r, role: 'warga' };
@@ -5273,8 +5274,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updatePortalPin = async (pinCode: string, periodLabel: string, notes?: string) => {
-    if (!currentUser || currentUser.role !== 'superadmin') {
-      throw new Error('Akses Ditolak: Hanya Superadmin yang dapat memperbarui PIN Portal.');
+    if (!currentUser || (currentUser.role !== 'superadmin' && currentUser.role !== 'koordinator_kamtibmas')) {
+      throw new Error('Akses Ditolak: Hanya Superadmin dan Koordinator Kamtibmas yang dapat memperbarui PIN Portal.');
     }
     const cleanPin = pinCode.trim();
     if (!cleanPin) {

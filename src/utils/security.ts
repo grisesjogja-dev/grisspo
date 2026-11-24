@@ -129,7 +129,7 @@ export function sendAnomalyEmailAlert(trx: Partial<Transaction>, reason: string)
 export const isPengurusRole = (role?: UserRole | null): boolean =>
   Boolean(
     role &&
-      ['superadmin', 'sekretaris', 'bendahara1', 'bendahara2', 'admin_inventaris'].includes(role)
+      ['superadmin', 'sekretaris', 'bendahara1', 'bendahara2', 'admin_inventaris', 'koordinator_kamtibmas'].includes(role)
   );
 
 export const permissions = {

@@ -28,6 +28,9 @@ export const PengurusModal: React.FC<PengurusModalProps> = ({ isOpen, onClose })
     if (pos.includes('Sekretaris')) {
       return 'bg-purple-100 text-purple-800 border-purple-300';
     }
+    if (pos.includes('Kamtibmas')) {
+      return 'bg-cyan-100 text-cyan-800 border-cyan-300';
+    }
     return 'bg-amber-100 text-amber-800 border-amber-300';
   };
 

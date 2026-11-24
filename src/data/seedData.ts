@@ -64,7 +64,7 @@ export const initialResidents: Resident[] = [
   { id: 'w-c09', no: 52, name: 'BAPAK RANTO', houseNumber: 'C 09', block: 'C', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7852', familyMembers: 0, monthlyIuranPaid: false, jimpitanPaidMonth: 0, points: 0 },
   { id: 'w-c10', no: 53, name: 'BAPAK RUDI', houseNumber: 'C 10', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7853', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
   { id: 'w-c11', no: 54, name: 'BAPAK FALLAH', houseNumber: 'C 11', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7854', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
-  { id: 'w-c12', no: 55, name: 'BAPAK JOKO TRI', houseNumber: 'C 12', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7855', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-c12', no: 55, name: 'BAPAK JOKO TRI', houseNumber: 'C 12', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'koordinator_kamtibmas', phone: '0812-3456-7855', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
   { id: 'w-c13', no: 56, name: 'BAPAK SAYOGO', houseNumber: 'C 13', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7856', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
   { id: 'w-c14', no: 57, name: 'BAPAK DIAN', houseNumber: 'C 14', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7857', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
   { id: 'w-c15', no: 58, name: 'BAPAK ROBY', houseNumber: 'C 15', block: 'C', statusRumah: 'DI HUNI PEMILIK', role: 'bendahara2', phone: '0812-3456-7858', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
@@ -128,8 +128,8 @@ export const dataPengurusGSS: PengurusInfo[] = [
     name: 'JOKO TRI',
     houseNumber: 'C 12',
     phone: '0812-3456-7855',
-    role: 'warga',
-    tasks: ['Koordinator jadwal ronda 7 hari', 'Pengawasan jam kunci portal (21.00 WIB)', 'Penegakan tata tertib keamanan & ketertiban lingkungan']
+    role: 'koordinator_kamtibmas',
+    tasks: ['Koordinator jadwal ronda 7 hari', 'Pengelolaan & pembaruan PIN Portal gerbang', 'Pengawasan jam kunci portal (21.00 WIB)', 'Penegakan tata tertib keamanan & ketertiban lingkungan']
   }
 ];
 
