@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { isResidentLockedByArrears } from '../utils/security';
 import {
   Bell,
   Cloud,
@@ -38,6 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const {
     currentUser,
+    residents,
     isCloudSynced,
     lastSyncedAt,
     triggerManualSync,
@@ -49,6 +51,18 @@ export const Header: React.FC<HeaderProps> = ({
     setActiveView,
     importantContacts
   } = useApp();
+
+  const currentResident = useMemo(() => {
+    if (!currentUser) return undefined;
+    const cleanHouse = (currentUser.houseNumber || '').replace(/\s+/g, '').toUpperCase();
+    return residents.find(
+      (r) =>
+        (cleanHouse && r.houseNumber.replace(/\s+/g, '').toUpperCase() === cleanHouse) ||
+        (currentUser.id && r.id === currentUser.id)
+    );
+  }, [residents, currentUser]);
+
+  const isArrearsLocked = !!currentUser && isResidentLockedByArrears(currentResident);
 
   const [showRoleMenu, setShowRoleMenu] = useState(false);
 
@@ -132,9 +146,24 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <button
-          onClick={() => setActiveView('kontak_penting')}
-          className="text-[10px] font-black text-amber-100 hover:text-white flex items-center gap-1 underline underline-offset-2 shrink-0 ml-auto"
+          type="button"
+          disabled={isArrearsLocked}
+          onClick={() => {
+            if (isArrearsLocked) return;
+            setActiveView('kontak_penting');
+          }}
+          title={
+            isArrearsLocked
+              ? 'Terkunci otomatis oleh sistem karena tunggakan iuran >= 2 bulan'
+              : 'Lihat Daftar Kontak Lengkap'
+          }
+          className={`text-[10px] font-black flex items-center gap-1 shrink-0 ml-auto ${
+            isArrearsLocked
+              ? 'text-amber-200/60 cursor-not-allowed'
+              : 'text-amber-100 hover:text-white underline underline-offset-2'
+          }`}
         >
+          {isArrearsLocked && <Lock size={10} />}
           <span>Daftar Kontak Lengkap &raquo;</span>
         </button>
       </div>
@@ -142,7 +171,10 @@ export const Header: React.FC<HeaderProps> = ({
       <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Brand */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => currentUser && setActiveView('dashboard')}>
+          <div
+            className="flex items-center gap-3 cursor-pointer"
+            onClick={() => currentUser && setActiveView(isArrearsLocked ? 'jimpitan' : 'dashboard')}
+          >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-amber-500 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <div className="w-full h-full bg-stone-900 rounded-[10px] flex items-center justify-center">
                 <span className="font-black text-transparent bg-clip-text bg-gradient-to-tr from-emerald-400 to-amber-300 text-lg">

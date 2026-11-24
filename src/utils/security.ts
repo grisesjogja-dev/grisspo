@@ -636,3 +636,11 @@ export function getResidentUnpaidMonthsCount(resident?: Resident | null): number
 export function canAccessPinPortal(resident?: Resident | null): boolean {
   return getResidentUnpaidMonthsCount(resident) < 2;
 }
+
+/**
+ * All menus except Jimpit are automatically locked by the system
+ * when a resident has >= 2 months of unpaid iuran.
+ */
+export function isResidentLockedByArrears(resident?: Resident | null): boolean {
+  return getResidentUnpaidMonthsCount(resident) >= 2;
+}

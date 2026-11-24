@@ -28,7 +28,14 @@ import { VersionChangelogModal } from './components/VersionChangelogModal';
 import { InfoBlastManagementView } from './components/InfoBlastManagementView';
 import { InfoBlastModal } from './components/InfoBlastModal';
 import { APP_VERSION, APP_BUILD_DATE } from './data/versionInfo';
-import { Clock } from 'lucide-react';
+import {
+  isResidentLockedByArrears,
+  getResidentUnpaidMonthsCount,
+  getResidentMonthlyFee,
+  getBendahara1Contact,
+  buildBendahara1WhatsAppUrl
+} from './utils/security';
+import { Clock, Lock, CreditCard, Send } from 'lucide-react';
 
 const MainApp: React.FC = () => {
   const {
@@ -49,28 +56,42 @@ const MainApp: React.FC = () => {
   const [isActiveSessionsOpen, setIsActiveSessionsOpen] = useState(false);
   const [isVersionChangelogOpen, setIsVersionChangelogOpen] = useState(false);
 
+  const currentResident = React.useMemo(() => {
+    if (!currentUser) return undefined;
+    const cleanHouse = (currentUser.houseNumber || '').replace(/\s+/g, '').toUpperCase();
+    return residents.find(
+      (r) =>
+        (cleanHouse && r.houseNumber.replace(/\s+/g, '').toUpperCase() === cleanHouse) ||
+        (currentUser.id && r.id === currentUser.id)
+    );
+  }, [currentUser, residents]);
+
+  const isArrearsLocked = !!currentUser && isResidentLockedByArrears(currentResident);
+  const unpaidMonths = getResidentUnpaidMonthsCount(currentResident);
+  const monthlyFee = currentResident ? getResidentMonthlyFee(currentResident) : 0;
+  const totalArrears = unpaidMonths * monthlyFee;
+
   // Trigger warning modal on login or user switch if resident has >= 2 months unpaid iuran
   React.useEffect(() => {
     if (!currentUser) {
       setIsIuranWarningOpen(false);
       return;
     }
-    const resident = residents.find(
-      (r) =>
-        r.houseNumber.replace(/\s+/g, '').toUpperCase() === currentUser.houseNumber.replace(/\s+/g, '').toUpperCase() ||
-        r.id === currentUser.id
-    );
-    if (resident && (resident.iuranUnpaidMonths || 0) >= 2) {
+    if (isResidentLockedByArrears(currentResident)) {
       setIsIuranWarningOpen(true);
     } else {
       setIsIuranWarningOpen(false);
     }
-  }, [currentUser, residents]);
+  }, [currentUser, currentResident]);
 
   // When user is NOT logged in: simple, flexible landing page with login form & biometrics
   const renderCurrentView = () => {
     if (!currentUser) {
       return <LandingLoginView onOpenLogin={() => setIsLoginOpen(true)} />;
+    }
+
+    if (isArrearsLocked && activeView !== 'jimpitan') {
+      return <JimpitanView onOpenLogin={() => setIsLoginOpen(true)} />;
     }
 
     switch (activeView) {
@@ -124,6 +145,67 @@ const MainApp: React.FC = () => {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {currentUser && isArrearsLocked && currentResident && (() => {
+          const ben1 = getBendahara1Contact(residents);
+          const monthList =
+            currentResident.unpaidMonthNames && currentResident.unpaidMonthNames.length > 0
+              ? currentResident.unpaidMonthNames.join(', ')
+              : `${unpaidMonths} bulan terakhir`;
+          const waMsg =
+            `*KONFIRMASI PELUNASAN IURAN WARGA GSS 1*\n` +
+            `Kepada Yth. Bendahara 1 (${ben1.name} - Rumah ${ben1.houseNumber})\n\n` +
+            `Saya *${currentResident.name}* (Rumah *${currentResident.houseNumber}*) mengonfirmasi pelunasan tunggakan iuran bulanan agar seluruh menu portal kembali terbuka:\n` +
+            `• Periode: ${unpaidMonths} Bulan (${monthList})\n` +
+            `• Total Tunggakan: *Rp ${totalArrears.toLocaleString('id-ID')}*\n\n` +
+            `Mohon konfirmasi & pembukaan akses kas. Terima kasih.`;
+          const waUrl = buildBendahara1WhatsAppUrl(residents, waMsg);
+
+          return (
+            <div className="mb-5 bg-gradient-to-r from-rose-50 via-red-50 to-amber-50 border-2 border-rose-300 rounded-2xl p-4 sm:p-5 shadow-sm">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <Lock size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-sm font-black text-rose-900">
+                        Sistem Mengunci Seluruh Menu (Kecuali Menu Jimpit)
+                      </h2>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-600 text-white">
+                        Tunggakan {unpaidMonths} Bulan
+                      </span>
+                    </div>
+                    <p className="text-xs text-rose-800 leading-relaxed">
+                      Akun <strong>{currentResident.name}</strong> (Rumah <strong>{currentResident.houseNumber}</strong>) terdeteksi menunggak iuran{' '}
+                      <strong>{unpaidMonths} bulan</strong> (Rp {totalArrears.toLocaleString('id-ID')}). Sesuai ketentuan paguyuban, seluruh menu selain <strong>Jimpit</strong> terkunci otomatis hingga tunggakan iuran dilunasi.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsIuranWarningOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-sm transition cursor-pointer"
+                  >
+                    <CreditCard size={14} />
+                    <span>Lunasi Iuran Sekarang</span>
+                  </button>
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm transition"
+                  >
+                    <Send size={14} />
+                    <span>Konfirmasi ke WA Bendahara 1</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
         {renderCurrentView()}
       </main>
 

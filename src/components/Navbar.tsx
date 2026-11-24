@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { canAccessPinPortal } from '../utils/security';
+import { canAccessPinPortal, isResidentLockedByArrears, getResidentUnpaidMonthsCount } from '../utils/security';
 import {
   LayoutDashboard,
   Coins,
@@ -35,6 +35,9 @@ export const Navbar: React.FC = () => {
   }, [residents, currentUser]);
 
   const hasPinPortalAccess = canAccessPinPortal(currentResident);
+  const isArrearsLocked = !!authUser && isResidentLockedByArrears(currentResident);
+  const unpaidMonths = getResidentUnpaidMonthsCount(currentResident);
+  const lockedTitle = `Terkunci otomatis oleh sistem: Tunggakan iuran ${unpaidMonths} bulan (>= 2 bulan). Hanya menu Jimpit yang dapat diakses hingga iuran dilunasi.`;
 
   // Dropdown states for Desktop
   const [openDropdown, setOpenDropdown] = useState<'keuangan' | 'info' | null>(null);
@@ -43,6 +46,14 @@ export const Navbar: React.FC = () => {
   const [mobileSheet, setMobileSheet] = useState<'keuangan' | 'info' | 'lainnya' | null>(null);
 
   const desktopNavRef = useRef<HTMLDivElement>(null);
+
+  // Close desktop dropdown & mobile sheet whenever arrears lock is active
+  useEffect(() => {
+    if (isArrearsLocked) {
+      setOpenDropdown(null);
+      setMobileSheet(null);
+    }
+  }, [isArrearsLocked]);
 
   // Close desktop dropdown on click outside
   useEffect(() => {
@@ -69,37 +80,49 @@ export const Navbar: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center space-x-1.5 py-2 overflow-x-visible">
-            {/* 1. dashboard */}
+            {/* 1. Dashboard */}
             <button
               type="button"
+              disabled={isArrearsLocked}
+              title={isArrearsLocked ? lockedTitle : 'Dashboard Utama'}
               onClick={() => {
+                if (isArrearsLocked) return;
                 setActiveView('dashboard');
                 setOpenDropdown(null);
               }}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-                activeView === 'dashboard'
+                isArrearsLocked
+                  ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-75'
+                  : activeView === 'dashboard'
                   ? 'bg-blue-600 text-white shadow-sm shadow-emerald-600/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               <LayoutDashboard size={15} />
               <span>Dashboard</span>
+              {isArrearsLocked && <Lock size={12} className="text-rose-500 shrink-0" />}
             </button>
 
             {/* 1b. PIN Portal (sebelah dashboard, selalu berkedip, akses khusus tunggakan < 2 bulan) */}
             <button
               type="button"
+              disabled={isArrearsLocked}
               onClick={() => {
+                if (isArrearsLocked) return;
                 setActiveView('pin_portal');
                 setOpenDropdown(null);
               }}
               title={
-                hasPinPortalAccess
+                isArrearsLocked
+                  ? lockedTitle
+                  : hasPinPortalAccess
                   ? 'PIN Portal Gerbang Utama GSS 1 (Tersedia untuk tunggakan < 2 bulan)'
                   : 'Terkunci: Menu PIN Portal hanya dapat diakses oleh user dengan tunggakan iuran kurang dari 2 bulan'
               }
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition whitespace-nowrap border ${
-                activeView === 'pin_portal'
+                isArrearsLocked
+                  ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-75'
+                  : activeView === 'pin_portal'
                   ? hasPinPortalAccess
                     ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/25'
                     : 'bg-rose-600 text-white border-rose-600 shadow-sm'
@@ -108,21 +131,25 @@ export const Navbar: React.FC = () => {
                   : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200'
               }`}
             >
-              <Key size={14} className="animate-pulse shrink-0" />
-              <span className="animate-pulse">PIN Portal</span>
-              {!hasPinPortalAccess && <Lock size={12} className="shrink-0 opacity-85" />}
-              <span
-                className={`w-2 h-2 rounded-full animate-ping shrink-0 ${
-                  activeView === 'pin_portal'
-                    ? 'bg-amber-300'
-                    : hasPinPortalAccess
-                    ? 'bg-emerald-500'
-                    : 'bg-rose-500'
-                }`}
-              />
+              <Key size={14} className={isArrearsLocked ? 'shrink-0 opacity-60' : 'animate-pulse shrink-0'} />
+              <span className={isArrearsLocked ? '' : 'animate-pulse'}>PIN Portal</span>
+              {(!hasPinPortalAccess || isArrearsLocked) && (
+                <Lock size={12} className="text-rose-500 shrink-0 opacity-90" />
+              )}
+              {!isArrearsLocked && (
+                <span
+                  className={`w-2 h-2 rounded-full animate-ping shrink-0 ${
+                    activeView === 'pin_portal'
+                      ? 'bg-amber-300'
+                      : hasPinPortalAccess
+                      ? 'bg-emerald-500'
+                      : 'bg-rose-500'
+                  }`}
+                />
+              )}
             </button>
 
-            {/* 2. jimpit */}
+            {/* 2. Jimpit (Satu-satunya menu yang selalu terbuka) */}
             <button
               type="button"
               onClick={() => {
@@ -146,28 +173,41 @@ export const Navbar: React.FC = () => {
             {currentUser.role === 'superadmin' && (
               <button
                 type="button"
+                disabled={isArrearsLocked}
+                title={isArrearsLocked ? lockedTitle : 'Kelola Info Blast'}
                 onClick={() => {
+                  if (isArrearsLocked) return;
                   setActiveView('infoblast');
                   setOpenDropdown(null);
                 }}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-                  activeView === 'infoblast'
+                  isArrearsLocked
+                    ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-75'
+                    : activeView === 'infoblast'
                     ? 'bg-rose-600 text-white shadow-sm shadow-rose-500/20'
                     : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
                 }`}
               >
                 <Megaphone size={15} />
                 <span>Info Blast</span>
+                {isArrearsLocked && <Lock size={12} className="text-rose-500 shrink-0" />}
               </button>
             )}
 
-            {/* 3. keuangan (dropdown: sewa fasum dan kas) */}
+            {/* 3. Keuangan (dropdown: Sewa Fasum dan Kas) */}
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setOpenDropdown(openDropdown === 'keuangan' ? null : 'keuangan')}
+                disabled={isArrearsLocked}
+                title={isArrearsLocked ? lockedTitle : 'Menu Keuangan'}
+                onClick={() => {
+                  if (isArrearsLocked) return;
+                  setOpenDropdown(openDropdown === 'keuangan' ? null : 'keuangan');
+                }}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-                  isKeuanganActive
+                  isArrearsLocked
+                    ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-75'
+                    : isKeuanganActive
                     ? 'bg-blue-600 text-white shadow-sm shadow-emerald-600/20'
                     : openDropdown === 'keuangan'
                     ? 'bg-slate-100 text-slate-900'
@@ -176,14 +216,18 @@ export const Navbar: React.FC = () => {
               >
                 <ReceiptText size={15} />
                 <span>Keuangan</span>
-                <ChevronDown
-                  size={14}
-                  className={`transition-transform duration-200 ${openDropdown === 'keuangan' ? 'rotate-180' : ''}`}
-                />
+                {isArrearsLocked ? (
+                  <Lock size={12} className="text-rose-500 shrink-0" />
+                ) : (
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform duration-200 ${openDropdown === 'keuangan' ? 'rotate-180' : ''}`}
+                  />
+                )}
               </button>
 
               {/* Dropdown Menu for keuangan */}
-              {openDropdown === 'keuangan' && (
+              {openDropdown === 'keuangan' && !isArrearsLocked && (
                 <div className="absolute left-0 mt-1.5 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="px-3 py-1 text-[10px] uppercase font-black tracking-wider text-slate-400">
                     Menu Keuangan
@@ -236,9 +280,16 @@ export const Navbar: React.FC = () => {
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setOpenDropdown(openDropdown === 'info' ? null : 'info')}
+                disabled={isArrearsLocked}
+                title={isArrearsLocked ? lockedTitle : 'Menu Info & Regulasi'}
+                onClick={() => {
+                  if (isArrearsLocked) return;
+                  setOpenDropdown(openDropdown === 'info' ? null : 'info');
+                }}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-                  isInfoActive
+                  isArrearsLocked
+                    ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-75'
+                    : isInfoActive
                     ? 'bg-blue-600 text-white shadow-sm shadow-emerald-600/20'
                     : openDropdown === 'info'
                     ? 'bg-slate-100 text-slate-900'
@@ -247,14 +298,18 @@ export const Navbar: React.FC = () => {
               >
                 <Users size={15} />
                 <span>Info</span>
-                <ChevronDown
-                  size={14}
-                  className={`transition-transform duration-200 ${openDropdown === 'info' ? 'rotate-180' : ''}`}
-                />
+                {isArrearsLocked ? (
+                  <Lock size={12} className="text-rose-500 shrink-0" />
+                ) : (
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform duration-200 ${openDropdown === 'info' ? 'rotate-180' : ''}`}
+                  />
+                )}
               </button>
 
               {/* Dropdown Menu for info */}
-              {openDropdown === 'info' && (
+              {openDropdown === 'info' && !isArrearsLocked && (
                 <div className="absolute left-0 mt-1.5 w-60 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="px-3 py-1 text-[10px] uppercase font-black tracking-wider text-slate-400">
                     Informasi & Regulasi Paguyuban
@@ -366,35 +421,47 @@ export const Navbar: React.FC = () => {
             {/* 5. Inventaris */}
             <button
               type="button"
+              disabled={isArrearsLocked}
+              title={isArrearsLocked ? lockedTitle : 'Inventaris Paguyuban'}
               onClick={() => {
+                if (isArrearsLocked) return;
                 setActiveView('inventaris');
                 setOpenDropdown(null);
               }}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-                activeView === 'inventaris'
+                isArrearsLocked
+                  ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-75'
+                  : activeView === 'inventaris'
                   ? 'bg-blue-600 text-white shadow-sm shadow-emerald-600/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               <Package size={15} />
               <span>Inventaris</span>
+              {isArrearsLocked && <Lock size={12} className="text-rose-500 shrink-0" />}
             </button>
 
             {/* 6. Forum */}
             <button
               type="button"
+              disabled={isArrearsLocked}
+              title={isArrearsLocked ? lockedTitle : 'Forum Warga'}
               onClick={() => {
+                if (isArrearsLocked) return;
                 setActiveView('forum');
                 setOpenDropdown(null);
               }}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-                activeView === 'forum'
+                isArrearsLocked
+                  ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-75'
+                  : activeView === 'forum'
                   ? 'bg-blue-600 text-white shadow-sm shadow-emerald-600/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               <MessageSquare size={15} />
               <span>Forum</span>
+              {isArrearsLocked && <Lock size={12} className="text-rose-500 shrink-0" />}
             </button>
           </div>
         </div>
@@ -405,30 +472,43 @@ export const Navbar: React.FC = () => {
       {/* ========================================================================= */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 text-white z-40 px-1.5 py-1.5 shadow-2xl safe-area-bottom">
         <div className="grid grid-cols-6 gap-0.5 max-w-lg mx-auto">
-          {/* 1. dashboard */}
+          {/* 1. Dashboard */}
           <button
             type="button"
+            disabled={isArrearsLocked}
             onClick={() => {
+              if (isArrearsLocked) return;
               setActiveView('dashboard');
               setMobileSheet(null);
             }}
-            className={`flex flex-col items-center py-1 rounded-xl transition ${
-              activeView === 'dashboard' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center py-1 rounded-xl transition relative ${
+              isArrearsLocked
+                ? 'text-slate-500 opacity-50 cursor-not-allowed'
+                : activeView === 'dashboard'
+                ? 'text-emerald-400 font-bold'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <LayoutDashboard size={17} />
+            <div className="relative">
+              <LayoutDashboard size={17} />
+              {isArrearsLocked && <Lock size={9} className="absolute -top-1 -right-1.5 text-rose-400" />}
+            </div>
             <span className="text-[9.5px] mt-0.5">Dashboard</span>
           </button>
 
           {/* 1b. PIN Portal (sebelah dashboard, selalu berkedip) */}
           <button
             type="button"
+            disabled={isArrearsLocked}
             onClick={() => {
+              if (isArrearsLocked) return;
               setActiveView('pin_portal');
               setMobileSheet(null);
             }}
             className={`flex flex-col items-center py-1 rounded-xl transition relative ${
-              activeView === 'pin_portal'
+              isArrearsLocked
+                ? 'text-slate-500 opacity-50 cursor-not-allowed'
+                : activeView === 'pin_portal'
                 ? hasPinPortalAccess
                   ? 'text-emerald-300 font-black'
                   : 'text-rose-400 font-black'
@@ -438,17 +518,23 @@ export const Navbar: React.FC = () => {
             }`}
           >
             <div className="relative">
-              <Key size={17} className="animate-pulse" />
-              <span
-                className={`absolute -top-0.5 -right-1.5 w-2 h-2 rounded-full animate-ping ${
-                  hasPinPortalAccess ? 'bg-emerald-400' : 'bg-rose-400'
-                }`}
-              />
+              <Key size={17} className={isArrearsLocked ? '' : 'animate-pulse'} />
+              {isArrearsLocked ? (
+                <Lock size={9} className="absolute -top-1 -right-1.5 text-rose-400" />
+              ) : (
+                <span
+                  className={`absolute -top-0.5 -right-1.5 w-2 h-2 rounded-full animate-ping ${
+                    hasPinPortalAccess ? 'bg-emerald-400' : 'bg-rose-400'
+                  }`}
+                />
+              )}
             </div>
-            <span className="text-[9px] mt-0.5 whitespace-nowrap animate-pulse font-bold">PIN Portal</span>
+            <span className={`text-[9px] mt-0.5 whitespace-nowrap font-bold ${isArrearsLocked ? '' : 'animate-pulse'}`}>
+              PIN Portal
+            </span>
           </button>
 
-          {/* 2. Jimpit */}
+          {/* 2. Jimpit (Satu-satunya menu yang selalu terbuka) */}
           <button
             type="button"
             onClick={() => {
@@ -466,47 +552,78 @@ export const Navbar: React.FC = () => {
           {/* 3. Keuangan (dropdown trigger) */}
           <button
             type="button"
-            onClick={() => setMobileSheet(mobileSheet === 'keuangan' ? null : 'keuangan')}
+            disabled={isArrearsLocked}
+            onClick={() => {
+              if (isArrearsLocked) return;
+              setMobileSheet(mobileSheet === 'keuangan' ? null : 'keuangan');
+            }}
             className={`flex flex-col items-center py-1 rounded-xl transition ${
-              isKeuanganActive ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              isArrearsLocked
+                ? 'text-slate-500 opacity-50 cursor-not-allowed'
+                : isKeuanganActive
+                ? 'text-emerald-400 font-bold'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <ReceiptText size={17} />
+            <div className="relative">
+              <ReceiptText size={17} />
+              {isArrearsLocked && <Lock size={9} className="absolute -top-1 -right-1.5 text-rose-400" />}
+            </div>
             <span className="text-[9.5px] mt-0.5 flex items-center gap-0.5">
               Keuangan
-              <ChevronDown size={9} className={mobileSheet === 'keuangan' ? 'rotate-180' : ''} />
+              {!isArrearsLocked && <ChevronDown size={9} className={mobileSheet === 'keuangan' ? 'rotate-180' : ''} />}
             </span>
           </button>
 
           {/* 4. Info (dropdown trigger) */}
           <button
             type="button"
-            onClick={() => setMobileSheet(mobileSheet === 'info' ? null : 'info')}
+            disabled={isArrearsLocked}
+            onClick={() => {
+              if (isArrearsLocked) return;
+              setMobileSheet(mobileSheet === 'info' ? null : 'info');
+            }}
             className={`flex flex-col items-center py-1 rounded-xl transition ${
-              isInfoActive ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              isArrearsLocked
+                ? 'text-slate-500 opacity-50 cursor-not-allowed'
+                : isInfoActive
+                ? 'text-emerald-400 font-bold'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Users size={17} />
+            <div className="relative">
+              <Users size={17} />
+              {isArrearsLocked && <Lock size={9} className="absolute -top-1 -right-1.5 text-rose-400" />}
+            </div>
             <span className="text-[9.5px] mt-0.5 flex items-center gap-0.5">
               Info
-              <ChevronDown size={9} className={mobileSheet === 'info' ? 'rotate-180' : ''} />
+              {!isArrearsLocked && <ChevronDown size={9} className={mobileSheet === 'info' ? 'rotate-180' : ''} />}
             </span>
           </button>
 
           {/* 5. Lainnya (Inventaris, Forum) */}
           <button
             type="button"
-            onClick={() => setMobileSheet(mobileSheet === 'lainnya' ? null : 'lainnya')}
+            disabled={isArrearsLocked}
+            onClick={() => {
+              if (isArrearsLocked) return;
+              setMobileSheet(mobileSheet === 'lainnya' ? null : 'lainnya');
+            }}
             className={`flex flex-col items-center py-1 rounded-xl transition ${
-              ['inventaris', 'forum'].includes(activeView)
+              isArrearsLocked
+                ? 'text-slate-500 opacity-50 cursor-not-allowed'
+                : ['inventaris', 'forum'].includes(activeView)
                 ? 'text-emerald-400 font-bold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Menu size={17} />
+            <div className="relative">
+              <Menu size={17} />
+              {isArrearsLocked && <Lock size={9} className="absolute -top-1 -right-1.5 text-rose-400" />}
+            </div>
             <span className="text-[9.5px] mt-0.5 flex items-center gap-0.5">
               Lainnya
-              <ChevronDown size={9} className={mobileSheet === 'lainnya' ? 'rotate-180' : ''} />
+              {!isArrearsLocked && <ChevronDown size={9} className={mobileSheet === 'lainnya' ? 'rotate-180' : ''} />}
             </span>
           </button>
         </div>
@@ -515,7 +632,7 @@ export const Navbar: React.FC = () => {
       {/* ========================================================================= */}
       {/* MOBILE POPUP BOTTOM SHEETS FOR DROPDOWNS                                  */}
       {/* ========================================================================= */}
-      {mobileSheet && (
+      {mobileSheet && !isArrearsLocked && (
         <div
           className="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end p-3 animate-in fade-in duration-150"
           onClick={() => setMobileSheet(null)}

@@ -56,7 +56,8 @@ import {
   revertIuranPaymentFromResident,
   applyJimpitanPaymentToResident,
   revertJimpitanPaymentFromResident,
-  isPengurusRole
+  isPengurusRole,
+  isResidentLockedByArrears
 } from '../utils/security';
 import { db } from '../services/firebase';
 import {
@@ -598,7 +599,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null;
   });
 
-  const [activeView, setActiveView] = useState<string>(() => {
+  const [activeView, setActiveViewRaw] = useState<string>(() => {
     const saved = sessionStorage.getItem('grisspo_user');
     return saved ? 'dashboard' : 'jimpitan';
   });
@@ -1195,6 +1196,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { paymentReceiptsRef.current = paymentReceipts; }, [paymentReceipts]);
   useEffect(() => { attendanceSessionsRef.current = attendanceSessions; }, [attendanceSessions]);
   useEffect(() => { fasumBookingsRef.current = fasumBookings; }, [fasumBookings]);
+
+  const setActiveView = (view: string) => {
+    const activeUser = currentUserRef.current;
+    if (activeUser && view !== 'jimpitan') {
+      const cleanHouse = (activeUser.houseNumber || '').replace(/\s+/g, '').toUpperCase();
+      const matched = residentsRef.current.find(
+        (r) =>
+          (cleanHouse && r.houseNumber.replace(/\s+/g, '').toUpperCase() === cleanHouse) ||
+          (activeUser.id && r.id === activeUser.id)
+      );
+      if (isResidentLockedByArrears(matched)) {
+        setActiveViewRaw('jimpitan');
+        return;
+      }
+    }
+    setActiveViewRaw(view);
+  };
+
+  // Automatically lock all views except Jimpit if current user has >= 2 months unpaid iuran
+  useEffect(() => {
+    if (!currentUser) return;
+    const cleanHouse = (currentUser.houseNumber || '').replace(/\s+/g, '').toUpperCase();
+    const matched = residents.find(
+      (r) =>
+        (cleanHouse && r.houseNumber.replace(/\s+/g, '').toUpperCase() === cleanHouse) ||
+        (currentUser.id && r.id === currentUser.id)
+    );
+    if (isResidentLockedByArrears(matched) && activeView !== 'jimpitan') {
+      setActiveViewRaw('jimpitan');
+    }
+  }, [currentUser, residents, activeView]);
 
   // Function to mark an item as deleted permanently and sync to Firestore
   const markAsDeleted = async (id: string, collectionName?: string) => {
@@ -2406,7 +2438,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lastActivityTimeRef.current = Date.now();
     setCurrentUser(loggedUser);
     sessionStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
-    setActiveView('dashboard');
+    setActiveViewRaw(isResidentLockedByArrears(resident) ? 'jimpitan' : 'dashboard');
     syncActiveSessionToCloud(loggedUser);
     return {
       success: true,
@@ -2428,7 +2460,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lastActivityTimeRef.current = Date.now();
     setCurrentUser(loggedUser);
     sessionStorage.setItem('grisspo_user', JSON.stringify(loggedUser));
-    setActiveView('dashboard');
+    setActiveViewRaw(isResidentLockedByArrears(resident) ? 'jimpitan' : 'dashboard');
     syncActiveSessionToCloud(loggedUser);
   };
 
@@ -2468,6 +2500,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lastActivityTimeRef.current = Date.now();
     setCurrentUser(newUser);
     sessionStorage.setItem('grisspo_user', JSON.stringify(newUser));
+    if (isResidentLockedByArrears(resident)) {
+      setActiveViewRaw('jimpitan');
+    }
     syncActiveSessionToCloud(newUser);
     return {
       success: true,
@@ -2481,7 +2516,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     setCurrentUser(null);
     sessionStorage.removeItem('grisspo_user');
-    setActiveView('jimpitan');
+    setActiveViewRaw('jimpitan');
   };
 
   // Feature: Edit Profile for all roles with Firestore sync

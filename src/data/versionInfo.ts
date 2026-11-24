@@ -6,17 +6,26 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.4';
+export const APP_VERSION = 'v1.9.5';
 export const APP_BUILD_DATE = '23 November 2026';
-export const APP_BUILD_CODE = '2026.11.23-v1.9.4';
-export const APP_RELEASE_NAME = 'Kapitalisasi Penamaan Seluruh Menu Navigasi';
+export const APP_BUILD_CODE = '2026.11.23-v1.9.5';
+export const APP_RELEASE_NAME = 'Penguncian Otomatis Seluruh Menu (Kecuali Jimpit) Penunggak >= 2 Bulan';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.5',
+    releaseDate: '23 November 2026',
+    releaseTitle: 'Penguncian Otomatis Seluruh Menu (Kecuali Jimpit) Penunggak >= 2 Bulan',
+    badge: 'Terbaru',
+    highlights: [
+      'Kunci Otomatis Sistem (Kecuali Menu Jimpit): Pengguna yang memiliki tunggakan iuran bulanan 2 bulan atau lebih otomatis terkunci aksesnya pada seluruh menu navigasi (Dashboard, PIN Portal, Keuangan, Info, Inventaris, Forum, Info Blast, Kontak Penting) dan langsung diarahkan ke menu Jimpit.',
+      'Pembukaan Akses Otomatis & Konfirmasi Bendahara 1: Banner pemberitahuan sistem menyediakan akses langsung pelunasan tunggakan dan konfirmasi ke WhatsApp Bendahara 1; seluruh menu otomatis terbuka kembali segera setelah tunggakan dilunasi.'
+    ]
+  },
   {
     version: 'v1.9.4',
     releaseDate: '23 November 2026',
     releaseTitle: 'Kapitalisasi Penamaan Seluruh Menu Navigasi',
-    badge: 'Terbaru',
     highlights: [
       'Penulisan Huruf Kapital Awal Pada Semua Menu: Seluruh nama menu utama dan submenu di navigasi desktop serta mobile kini diawali huruf kapital (Dashboard, PIN Portal, Jimpit, Info Blast, Keuangan, Sewa Fasum, Kas, Info, Data Warga, Jadwal Ronda, Notulen & Absensi, Tata Tertib, Grisspoin, Inventaris, Forum, dan Lainnya).'
     ]
