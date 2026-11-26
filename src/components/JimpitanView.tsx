@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { useApp, findResidentByMemberName, normalizeCleanName } from '../context/AppContext';
+import { useApp, findResidentByMemberName, normalizeCleanName, MEMBER_NAME_ALIASES } from '../context/AppContext';
 import { DayOfWeek, JimpitDailyReport, Resident } from '../types';
 import {
   exportJimpitanReportToExcel,
@@ -212,9 +212,32 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
     });
   }, [currentUser, dutyGroup, residents]);
 
-  const canDoRondaAttendance = isAdminRole || isDutyOfficerToday;
-  // Tombol kirim jimpit hanya bisa aktif di akun petugas ronda hari tersebut dan super admin
-  const canSubmitJimpit = isSuperadmin || isDutyOfficerToday;
+  const isAnyRondaOfficer = useMemo(() => {
+    if (!currentUser) return false;
+    const currentHouseClean = (currentUser.houseNumber || '').replace(/\s+/g, '').toUpperCase();
+    const currentNameClean = normalizeCleanName(currentUser.name || '');
+
+    return rondaSchedule.some((g) =>
+      g.members.some((memberName) => {
+        const memClean = normalizeCleanName(memberName);
+        const aliases = MEMBER_NAME_ALIASES[memClean] || [memClean];
+        if (aliases.some((alias) => currentNameClean.includes(alias) || alias.includes(currentNameClean))) {
+          return true;
+        }
+        if (currentNameClean && (memClean.includes(currentNameClean) || currentNameClean.includes(memClean))) {
+          return true;
+        }
+        const res = findResidentByMemberName(memberName, residents);
+        if (res && res.houseNumber.replace(/\s+/g, '').toUpperCase() === currentHouseClean) {
+          return true;
+        }
+        return false;
+      })
+    );
+  }, [currentUser, rondaSchedule, residents]);
+
+  const canDoRondaAttendance = isAdminRole || isDutyOfficerToday || isAnyRondaOfficer;
+  const canSubmitJimpit = isSuperadmin || isDutyOfficerToday || isAnyRondaOfficer;
 
   const [rondaAttendanceMap, setRondaAttendanceMap] = useState<Record<string, boolean>>({});
   const [isSavingRondaAttendance, setIsSavingRondaAttendance] = useState(false);
@@ -1131,15 +1154,15 @@ export const JimpitanView: React.FC<JimpitanViewProps> = ({ onOpenLogin }) => {
                           <ShieldCheck size={11} className="text-emerald-700" />
                           <span>Akses Pengurus / Admin (Bisa Absen)</span>
                         </span>
-                      ) : isDutyOfficerToday ? (
+                      ) : isDutyOfficerToday || isAnyRondaOfficer ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-[10px]">
                           <CheckCircle2 size={11} className="text-emerald-600" />
-                          <span>Petugas Ronda Hari Ini (Bisa Absen)</span>
+                          <span>Petugas Ronda / Terjadwal (Bisa Absen)</span>
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-extrabold text-[10px]">
                           <Lock size={11} className="text-rose-600" />
-                          <span>Khusus Petugas Hari Ini &amp; Admin</span>
+                          <span>Khusus Petugas &amp; Admin</span>
                         </span>
                       )}
                     </div>

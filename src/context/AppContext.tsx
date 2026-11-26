@@ -89,7 +89,7 @@ function sanitizeForFirestore<T>(obj: T): T {
   return obj;
 }
 
-const MEMBER_NAME_ALIASES: Record<string, string[]> = {
+export const MEMBER_NAME_ALIASES: Record<string, string[]> = {
   dewa: ['dewo', 'dewa', 'dewa anugrah senki', 'senki', 'anugrah'],
   dewo: ['dewa', 'dewo', 'dewa anugrah senki', 'senki', 'anugrah'],
   'dewa anugrah senki': ['dewa', 'dewo', 'dewa anugrah senki', 'senki', 'anugrah'],

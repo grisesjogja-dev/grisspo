@@ -6,12 +6,22 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.7';
+export const APP_VERSION = 'v1.9.8';
 export const APP_BUILD_DATE = '26 November 2026';
-export const APP_BUILD_CODE = '2026.11.26-v1.9.7';
-export const APP_RELEASE_NAME = 'Perbaikan Pencocokan Petugas Ronda & Input Jimpitan Dewa Anugrah Senki';
+export const APP_BUILD_CODE = '2026.11.26-v1.9.8';
+export const APP_RELEASE_NAME = 'Penyempurnaan Hak Akses Petugas Ronda Terjadwal untuk Absen & Jimpitan';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.8',
+    releaseDate: '26 November 2026',
+    releaseTitle: 'Penyempurnaan Hak Akses Petugas Ronda Terjadwal untuk Absen & Jimpitan',
+    badge: 'Terbaru',
+    highlights: [
+      'Otorisasi Penuh Petugas Ronda Terjadwal: Setiap warga yang terdaftar sebagai petugas ronda pada jadwal 7 hari kini dijamin memiliki hak penuh untuk melakukan absensi ronda dan mengirimkan input jimpitan harian.',
+      'Resolusi Kendala Akun B25 (Dewa Anugrah Senki): Pengecekan otorisasi petugas (isAnyRondaOfficer) kini mendeteksi akun dengan sempurna sehingga kendala izin akses absensi dan input jimpit pada akun B25 teratasi sepenuhnya.'
+    ]
+  },
   {
     version: 'v1.9.7',
     releaseDate: '26 November 2026',
