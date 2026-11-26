@@ -48,7 +48,7 @@ export const initialResidents: Resident[] = [
   { id: 'w-b22', no: 38, name: 'MBAK BELLA', houseNumber: 'B 22', block: 'B', statusRumah: 'KOSONG (ADA PEMILIK)', role: 'warga', phone: '0812-3456-7838', familyMembers: 0, monthlyIuranPaid: false, jimpitanPaidMonth: 0, points: 0 },
   { id: 'w-b23', no: 39, name: 'BAPAK SONY', houseNumber: 'B 23', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'admin_inventaris', phone: '0812-3456-7839', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
   { id: 'w-b24', no: 40, name: 'BAPAK BENI', houseNumber: 'B 24', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'superadmin', phone: '0812-3456-7840', familyMembers: 4, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
-  { id: 'w-b25', no: 41, name: 'BAPAK DEWO', houseNumber: 'B 25', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7841', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
+  { id: 'w-b25', no: 41, name: 'DEWA ANUGRAH SENKI', houseNumber: 'B 25', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7841', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
   { id: 'w-b26', no: 42, name: 'BAPAK HENGKI', houseNumber: 'B 26', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7842', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
   { id: 'w-b27', no: 43, name: 'BAPAK DWINOP (B27)', houseNumber: 'B 27', block: 'B', statusRumah: 'DI HUNI PEMILIK', role: 'warga', phone: '0812-3456-7843', familyMembers: 3, monthlyIuranPaid: true, jimpitanPaidMonth: 15000, points: 0 },
 

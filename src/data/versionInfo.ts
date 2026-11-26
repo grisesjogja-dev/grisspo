@@ -6,12 +6,22 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.6';
-export const APP_BUILD_DATE = '24 November 2026';
-export const APP_BUILD_CODE = '2026.11.24-v1.9.6';
-export const APP_RELEASE_NAME = 'Penambahan Role Koordinator Kamtibmas & Hak Akses Ganti PIN Portal';
+export const APP_VERSION = 'v1.9.7';
+export const APP_BUILD_DATE = '26 November 2026';
+export const APP_BUILD_CODE = '2026.11.26-v1.9.7';
+export const APP_RELEASE_NAME = 'Perbaikan Pencocokan Petugas Ronda & Input Jimpitan Dewa Anugrah Senki';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.7',
+    releaseDate: '26 November 2026',
+    releaseTitle: 'Perbaikan Pencocokan Petugas Ronda & Input Jimpitan Dewa Anugrah Senki',
+    badge: 'Terbaru',
+    highlights: [
+      'Sinkronisasi Nama & Jadwal Ronda Dewa Anugrah Senki: Nama warga untuk Rumah B 25 diperbarui menjadi "DEWA ANUGRAH SENKI" serta diperluas kamus alias pencocokan nama ronda (dewa, dewo, dewa anugrah senki, senki, anugrah).',
+      'Kelancaran Input Jimpitan Petugas: Petugas ronda terjadwal (termasuk Bpk. Dewa Anugrah Senki di hari Kamis) kini dapat dengan lancar melakukan absensi dan menginput jimpitan harian tanpa kendala otorisasi.'
+    ]
+  },
   {
     version: 'v1.9.6',
     releaseDate: '24 November 2026',

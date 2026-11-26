@@ -90,8 +90,11 @@ function sanitizeForFirestore<T>(obj: T): T {
 }
 
 const MEMBER_NAME_ALIASES: Record<string, string[]> = {
-  dewa: ['dewo', 'dewa'],
-  dewo: ['dewa', 'dewo'],
+  dewa: ['dewo', 'dewa', 'dewa anugrah senki', 'senki', 'anugrah'],
+  dewo: ['dewa', 'dewo', 'dewa anugrah senki', 'senki', 'anugrah'],
+  'dewa anugrah senki': ['dewa', 'dewo', 'dewa anugrah senki', 'senki', 'anugrah'],
+  senki: ['dewa', 'dewo', 'dewa anugrah senki', 'senki', 'anugrah'],
+  anugrah: ['dewa', 'dewo', 'dewa anugrah senki', 'senki', 'anugrah'],
   robi: ['roby', 'robi'],
   roby: ['robi', 'roby']
 };
@@ -979,6 +982,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (r.houseNumber === 'C 15') return { ...r, role: 'bendahara2' };
             if (r.houseNumber === 'B 23') return { ...r, role: 'admin_inventaris' };
             if (r.houseNumber === 'C 12') return { ...r, role: 'koordinator_kamtibmas' };
+            if (r.houseNumber === 'B 25' && (!r.name || r.name.includes('DEWO') || r.name === 'BAPAK DEWO')) return { ...r, name: 'DEWA ANUGRAH SENKI' };
             if (r.houseNumber === 'A 11' && r.role === 'bendahara1') return { ...r, role: 'warga' };
             if (r.houseNumber === 'B 26' && r.role === 'admin_inventaris') return { ...r, role: 'warga' };
             if (r.houseNumber === 'C 10' && r.role === 'superadmin') return { ...r, role: 'warga' };
