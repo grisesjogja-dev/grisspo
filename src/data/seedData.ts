@@ -414,6 +414,19 @@ export const fasumFacilities: FasumFacilityConfig[] = [
     rules: ['Dioperasikan dengan hati-hati dari cipratan air', 'Simpan kembali mic dalam kotak penyimpanan', 'Batas maksimal kebisingan pukul 22.00 WIB'],
     icon: 'Volume2',
     badgeColor: 'bg-purple-100 text-purple-800 border-purple-200'
+  },
+  {
+    id: 'lahan_parkir',
+    name: 'Sewa Lahan Parkir / Carport',
+    category: 'Fasilitas Lahan',
+    defaultFee: 30000,
+    unit: 'per bulan',
+    capacity: '1 Slot Kendaraan',
+    description: 'Sewa bulanan pemanfaatan lahan fasum / carport / area parkir lingkungan perumahan GSS 1.',
+    facilitiesIncluded: ['1 Slot Area Parkir / Lahan Terkelola', 'Akses Lingkungan Aman & Tertib'],
+    rules: ['Tidak menghalangi akses jalan warga lain', 'Kendaraan wajib dikunci ganda saat malam hari'],
+    icon: 'Car',
+    badgeColor: 'bg-rose-100 text-rose-800 border-emerald-200'
   }
 ];
 

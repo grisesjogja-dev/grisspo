@@ -6,12 +6,22 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.8';
-export const APP_BUILD_DATE = '26 November 2026';
-export const APP_BUILD_CODE = '2026.11.26-v1.9.8';
-export const APP_RELEASE_NAME = 'Penyempurnaan Hak Akses Petugas Ronda Terjadwal untuk Absen & Jimpitan';
+export const APP_VERSION = 'v1.9.9';
+export const APP_BUILD_DATE = '27 November 2026';
+export const APP_BUILD_CODE = '2026.11.27-v1.9.9';
+export const APP_RELEASE_NAME = 'Penambahan Fasilitas Sewa Lahan Parkir & Carport (Rp 30.000 / Bulan)';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.9',
+    releaseDate: '27 November 2026',
+    releaseTitle: 'Penambahan Fasilitas Sewa Lahan Parkir & Carport (Rp 30.000 / Bulan)',
+    badge: 'Terbaru',
+    highlights: [
+      'Menu Sewa Lahan Parkir / Carport: Ditambahkan opsi fasilitas baru pada menu Sewa Fasum yaitu "Sewa Lahan Parkir / Carport" dengan tarif resmi Rp 30.000 / bulan.',
+      'Integrasi Pemesanan & Kas: Warga dapat langsung melakukan pemesanan dan pembayaran sewa lahan parkir lingkungan perumahan yang terhubung otomatis dengan buku kas dan laporan keuangan.'
+    ]
+  },
   {
     version: 'v1.9.8',
     releaseDate: '26 November 2026',

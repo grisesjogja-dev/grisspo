@@ -1127,7 +1127,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Fasum Facilities Config List (Superadmin dynamic CRUD)
   const [fasumFacilitiesList, setFasumFacilitiesList] = useState<FasumFacilityConfig[]>(() => {
     const saved = localStorage.getItem('grisspo_fasum_facilities');
-    return saved ? JSON.parse(saved) : fasumFacilities;
+    let list: FasumFacilityConfig[] = saved ? JSON.parse(saved) : fasumFacilities;
+    if (!list.some((f) => f.id === 'lahan_parkir')) {
+      list = [
+        ...list,
+        {
+          id: 'lahan_parkir',
+          name: 'Sewa Lahan Parkir / Carport',
+          category: 'Fasilitas Lahan',
+          defaultFee: 30000,
+          unit: 'per bulan',
+          capacity: '1 Slot Kendaraan',
+          description: 'Sewa bulanan pemanfaatan lahan fasum / carport / area parkir lingkungan perumahan GSS 1.',
+          facilitiesIncluded: ['1 Slot Area Parkir / Lahan Terkelola', 'Akses Lingkungan Aman & Tertib'],
+          rules: ['Tidak menghalangi akses jalan warga lain', 'Kendaraan wajib dikunci ganda saat malam hari'],
+          icon: 'Car',
+          badgeColor: 'bg-rose-100 text-rose-800 border-emerald-200'
+        }
+      ];
+    } else {
+      list = list.map((f) => (f.id === 'lahan_parkir' ? { ...f, defaultFee: 30000 } : f));
+    }
+    return list;
   });
 
   // Loket Pembayaran Kas & Kwitansi Resmi
