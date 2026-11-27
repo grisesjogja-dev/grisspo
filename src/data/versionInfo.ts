@@ -6,12 +6,21 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.9';
+export const APP_VERSION = 'v1.9.10';
 export const APP_BUILD_DATE = '27 November 2026';
-export const APP_BUILD_CODE = '2026.11.27-v1.9.9';
-export const APP_RELEASE_NAME = 'Penambahan Fasilitas Sewa Lahan Parkir & Carport (Rp 30.000 / Bulan)';
+export const APP_BUILD_CODE = '2026.11.27-v1.9.10';
+export const APP_RELEASE_NAME = 'Penyederhanaan Dashboard (Penghapusan Kartu Keaktifan Ronda & Akses Cepat)';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.10',
+    releaseDate: '27 November 2026',
+    releaseTitle: 'Penyederhanaan Dashboard (Penghapusan Kartu Keaktifan Ronda & Akses Cepat)',
+    badge: 'Terbaru',
+    highlights: [
+      'Penyederhanaan Tampilan Dashboard Utama: Kartu "Chart Keaktifan Warga Hadir Ronda" dan kartu "Akses Cepat Layanan" telah dihapus dari halaman dashboard utama untuk membuat tampilan dashboard lebih rapi, bersih, dan ringkas.'
+    ]
+  },
   {
     version: 'v1.9.9',
     releaseDate: '27 November 2026',

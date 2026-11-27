@@ -1457,86 +1457,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
             {/* Left Column (Ronda Activity Chart & Duty Group) */}
             <div className="lg:col-span-7 space-y-6">
 
-              {/* Chart Keaktifan Warga Hadir Ronda */}
-              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-black">
-                      <Shield size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Chart Keaktifan Warga Hadir Ronda</span>
-                        <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-black">
-                          {rondaAttendanceStats.totalRondaSessions} Sesi
-                        </span>
-                      </h3>
-                      <p className="text-xs text-slate-500">
-                        Peringkat kehadiran ronda malam seluruh warga.
-                      </p>
-                    </div>
-                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('jimpit')}
-                    className="text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl transition flex items-center gap-1 border border-amber-200"
-                  >
-                    <span>Absen Ronda</span>
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {rondaAttendanceStats.ranked.slice(0, 4).map((item, idx) => {
-                    const maxCount = rondaAttendanceStats.totalRondaSessions || 1;
-                    const percent = Math.min(100, Math.round((item.count / maxCount) * 100));
-                    const rankColor =
-                      idx === 0
-                        ? 'bg-amber-500 text-white shadow-amber-500/30'
-                        : idx === 1
-                        ? 'bg-slate-400 text-white'
-                        : idx === 2
-                        ? 'bg-amber-700 text-white'
-                        : 'bg-slate-100 text-slate-700';
-
-                    return (
-                      <div key={item.houseNumber} className="p-3.5 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center shadow-xs ${rankColor}`}>
-                              #{idx + 1}
-                            </span>
-                            <span className="font-mono font-black text-xs text-emerald-800 bg-white px-2 py-0.5 rounded border border-slate-200">
-                              {item.houseNumber}
-                            </span>
-                          </div>
-                          <span className="text-xs font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
-                            {item.count} Hadir
-                          </span>
-                        </div>
-
-                        <div className="font-bold text-xs text-slate-900 truncate" title={item.residentName}>
-                          {item.residentName}
-                        </div>
-
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[10px] font-bold text-slate-500">
-                            <span>Kehadiran:</span>
-                            <span className="text-emerald-700">{percent}%</span>
-                          </div>
-                          <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                            <div
-                              className="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full transition-all duration-500"
-                              style={{ width: `${percent}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
 
               {/* Ronda Malam Hari Ini Widget */}
               <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-3xl p-6 shadow-md border border-slate-800 space-y-4">
@@ -1680,59 +1601,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
                 })()}
               </div>
 
-              {/* Quick Actions Shortcuts */}
-              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
-                <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                  <Sparkles size={14} className="text-emerald-700" />
-                  <span>Akses Cepat Layanan</span>
-                </h4>
 
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    onClick={() => setActiveView('jimpitan')}
-                    className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-left group"
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mb-2">
-                      <Coins size={16} />
-                    </div>
-                    <h5 className="text-xs font-bold text-slate-900">Jimpit Online</h5>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Input &amp; Rekap</p>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveView('keuangan')}
-                    className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-left group"
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-2">
-                      <ReceiptText size={16} />
-                    </div>
-                    <h5 className="text-xs font-bold text-slate-900">Kas Transparan</h5>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Buku Kas &amp; PDF</p>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveView('fasum')}
-                    className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-left group"
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-2">
-                      <Building2 size={16} />
-                    </div>
-                    <h5 className="text-xs font-bold text-slate-900">Sewa Fasum</h5>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Booking Tenda/Balai</p>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveView('warga')}
-                    className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-left group"
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-indigo-100 text-emerald-700 flex items-center justify-center mb-2">
-                      <Users size={16} />
-                    </div>
-                    <h5 className="text-xs font-bold text-slate-900">Data 58 Warga</h5>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Checklist Berkas</p>
-                  </button>
-                </div>
-              </div>
 
             </div>
 
