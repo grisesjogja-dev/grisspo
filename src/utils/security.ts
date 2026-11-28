@@ -174,7 +174,14 @@ export const permissions = {
  * - Empty house paying iuran: Rp 25,000
  * - Other: Rp 0
  */
-export function getResidentMonthlyFee(r: { name?: string; statusRumah?: string; monthlyFee?: number }): number {
+export function getResidentMonthlyFee(r: { name?: string; statusRumah?: string; monthlyFee?: number; selectedIurans?: string[] }): number {
+  if (r.selectedIurans && Array.isArray(r.selectedIurans) && r.selectedIurans.length > 0) {
+    let total = 0;
+    if (r.selectedIurans.includes('25k')) total += 25000;
+    if (r.selectedIurans.includes('50k')) total += 50000;
+    if (r.selectedIurans.includes('30k')) total += 30000;
+    return total;
+  }
   if (r.monthlyFee !== undefined && r.monthlyFee !== null) {
     return r.monthlyFee;
   }

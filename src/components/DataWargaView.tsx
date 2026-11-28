@@ -74,7 +74,23 @@ export const DataWargaView: React.FC = () => {
   const [formJimpitanPaid, setFormJimpitanPaid] = useState<number>(0);
   const [formPoints, setFormPoints] = useState<number>(50);
   const [formPassword, setFormPassword] = useState<string>('Griss123');
-  const [formMonthlyFee, setFormMonthlyFee] = useState<number>(50000);
+  const [formSelectedIurans, setFormSelectedIurans] = useState<string[]>(['50k']);
+
+  const toggleIuranSelection = (key: string) => {
+    if (formSelectedIurans.includes(key)) {
+      setFormSelectedIurans(formSelectedIurans.filter((k) => k !== key));
+    } else {
+      setFormSelectedIurans([...formSelectedIurans, key]);
+    }
+  };
+
+  const calculatedFormFee = useMemo(() => {
+    let total = 0;
+    if (formSelectedIurans.includes('25k')) total += 25000;
+    if (formSelectedIurans.includes('50k')) total += 50000;
+    if (formSelectedIurans.includes('30k')) total += 30000;
+    return total;
+  }, [formSelectedIurans]);
 
   // Permission checks
   const isPengurus = isPengurusRole(currentUser?.role);
@@ -149,6 +165,16 @@ export const DataWargaView: React.FC = () => {
 
   const getResidentPaymentType = (r: Resident) => {
     const fee = getResidentMonthlyFee(r);
+    const iurans = r.selectedIurans || [];
+    if (iurans.length > 0) {
+      const labels = iurans.map((i) => {
+        if (i === '25k') return 'Bulanan 25k';
+        if (i === '50k') return 'Bulanan & Sampah 50k';
+        if (i === '30k') return 'Parkir 30k';
+        return i;
+      });
+      return { label: `${labels.join(' + ')} (Rp ${fee.toLocaleString('id-ID')})`, badge: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold' };
+    }
     if (fee === 50000) {
       return { label: 'Iuran Bulanan + Sampah (Rp 50.000)', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold' };
     } else if (fee === 25000) {
@@ -221,7 +247,9 @@ export const DataWargaView: React.FC = () => {
     setFormJimpitanPaid(r.jimpitanPaidMonth || 0);
     setFormPoints(r.points || 50);
     setFormPassword(r.password || 'Griss123');
-    setFormMonthlyFee(getResidentMonthlyFee(r));
+    const defaultFee = getResidentMonthlyFee(r);
+    const initialIurans = r.selectedIurans || (defaultFee === 50000 ? ['50k'] : defaultFee === 25000 ? ['25k'] : defaultFee === 30000 ? ['30k'] : defaultFee === 75000 ? ['50k', '30k'] : defaultFee === 55000 ? ['25k', '30k'] : ['50k']);
+    setFormSelectedIurans(initialIurans);
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
@@ -249,7 +277,8 @@ export const DataWargaView: React.FC = () => {
           previousMonthsJimpitanDeficit: Number(formPrevJimpitanDeficit),
           jimpitanPaidMonth: Number(formJimpitanPaid),
           points: Number(formPoints),
-          monthlyFee: Number(formMonthlyFee),
+          selectedIurans: formSelectedIurans,
+          monthlyFee: calculatedFormFee,
           password: formPassword || undefined
         });
         setEditingResident(null);
@@ -275,7 +304,8 @@ export const DataWargaView: React.FC = () => {
       points: 50,
       jimpitanPaidMonth: 0,
       monthlyIuranPaid: false,
-      monthlyFee: Number(formMonthlyFee)
+      selectedIurans: formSelectedIurans,
+      monthlyFee: calculatedFormFee
     });
     setShowAddModal(false);
     alert('Warga baru berhasil ditambahkan oleh Superadmin!');
@@ -311,7 +341,7 @@ export const DataWargaView: React.FC = () => {
                     setFormPhone('');
                     setFormRole('warga');
                     setFormFamily(3);
-                    setFormMonthlyFee(50000);
+                    setFormSelectedIurans(['50k']);
                     setFormBerkasKependudukan(false);
                     setShowAddModal(true);
                   }}
@@ -983,19 +1013,42 @@ export const DataWargaView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Jenis Iuran / Tarif Bulanan (Superadmin)</label>
-                <select
-                  value={formMonthlyFee}
-                  onChange={(e) => setFormMonthlyFee(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-emerald-800"
-                >
-                  <option value={50000}>Rp 50.000 / bulan (Iuran Bulanan + Sampah)</option>
-                  <option value={25000}>Rp 25.000 / bulan (Iuran Bulanan Rutin)</option>
-                  <option value={0}>Rp 0 / bulan (Jimpitan Saja / Non-Wajib)</option>
-                </select>
-                <span className="text-[10px] text-slate-500 mt-0.5 block">
-                  Kecuali Fajar &amp; Arnado (Default Rp 25.000 atau sesuai pilihan Superadmin).
-                </span>
+                <label className="block font-bold text-slate-700 mb-2">Pilihan Iuran Warga (Bisa Lebih dari Satu / Kombinasi)</label>
+                <div className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-300">
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formSelectedIurans.includes('25k')}
+                      onChange={() => toggleIuranSelection('25k')}
+                      className="w-4 h-4 text-emerald-600 rounded border-slate-300 accent-emerald-600"
+                    />
+                    <span className="font-bold text-slate-800">Iuran Bulanan 25k (Rp 25.000 / bulan)</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formSelectedIurans.includes('50k')}
+                      onChange={() => toggleIuranSelection('50k')}
+                      className="w-4 h-4 text-emerald-600 rounded border-slate-300 accent-emerald-600"
+                    />
+                    <span className="font-bold text-slate-800">Iuran Bulanan dan Sampah 50k (Rp 50.000 / bulan)</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formSelectedIurans.includes('30k')}
+                      onChange={() => toggleIuranSelection('30k')}
+                      className="w-4 h-4 text-emerald-600 rounded border-slate-300 accent-emerald-600"
+                    />
+                    <span className="font-bold text-slate-800">Biaya Sewa Parkir 30k (Rp 30.000 / bulan)</span>
+                  </label>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200">
+                  <span>Total Tagihan Iuran Bulanan:</span>
+                  <span className="text-sm font-black text-emerald-700">Rp {calculatedFormFee.toLocaleString('id-ID')} / bulan</span>
+                </div>
               </div>
 
               {/* Checklist Berkas Kependudukan (Di sebelah / bawah Status Rumah) */}

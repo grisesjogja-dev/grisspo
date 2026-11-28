@@ -6,12 +6,22 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.11';
+export const APP_VERSION = 'v1.9.12';
 export const APP_BUILD_DATE = '28 November 2026';
-export const APP_BUILD_CODE = '2026.11.28-v1.9.11';
-export const APP_RELEASE_NAME = 'Pembersihan Kartu Pengumuman Pengurus & Duplikasi Jadwal Ronda di Dashboard';
+export const APP_BUILD_CODE = '2026.11.28-v1.9.12';
+export const APP_RELEASE_NAME = 'Multi-Pilihan Iuran Warga (Bulanan 25k, Bulanan & Sampah 50k, Sewa Parkir 30k) & Sinkronisasi Keuangan';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.12',
+    releaseDate: '28 November 2026',
+    releaseTitle: 'Multi-Pilihan Iuran Warga (Bulanan 25k, Bulanan & Sampah 50k, Sewa Parkir 30k) & Sinkronisasi Keuangan',
+    badge: 'Terbaru',
+    highlights: [
+      'Multi-Pilihan Iuran Warga di Data Warga: Admin/Superadmin diizinkan untuk menambahkan lebih dari satu pilihan iuran warga secara kombinasi per warga (Pilihan: Iuran Bulanan 25k, Iuran Bulanan dan Sampah 50k, Biaya Sewa Parkir 30k).',
+      'Sinkronisasi Keuangan, Tunggakan & Kwitansi: Total kalkulasi iuran bulanan warga secara otomatis tersinkronisasi penuh dengan laporan keuangan, perhitungan tunggakan/arrears, dan penerbitan kwitansi digital.'
+    ]
+  },
   {
     version: 'v1.9.11',
     releaseDate: '28 November 2026',

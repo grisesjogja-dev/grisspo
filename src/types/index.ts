@@ -34,6 +34,7 @@ export interface Resident {
   points: number;
   password?: string;
   monthlyFee?: number; // e.g. 50000, 25000, 0
+  selectedIurans?: string[]; // e.g. ["25k", "50k", "30k"] for multiple iurans (Bulanan 25k, Bulanan & Sampah 50k, Sewa Parkir 30k)
   appliedIuranCredits?: Record<string, number>; // maps transactionId -> months deducted for safe reconciliation/edit/delete
   appliedJimpitanCredits?: Record<string, { paidAdded: number; prevDeducted: number }>; // maps transactionId -> jimpitan payment applied
 }
