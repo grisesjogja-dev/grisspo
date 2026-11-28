@@ -6,12 +6,22 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.12';
+export const APP_VERSION = 'v1.9.13';
 export const APP_BUILD_DATE = '28 November 2026';
-export const APP_BUILD_CODE = '2026.11.28-v1.9.12';
-export const APP_RELEASE_NAME = 'Multi-Pilihan Iuran Warga (Bulanan 25k, Bulanan & Sampah 50k, Sewa Parkir 30k) & Sinkronisasi Keuangan';
+export const APP_BUILD_CODE = '2026.11.28-v1.9.13';
+export const APP_RELEASE_NAME = 'Otomatisasi Denda Kelompok Ronda Tidak Aktif (Rp 15.000) & Integrasi Kas';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.13',
+    releaseDate: '28 November 2026',
+    releaseTitle: 'Otomatisasi Denda Kelompok Ronda Tidak Aktif (Rp 15.000) & Integrasi Kas',
+    badge: 'Terbaru',
+    highlights: [
+      'Otomatisasi Denda Kelompok Ronda Tidak Aktif: Sistem secara otomatis mendeteksi hari-hari yang terlewat tanpa input jimpitan harian (lewat pukul 01.00 WIB pada hari berikutnya), dan mengenakan denda sebesar Rp 15.000 per kelompok ronda.',
+      'Notifikasi Dashboard & Integrasi Kas: Informasi lengkap mengenai tim ronda yang tidak aktif (beserta daftar nama anggota) tampil di dashboard seluruh warga. Pembayaran denda langsung terhubung dan tercatat ke kas paguyuban serta tagihan penanggung jawab ronda.'
+    ]
+  },
   {
     version: 'v1.9.12',
     releaseDate: '28 November 2026',

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp, defaultGuestUser, getLocalDateString, LEGACY_FAKE_SEED_IDS } from '../context/AppContext';
-import { DayOfWeek, PaymentReceipt, PaymentReceiptType, PaymentMethodType, Resident } from '../types';
+import { DayOfWeek, PaymentReceipt, PaymentReceiptType, PaymentMethodType, Resident, RondaGroup } from '../types';
 import {
   getResidentMonthlyFee,
   getResidentJimpitanTarget,
@@ -80,9 +80,38 @@ export const DashboardView: React.FC = () => {
     toggleBerkasKependudukan,
     deletedIds,
     confirmAction,
-    attendanceSessions
+    attendanceSessions,
+    jimpitReports,
+    paidMissedRondaFines,
+    payMissedRondaFine
   } = useApp();
   const currentUser = authUser || defaultGuestUser;
+
+  const unpaidMissedRondaFines = useMemo(() => {
+    const todayStr = getLocalDateString();
+    const missed: { dateStr: string; day: DayOfWeek; group: RondaGroup }[] = [];
+    
+    for (let i = 1; i <= 14; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dStr = getLocalDateString(d);
+      if (dStr >= todayStr) continue;
+
+      const hasJimpit = jimpitReports.some((r) => r.date === dStr);
+      if (!hasJimpit) {
+        const daysList: DayOfWeek[] = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const dayOfWeek = daysList[d.getDay()] || 'Senin';
+        const group = rondaSchedule.find((g) => g.day === dayOfWeek);
+        if (group) {
+          const fineKey = `${dStr}-${group.day}`;
+          if (!paidMissedRondaFines.includes(fineKey)) {
+            missed.push({ dateStr: dStr, day: group.day, group });
+          }
+        }
+      }
+    }
+    return missed;
+  }, [jimpitReports, rondaSchedule, paidMissedRondaFines]);
 
   // Active dashboard tab: 'ringkasan' | 'loket' | 'riwayat'
   const [dashboardTab, setDashboardTab] = useState<'ringkasan' | 'loket' | 'riwayat'>('ringkasan');
@@ -728,6 +757,74 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
           </div>
         </div>
       </div>
+
+      {/* NOTIFIKASI DENDA KELOMPOK RONDA TIDAK AKTIF (01.00 setelah tanggal tidak terjimpit) */}
+      {unpaidMissedRondaFines.map((item) => {
+        const membersList = item.group.members.join(', ');
+        const captainName = item.group.captain || item.group.members[0] || 'Penanggung Jawab';
+        return (
+          <div key={`${item.dateStr}-${item.day}`} className="bg-gradient-to-r from-red-600/15 via-rose-600/10 to-red-600/15 border-2 border-red-500 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden animate-in fade-in slide-in-from-top-2">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="p-3.5 bg-red-600 text-white rounded-2xl shadow-md shrink-0">
+                  <AlertOctagon size={28} />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-red-600 text-white font-black text-[10px] uppercase tracking-wider">
+                      Denda Absen Ronda Malam (&ge; Pukul 01.00 WIB)
+                    </span>
+                    <span className="text-xs font-bold text-red-800 bg-red-100 px-2.5 py-0.5 rounded-full border border-red-300">
+                      Hari {item.day}, Tanggal {new Date(`${item.dateStr}T12:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 mt-1.5">
+                    Tim Ronda Kelompok {item.day} Tidak Melakukan Ronda / Tidak Ada Input Jimpitan (Denda Rp 15.000)
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-700 mt-1 max-w-3xl leading-relaxed">
+                    Sistem mendeteksi tidak ada laporan jimpitan harian yang diinput untuk hari {item.day} ({item.dateStr}). Sesuai tata tertib, kelompok ronda dikenakan denda sebesar <strong>Rp 15.000</strong>.
+                    <br />
+                    <strong>Anggota Tim Ronda:</strong> {membersList} (Penanggung Jawab: {captainName}).
+                    <br />
+                    <em>Tagihan otomatis muncul dan terhubung ke seluruh kas paguyuban hingga denda dilunasi.</em>
+                  </p>
+                </div>
+              </div>
+
+              <div className="shrink-0 flex flex-col sm:flex-row md:flex-col gap-2 w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    confirmAction({
+                      title: 'Konfirmasi Pembayaran Denda Ronda',
+                      message: `Bayar denda absen ronda kelompok ${item.day} tanggal ${item.dateStr} sebesar Rp 15.000? Pembayaran akan tercatat otomatis sebagai pemasukan kas paguyuban.`,
+                      confirmLabel: 'Bayar Sekarang',
+                      cancelLabel: 'Batal',
+                      variant: 'primary',
+                      onConfirm: async () => {
+                        try {
+                          await payMissedRondaFine(item.dateStr, item.day, currentUser.name);
+                          confetti({ particleCount: 70, spread: 70 });
+                          alert('Denda absen ronda berhasil dibayar dan dicatat ke kas paguyuban! Notifikasi otomatis hilang.');
+                        } catch (err: any) {
+                          alert('Gagal membayar denda: ' + err.message);
+                        }
+                      }
+                    });
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black shadow-lg shadow-red-600/30 transition"
+                >
+                  <Coins size={15} />
+                  <span>Bayar Denda Rp 15.000</span>
+                </button>
+                <span className="text-[10px] text-center text-slate-500">
+                  Terhubung ke Kas &amp; Penanggung Jawab
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
 
       {/* NOTIFIKASI PERINGATAN: BERKAS KEPENDUDUKAN BELUM DISERAHKAN (Muncul di akun warga yang belum menyerahkan berkas) */}
       {hasPendingBerkas && currentResidentRecord && (

@@ -418,6 +418,8 @@ interface AppContextType {
   payJimpitanDeficit: (residentId: string, amount: number, method: 'transfer' | 'cash', notes?: string) => Promise<{ success: boolean; message: string; transactionId?: string }>;
   removeRondaMember: (day: DayOfWeek, memberName: string) => Promise<void>;
   addRondaMember: (day: DayOfWeek, memberName: string) => Promise<void>;
+  paidMissedRondaFines: string[];
+  payMissedRondaFine: (dateStr: string, day: DayOfWeek, paidBy: string) => Promise<void>;
 
   // WhatsApp Iuran Warning
   whatsAppLogs: WhatsAppNotificationLog[];
@@ -1030,6 +1032,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
   });
+
+  const [paidMissedRondaFines, setPaidMissedRondaFines] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('grisspo_paid_missed_ronda_fines');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('grisspo_paid_missed_ronda_fines', JSON.stringify(paidMissedRondaFines));
+  }, [paidMissedRondaFines]);
+
+  const payMissedRondaFine = async (dateStr: string, day: DayOfWeek, paidBy: string) => {
+    const fineKey = `${dateStr}-${day}`;
+    if (paidMissedRondaFines.includes(fineKey)) return;
+
+    const now = Date.now();
+    const trxId = `trx-denda-ronda-${now}`;
+    const newTrx: Transaction = {
+      id: trxId,
+      type: 'pemasukan',
+      category: 'Lain-lain Pemasukan',
+      amount: 15000,
+      date: dateStr,
+      description: `Denda Absen Ronda Kelompok ${day} Tanggal ${dateStr} (Dibayar oleh ${paidBy})`,
+      recordedBy: paidBy,
+      userRole: currentUser?.role || 'warga',
+      encryptedHash: await computeTransactionHash('pemasukan', 'Lain-lain Pemasukan', 15000, dateStr, paidBy, now),
+      isAnomaly: false,
+      timestamp: now
+    };
+
+    const nextTrx = [newTrx, ...transactionsRef.current];
+    transactionsRef.current = nextTrx;
+    setTransactions(nextTrx);
+    await safeCloudWrite('keuangan_transaksi', newTrx.id, newTrx);
+
+    const nextFines = [...paidMissedRondaFines, fineKey];
+    setPaidMissedRondaFines(nextFines);
+    localStorage.setItem('grisspo_paid_missed_ronda_fines', JSON.stringify(nextFines));
+  };
 
   // Transactions
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
@@ -5370,6 +5415,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         payJimpitanDeficit,
         removeRondaMember,
         addRondaMember,
+        paidMissedRondaFines,
+        payMissedRondaFine,
 
         whatsAppLogs,
         sendWhatsAppIuranWarning,
