@@ -124,6 +124,7 @@ export interface Transaction {
   encryptedHash: string; // Integrity verification (SHA-256)
   isAnomaly?: boolean;
   anomalyReason?: string;
+  proofImage?: string; // Optional expense receipt image (JPEG, BMP, JPG up to 1MB)
   timestamp: number;
 }
 

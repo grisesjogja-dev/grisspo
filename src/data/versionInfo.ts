@@ -6,12 +6,21 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.13';
+export const APP_VERSION = 'v1.9.14';
 export const APP_BUILD_DATE = '28 November 2026';
-export const APP_BUILD_CODE = '2026.11.28-v1.9.13';
-export const APP_RELEASE_NAME = 'Otomatisasi Denda Kelompok Ronda Tidak Aktif (Rp 15.000) & Integrasi Kas';
+export const APP_BUILD_CODE = '2026.11.28-v1.9.14';
+export const APP_RELEASE_NAME = 'Upload Bukti Pengeluaran Kas (JPEG, BMP, JPG, Maks. 1MB)';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.14',
+    releaseDate: '28 November 2026',
+    releaseTitle: 'Upload Bukti Pengeluaran Kas (JPEG, BMP, JPG, Maks. 1MB)',
+    badge: 'Terbaru',
+    highlights: [
+      'Upload Bukti Pengeluaran Kas: Pada formulir pencatatan transaksi keluar (pengeluaran), ditambahkan opsi unggah (upload) bukti pengeluaran dengan format yang didukung meliputi JPEG, BMP, dan JPG dengan batas ukuran maksimal 1MB (bersifat opsional / tidak wajib diisi).'
+    ]
+  },
   {
     version: 'v1.9.13',
     releaseDate: '28 November 2026',

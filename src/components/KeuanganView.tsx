@@ -194,6 +194,7 @@ export const KeuanganView: React.FC = () => {
   const [trxDate, setTrxDate] = useState<string>(() => getLocalDateString());
   const [trxDesc, setTrxDesc] = useState<string>('');
   const [trxHouse, setTrxHouse] = useState<string>('');
+  const [trxProofImage, setTrxProofImage] = useState<string | undefined>(undefined);
 
   // Superadmin Edit Master Transaksi state
   const [editingTrx, setEditingTrx] = useState<Transaction | null>(null);
@@ -359,13 +360,15 @@ export const KeuanganView: React.FC = () => {
         description: trxDesc || `${trxCategory} - ${trxDate}`,
         recordedBy: `${currentUser.name} (${currentUser.role.toUpperCase()})`,
         userRole: currentUser.role,
-        sourceHouse: trxHouse || undefined
+        sourceHouse: trxHouse || undefined,
+        proofImage: trxType === 'pengeluaran' ? trxProofImage : undefined
       });
 
       setShowAddModal(false);
       setTrxDesc('');
       setTrxHouse('');
       setTrxAmount(25000);
+      setTrxProofImage(undefined);
       alert('Transaksi kas berhasil dicatat dan diamankan dengan enkripsi integritas SHA-256!');
     } catch (err: any) {
       alert('Gagal mencatat transaksi: ' + err.message);
@@ -1057,6 +1060,18 @@ export const KeuanganView: React.FC = () => {
                         <AlertTriangle size={10} /> {trx.anomalyReason}
                       </span>
                     )}
+                    {trx.proofImage && (
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <a
+                          href={trx.proofImage}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-bold hover:bg-emerald-100"
+                        >
+                          <span>📎 Lihat Bukti Pengeluaran</span>
+                        </a>
+                      </div>
+                    )}
                   </td>
                   <td className="py-3 px-4 text-slate-500 font-medium">
                     {trx.recordedBy}
@@ -1292,6 +1307,59 @@ export const KeuanganView: React.FC = () => {
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
                 />
               </div>
+
+              {/* Optional Proof of Expense Upload for Pengeluaran */}
+              {trxType === 'pengeluaran' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Upload Bukti Pengeluaran (Opsional &bull; Format: JPEG, BMP, JPG &bull; Maks. 1MB)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".jpg, .jpeg, .bmp, image/jpeg, image/bmp, image/jpg"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) {
+                        setTrxProofImage(undefined);
+                        return;
+                      }
+                      if (file.size > 1024 * 1024) {
+                        alert('Ukuran file terlalu besar! Maksimal ukuran file bukti pengeluaran adalah 1 MB.');
+                        e.target.value = '';
+                        setTrxProofImage(undefined);
+                        return;
+                      }
+                      const ext = file.name.split('.').pop()?.toLowerCase();
+                      const validExts = ['jpg', 'jpeg', 'bmp'];
+                      if (!ext || !validExts.includes(ext)) {
+                        alert('Format file tidak diterima! Hanya format JPEG, JPG, dan BMP yang diperbolehkan.');
+                        e.target.value = '';
+                        setTrxProofImage(undefined);
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = (uploadEvent) => {
+                        setTrxProofImage(uploadEvent.target?.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                  />
+                  {trxProofImage && (
+                    <div className="mt-2 flex items-center gap-2 bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+                      <img src={trxProofImage} alt="Bukti" className="w-12 h-12 object-cover rounded-lg border border-emerald-300" />
+                      <span className="text-[11px] text-emerald-800 font-bold">Bukti pengeluaran berhasil dilampirkan</span>
+                      <button
+                        type="button"
+                        onClick={() => setTrxProofImage(undefined)}
+                        className="text-xs text-rose-600 hover:underline font-semibold ml-auto"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Security notice */}
               <div className="p-3 bg-blue-50 rounded-xl border border-emerald-200 text-[11px] text-blue-800 flex items-center gap-2">
