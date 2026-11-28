@@ -6,12 +6,22 @@ export interface SystemUpdateRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.9.10';
-export const APP_BUILD_DATE = '27 November 2026';
-export const APP_BUILD_CODE = '2026.11.27-v1.9.10';
-export const APP_RELEASE_NAME = 'Penyederhanaan Dashboard (Penghapusan Kartu Keaktifan Ronda & Akses Cepat)';
+export const APP_VERSION = 'v1.9.11';
+export const APP_BUILD_DATE = '28 November 2026';
+export const APP_BUILD_CODE = '2026.11.28-v1.9.11';
+export const APP_RELEASE_NAME = 'Pembersihan Kartu Pengumuman Pengurus & Duplikasi Jadwal Ronda di Dashboard';
 
 export const SYSTEM_UPDATE_HISTORY: SystemUpdateRelease[] = [
+  {
+    version: 'v1.9.11',
+    releaseDate: '28 November 2026',
+    releaseTitle: 'Pembersihan Kartu Pengumuman Pengurus & Duplikasi Jadwal Ronda di Dashboard',
+    badge: 'Terbaru',
+    highlights: [
+      'Penghapusan Kartu Pengumuman Penting Pengurus: Kartu "Pengumuman Penting Pengurus" telah dihapus dari halaman dashboard utama.',
+      'Pembersihan Duplikasi Kartu Jadwal Ronda: Kartu duplikat "Jadwal Ronda Malam Ini" yang tampil ganda di dashboard kini telah dibersihkan sehingga hanya menyisakan satu widget widget ronda utama yang rapi dan optimal.'
+    ]
+  },
   {
     version: 'v1.9.10',
     releaseDate: '27 November 2026',

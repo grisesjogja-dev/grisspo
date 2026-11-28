@@ -1423,33 +1423,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
         <div className="space-y-6">
           <>
 
-          {/* Priority Announcement Alert */}
-          {announcements.length > 0 && (
-            <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4.5 text-amber-950 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-                  <AlertOctagon className="text-amber-700" size={22} />
-                </div>
-                <div>
-                  <div className="text-xs font-bold uppercase text-amber-800 tracking-wider">
-                    Pengumuman Penting Pengurus:
-                  </div>
-                  <div className="text-sm font-bold text-slate-900 mt-0.5">
-                    {announcements[0].title}
-                  </div>
-                  <p className="text-xs text-slate-600 mt-0.5 line-clamp-2">
-                    {announcements[0].message}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setActiveView('tatib')}
-                className="text-xs font-bold px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition whitespace-nowrap"
-              >
-                Baca Tatib 2026
-              </button>
-            </div>
-          )}
+
 
           {/* 2-Column Responsive Layout for Simplicity & Cleanliness */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -1950,62 +1924,7 @@ Email Resmi Pengurus: grises.jogja@gmail.com`;
             </div>
           )}
 
-          {/* Ronda Malam Hari Ini Widget */}
-          <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl p-6 shadow-md border border-slate-800">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
-                  <Shield size={24} />
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">
-                    Jadwal Ronda Malam Ini
-                  </span>
-                  <h3 className="text-lg font-black text-white">
-                    Hari {todayDay} ({dutyGroup?.members.length} Petugas)
-                  </h3>
-                </div>
-              </div>
 
-              <button
-                onClick={() => setActiveView('jimpitan')}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 self-start sm:self-auto"
-              >
-                <Coins size={14} />
-                <span>Mulai Input Jimpitan Online</span>
-              </button>
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                <span className="text-[10px] text-slate-400 block font-semibold">Petugas Ronda Malam Ini:</span>
-                <span className="text-xs font-bold text-amber-300 mt-1 block">
-                  {dutyGroup?.members.join(', ') || 'Belum diatur'}
-                </span>
-              </div>
-
-              <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                <span className="text-[10px] text-slate-400 block font-semibold">Ketentuan Kunci Portal:</span>
-                <span className="text-xs font-bold text-white mt-1 block">
-                  Tepat Pukul 21.00 WIB Dikunci
-                </span>
-              </div>
-
-              <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                <span className="text-[10px] text-slate-400 block font-semibold">Standar Jimpitan Harian:</span>
-                <span className="text-xs font-bold text-emerald-400 mt-1 block">
-                  Rp 500 / Rumah / Hari
-                </span>
-              </div>
-
-              <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                <span className="text-[10px] text-slate-400 block font-semibold">Denda Tidak Ronda:</span>
-                <span className="text-xs font-bold text-red-400 mt-1 block">
-                  Rp 15.000 / Regu
-                </span>
-              </div>
-            </div>
-          </div>
 
           {/* Feature Navigation Grid */}
           <div>
